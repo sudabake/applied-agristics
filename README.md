@@ -8,7 +8,9 @@ An independent Minecraft addon project connecting Applied Energistics 2 and Myst
 
 当前处于设计与初始化阶段。仓库包含项目说明和目录骨架，尚无可运行的 Mod、构建配置或发布版本。
 
-Minecraft 版本、模组加载器及其版本、Java 版本、AE2 和 Mystical Agriculture 依赖版本均待确定。Forge / NeoForge 等方案需要在目标版本及依赖兼容性核实后选择。
+主开发平台已确定为 **Minecraft 1.21.1 / NeoForge / Java 21**。**Minecraft 1.20.1 / Forge / Java 17** 作为后续移植目标，当前尚未建立移植分支或完成兼容性验证。
+
+依赖策略：按对应 Minecraft 与加载器组合，以最新稳定版开发和测试，将上一稳定版作为最低支持目标；最终支持范围须经过实际验证。具体版本、上游约束与待验证问题见 [依赖版本记录](docs/DEPENDENCIES.md)。
 
 ## 设计目标
 
@@ -37,7 +39,8 @@ applied-agristics/
 ├── .gitignore
 ├── .gitattributes
 ├── docs/
-│   └── DESIGN.md
+│   ├── DESIGN.md
+│   └── DEPENDENCIES.md
 └── src/main/
     ├── java/
     │   └── README.md
@@ -50,12 +53,12 @@ applied-agristics/
 
 ## 开发起点
 
-1. 确定目标 Minecraft 与模组加载器版本，并验证 AE2 与 Mystical Agriculture 的兼容组合。
+1. 使用已确定的主线平台，验证 AE2 与 Mystical Agriculture 及其必需库的兼容组合。
 2. 根据所选加载器的官方开发模板加入 Gradle Wrapper、构建配置与模组元数据。
 3. 完成最小 Mod 入口及客户端／服务端启动验证。
 4. 从一个最小功能开始实现，再逐步加入祭坛和虚拟种植。
 
-版本确定前，本仓库没有构建命令，也不能直接生成可安装的 JAR。
+开发环境尚未建立，本仓库目前没有构建命令，也不能直接生成可安装的 JAR。
 
 ## 许可证与归属
 
