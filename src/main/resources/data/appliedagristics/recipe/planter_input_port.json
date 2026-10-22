@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [" I ", "HFC", " I "],
+  "key": {
+    "I": {"item": "minecraft:iron_ingot"},
+    "H": {"item": "minecraft:hopper"},
+    "F": {"item": "appliedagristics:planter_frame"},
+    "C": {"item": "ae2:annihilation_core"}
+  },
+  "result": {"id": "appliedagristics:planter_input_port", "count": 1}
+}

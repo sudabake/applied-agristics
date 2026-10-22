@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "appliedagristics:item/bio_seed_0",
+    "layer1": "appliedagristics:item/bio_seed_1",
+    "layer2": "appliedagristics:item/bio_seed_2"
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "includes": [
+    "common/common.json",
+    "common/player_inventory.json"
+  ],
+  "generatedBackground": {
+    "width": 176,
+    "height": 184
+  },
+  "slots": {
+    "MACHINE_INPUT": {
+      "left": 48,
+      "top": 40
+    },
+    "MACHINE_OUTPUT": {
+      "left": 116,
+      "top": 40
+    }
+  },
+  "text": {
+    "dialog_title": {
+      "text": {
+        "translate": "block.appliedagristics.me_infusion_altar"
+      },
+      "position": {
+        "left": 8,
+        "top": 6
+      }
+    },
+    "state": {
+      "text": "",
+      "position": {
+        "left": 8,
+        "top": 76
+      }
+    },
+    "speed": {
+      "text": "",
+      "position": {
+        "left": 130,
+        "top": 64
+      }
+    }
+  },
+  "images": {
+    "progressBar": {
+      "texture": "guis/molecular_assembler.png",
+      "srcRect": [
+        176,
+        0,
+        6,
+        18
+      ]
+    }
+  },
+  "widgets": {
+    "progressBar": {
+      "left": 152,
+      "top": 39
+    }
+  }
+}

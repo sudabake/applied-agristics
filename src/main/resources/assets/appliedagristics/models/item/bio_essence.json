@@ -1,0 +1,22 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "appliedagristics:item/bio_essence_0",
+    "layer1": "appliedagristics:item/bio_essence_1",
+    "layer2": "appliedagristics:item/bio_essence_2"
+  },
+  "overrides": [
+    {
+      "predicate": {
+        "appliedagristics:boss": 1
+      },
+      "model": "appliedagristics:item/bio_wither_essence"
+    },
+    {
+      "predicate": {
+        "appliedagristics:boss": 2
+      },
+      "model": "appliedagristics:item/bio_ender_dragon_essence"
+    }
+  ]
+}

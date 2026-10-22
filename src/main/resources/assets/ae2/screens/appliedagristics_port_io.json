@@ -1,0 +1,76 @@
+{
+  "includes": [
+    "common/common.json"
+  ],
+  "generatedBackground": {
+    "width": 176,
+    "height": 160
+  },
+  "text": {
+    "dialog_title": {
+      "text": {
+        "translate": "gui.appliedagristics.io_config"
+      },
+      "position": {
+        "left": 8,
+        "top": 6
+      }
+    },
+    "autoOutputLabel": {
+      "text": {
+        "translate": "gui.appliedagristics.auto_output_label"
+      },
+      "position": {
+        "left": 8,
+        "top": 111
+      }
+    },
+    "autoInputLabel": {
+      "text": {
+        "translate": "gui.appliedagristics.auto_input_label"
+      },
+      "position": {
+        "left": 8,
+        "top": 139
+      }
+    }
+  },
+  "widgets": {
+    "back": {
+      "right": 23,
+      "top": -5
+    },
+    "side0": {
+      "left": 68,
+      "top": 72
+    },
+    "side1": {
+      "left": 68,
+      "top": 24
+    },
+    "side2": {
+      "left": 68,
+      "top": 48
+    },
+    "side3": {
+      "left": 92,
+      "top": 72
+    },
+    "side4": {
+      "left": 44,
+      "top": 48
+    },
+    "side5": {
+      "left": 92,
+      "top": 48
+    },
+    "autoOutput": {
+      "left": 142,
+      "top": 104
+    },
+    "autoInput": {
+      "left": 142,
+      "top": 132
+    }
+  }
+}

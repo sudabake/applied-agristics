@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": ["IQI", "QPQ", "IQI"],
+  "key": {
+    "I": {"item": "minecraft:iron_ingot"},
+    "Q": {"item": "minecraft:quartz"},
+    "P": {"item": "mysticalagriculture:prosperity_shard"}
+  },
+  "result": {"id": "appliedagristics:planter_frame", "count": 4}
+}

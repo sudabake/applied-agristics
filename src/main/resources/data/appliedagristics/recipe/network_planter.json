@@ -1,0 +1,30 @@
+{
+  "type": "appliedagristics:empty_machine_upgrade",
+  "category": "misc",
+  "pattern": [
+    "IFI",
+    "PCP",
+    "IGI"
+  ],
+  "key": {
+    "I": {
+      "item": "minecraft:iron_ingot"
+    },
+    "F": {
+      "item": "ae2:formation_core"
+    },
+    "P": {
+      "item": "ae2:calculation_processor"
+    },
+    "C": {
+      "item": "appliedagristics:early_planter"
+    },
+    "G": {
+      "item": "mysticalagriculture:tertium_essence"
+    }
+  },
+  "result": {
+    "id": "appliedagristics:network_planter",
+    "count": 1
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "includes": [
+    "common/common.json",
+    "common/player_inventory.json"
+  ],
+  "generatedBackground": {
+    "width": 176,
+    "height": 200
+  },
+  "text": {
+    "dialog_title": {
+      "text": {
+        "translate": "block.appliedagristics.essence_vault"
+      },
+      "position": {
+        "left": 8,
+        "top": 6
+      }
+    },
+    "state": {
+      "text": "",
+      "position": {
+        "left": 8,
+        "top": 94
+      }
+    }
+  }
+}

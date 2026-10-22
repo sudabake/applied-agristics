@@ -1,6 +1,6 @@
 # 平台与依赖版本记录
 
-核查日期：2026-10-13。信息来自作者在 Modrinth 发布的版本记录及下载 JAR 中的模组元数据；这是候选配置，尚未完成构建或游戏启动测试。
+本页是 **2026-10-13 的依赖选型记录**，表内“最新稳定版”仅指当日核查结果，不代表持续更新的版本排行。当前锁定值见根目录 `gradle.properties`，各次实测组合见 `VERIFICATION.md`。以下保留当时核查记录；移植平台尚未测试。
 
 ## 平台路线
 
@@ -24,9 +24,9 @@
 
 | 依赖 | 最新稳定版（开发基线） | 上一稳定版 | 最低支持目标 |
 | --- | --- | --- | --- |
-| AE2 | 19.2.18 | 19.2.17 | 19.2.17，待运行验证 |
-| Mystical Agriculture | 8.0.28 | 8.0.27 | 8.0.27，待运行验证 |
-| GuideME（AE2 的必需库） | 21.1.19 | 21.1.18 | 21.1.18，待运行验证 |
+| AE2 | 19.2.18 | 19.2.17 | 19.2.17，开发游戏测试通过 |
+| Mystical Agriculture | 8.0.28 | 8.0.27 | 8.0.27，开发游戏测试通过 |
+| GuideME（AE2 的必需库） | 21.1.19 | 21.1.18 | 21.1.18，开发游戏测试通过 |
 | Cucumber Library（神秘农业的必需库） | 8.0.16 | 8.0.15 | 至少 8.0.16，上游明确要求 |
 
 神秘农业 8.0.27 与 8.0.28 的 JAR 元数据均要求 Cucumber `[8.0.16,)`，因此 8.0.15 无法作为该组合的最低目标。这里保留上游兼容性约束，不覆盖它。
@@ -37,7 +37,7 @@ AE2 19.2.18 的 JAR 声明 NeoForge `[21.1.169,)`、Minecraft `[1.21.1]`、Guide
 
 Modrinth / CurseForge 将神秘农业 8.0.27、8.0.28 标注为支持 1.21.1，但下载 JAR 中的 `META-INF/neoforge.mods.toml` 写有 Minecraft 范围 `[1.21,1.21.1)`。下载文件的 SHA512 与 Modrinth 声明一致。
 
-该范围文字与发布平台标注存在差异。尚未测试加载器如何处理该元数据，不能据此声称已经可用或已经不兼容。建立开发环境时应优先核实作者构件与实际启动结果；不修改上游 JAR 以绕过检查。
+该范围文字与发布平台标注存在差异。本轮在 NeoForge 21.1.259 下，8.0.27 与 8.0.28 均实际加载并通过开发游戏测试；8.0.28 还通过客户端验证。未修改上游 JAR，也未设置 dependencyOverrides。结论只覆盖实测组合。
 
 来源：[AE2 19.2.18](https://modrinth.com/mod/ae2/version/KDnFUmMm)、[AE2 19.2.17](https://modrinth.com/mod/ae2/version/kfyIqgJ6)、[神秘农业 8.0.28](https://modrinth.com/mod/mystical-agriculture/version/PLakgT6X)、[神秘农业 8.0.27](https://modrinth.com/mod/mystical-agriculture/version/izIaJr8V)、[GuideME 版本](https://modrinth.com/mod/guideme/versions)、[Cucumber 版本](https://modrinth.com/mod/cucumber/versions)。
 
@@ -58,6 +58,9 @@ AE2 15.4.11 的 JAR 声明 Forge `[47.1.3,)`、Minecraft `[1.20.1,1.20.2)`、Gui
 
 ## 当前验证状态
 
-- 已完成：稳定发布序列查询、最新主线／移植依赖 JAR 的元数据检查、主线神秘农业两个候选 JAR 的 SHA512 校验。
-- 未完成：Gradle 开发环境、源码编译、客户端启动、独立服务器启动及最低版本组合验证。
-- 下一步：建立 1.21.1 NeoForge 官方模板工程，锁定具体加载器构建及 JDK 21，优先解决上述元数据差异，再加入最小 Mod 入口。
+- 1.21.1 工程已建立：ModDevGradle 2.0.148、Gradle 9.2.1、Java 21。按用户选择，开发基线和声明的 NeoForge 最低版本已改为实测的 21.1.248；AE2 自身的 21.1.169 要求不代表本项目已验证更旧的加载器。
+- NeoForge 21.1.248 已通过构建、6 项单元测试、最新与最低前置组合各 5 项 GameTest，以及最新组合的四种客户端页面和操作消息测试。此前 21.1.259 的混合组合记录保留，不将其当作 21.1.248 的混合组合实测结果。
+- 最新、最低及 AE2／农业混合组合的开发 GameTest 均通过，最新组合客户端页面和操作消息通过。
+- Cucumber 最低仍为 8.0.16，GuideME 最低声明为 21.1.18。没有穷举其他库版本排列。
+- 1.20.1 Forge 移植、正式独立服务器玩家连接、长期整合包兼容性尚未验证。
+- 具体测试与证据见 [VERIFICATION.md](VERIFICATION.md)。

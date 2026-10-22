@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": ["SCS", "EFE", "SGS"],
+  "key": {
+    "S": {"item": "mysticalagriculture:supremium_essence"},
+    "C": {"item": "ae2:cell_component_256k"},
+    "E": {"item": "ae2:engineering_processor"},
+    "F": {"item": "appliedagristics:planter_frame"},
+    "G": {"item": "ae2:quartz_glass"}
+  },
+  "result": {"id": "appliedagristics:essence_vault", "count": 1}
+}

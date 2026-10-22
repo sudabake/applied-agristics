@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": ["IFI", "PAP", "IFI"],
+  "key": {
+    "I": {"item": "minecraft:iron_ingot"},
+    "F": {"item": "ae2:fluix_crystal"},
+    "P": {"item": "ae2:engineering_processor"},
+    "A": {"item": "mysticalagriculture:infusion_altar"}
+  },
+  "result": {"id": "appliedagristics:me_infusion_altar", "count": 1}
+}

@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [" E ", "AFS", " E "],
+  "key": {
+    "E": {"item": "mysticalagriculture:imperium_essence"},
+    "A": {"item": "ae2:annihilation_core"},
+    "F": {"item": "appliedagristics:planter_frame"},
+    "S": {"item": "mysticalagriculture:prosperity_seed_base"}
+  },
+  "result": {"id": "appliedagristics:planter_conversion_module", "count": 1}
+}

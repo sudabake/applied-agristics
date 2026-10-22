@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": ["GPG", "GFG", "GPG"],
+  "key": {
+    "G": {"item": "minecraft:glass"},
+    "P": {"item": "mysticalagriculture:prudentium_essence"},
+    "F": {"item": "appliedagristics:planter_frame"}
+  },
+  "result": {"id": "appliedagristics:cultivation_chamber", "count": 1}
+}

@@ -1,0 +1,77 @@
+plugins {
+    id 'java-library'
+    id 'net.neoforged.moddev' version '2.0.148'
+}
+version = mod_version
+group = 'io.github.sudabake.appliedagristics'
+base { archivesName = 'applied-agristics' }
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+repositories {
+    mavenCentral { content { excludeGroup 'maven.modrinth' } }
+    maven { url = 'https://maven.blamejared.com'; content { includeGroupByRegex 'mezz\\.jei.*' } }
+    maven { url = 'https://api.modrinth.com/maven'; content { includeGroup 'maven.modrinth' } }
+}
+neoForge {
+    version = neo_version
+    runs {
+        client {
+            client()
+            if (project.hasProperty('clientSmoke')) systemProperty 'appliedagristics.clientSmoke', 'true'
+        }
+        server { server(); programArgument '--nogui' }
+        gameTestServer {
+            type = 'gameTestServer'
+            systemProperty 'neoforge.enabledGameTestNamespaces', 'appliedagristics'
+            systemProperty 'appliedagristics.tests', 'true'
+        }
+    }
+    mods { appliedagristics { sourceSet(sourceSets.main) } }
+}
+dependencies {
+    compileOnly "mezz.jei:jei-1.21.1-common-api:${jei_version}"
+    compileOnly "mezz.jei:jei-1.21.1-neoforge-api:${jei_version}"
+    compileOnly "maven.modrinth:botany-pots:21.1.44"
+    compileOnly "maven.modrinth:bookshelf-lib:21.1.81"
+    if (project.hasProperty('botanyTests')) {
+        runtimeOnly "maven.modrinth:botany-pots:21.1.44"
+        runtimeOnly "maven.modrinth:bookshelf-lib:21.1.81"
+        if (project.hasProperty('prickleJar')) runtimeOnly files(project.property('prickleJar'))
+        else runtimeOnly "maven.modrinth:prickle:21.1.11"
+    }
+    if (project.hasProperty('jeiTests')) {
+        if (project.hasProperty('jeiJar')) runtimeOnly files(project.property('jeiJar'))
+        else runtimeOnly "mezz.jei:jei-1.21.1-neoforge:${jei_version}"
+    }
+    if (project.hasProperty('compatTests')) runtimeOnly "maven.modrinth:farmers-delight:1.21.1-1.2.11"
+    implementation "maven.modrinth:ae2:${ae2_version}"
+    implementation "maven.modrinth:mystical-agriculture:${ma_version}"
+    implementation "maven.modrinth:cucumber:${cucumber_version}"
+    implementation "maven.modrinth:guideme:${guideme_version}"
+    testImplementation platform('org.junit:junit-bom:5.11.4')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }
+tasks.named('test') { useJUnitPlatform() }
+processResources { inputs.property 'version', project.version; filesMatching('META-INF/neoforge.mods.toml') { expand version: project.version } }
+jar {
+    exclude 'io/github/sudabake/appliedagristics/testing/**'
+    exclude 'io/github/sudabake/appliedagristics/compat/jei/JeiSmoke*'
+    from('LICENSE', 'COPYING', 'THIRD_PARTY_NOTICES.md')
+    from('third_party/jdte/LICENSE.txt') { into 'licenses/jdte' }
+    from('third_party/mysticalagriculture/LICENSE.txt') { into 'licenses/mysticalagriculture' }
+}
+tasks.named('runGameTestServer').configure {
+    doLast {
+        def log = file('run/logs/latest.log')
+        if (!log.exists() || !(log.getText('UTF-8') =~ /All [1-9][0-9]* required tests passed/)) {
+            throw new GradleException('GameTest server did not report passing required tests. Inspect run/logs/latest.log.')
+        }
+    }
+}
+tasks.named('runClient').configure {
+    doLast {
+        if (project.hasProperty('clientSmoke') && !file('run/logs/latest.log').getText('UTF-8').contains('CLIENT_SMOKE_PASSED'))
+            throw new GradleException('Client smoke test did not pass. Inspect run/logs/latest.log.');
+    }
+}

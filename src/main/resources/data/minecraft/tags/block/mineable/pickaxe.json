@@ -1,0 +1,9 @@
+{
+  "replace": false,
+  "values": [
+    "appliedagristics:early_planter",
+    "appliedagristics:seed_storage",
+    "appliedagristics:network_planter",
+    "appliedagristics:cell_cultivator"
+  ]
+}

@@ -29,6 +29,13 @@ local.properties
 .env.*
 !.env.example
 
+# Python tool caches and local environments
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
 # OS and temporary files
 .DS_Store
 Thumbs.db

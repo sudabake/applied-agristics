@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": ["GIG", "ICI", "RBR"],
+  "key": {
+    "G": {"item": "minecraft:glass"},
+    "I": {"item": "minecraft:iron_ingot"},
+    "C": {"item": "mysticalagriculture:inferium_essence"},
+    "R": {"item": "minecraft:redstone"},
+    "B": {"item": "minecraft:bucket"}
+  },
+  "result": {"id": "appliedagristics:cell_cultivator", "count": 1}
+}

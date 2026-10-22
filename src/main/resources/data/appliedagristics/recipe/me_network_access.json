@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": ["ICI", "LFL", "ICI"],
+  "key": {
+    "I": {"item": "minecraft:iron_ingot"},
+    "C": {"item": "ae2:fluix_glass_cable"},
+    "L": {"item": "ae2:logic_processor"},
+    "F": {"item": "appliedagristics:planter_frame"}
+  },
+  "result": {"id": "appliedagristics:me_network_access", "count": 1}
+}

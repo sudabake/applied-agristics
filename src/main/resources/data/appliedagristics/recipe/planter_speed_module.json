@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": ["ITI", "AFA", "ITI"],
+  "key": {
+    "I": {"item": "minecraft:iron_ingot"},
+    "T": {"item": "mysticalagriculture:tertium_essence"},
+    "A": {"item": "ae2:speed_card"},
+    "F": {"item": "appliedagristics:planter_frame"}
+  },
+  "result": {"id": "appliedagristics:planter_speed_module", "count": 1}
+}

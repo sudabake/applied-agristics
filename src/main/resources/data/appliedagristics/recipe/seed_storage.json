@@ -1,0 +1,30 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "SCS",
+    "LFL",
+    "SGS"
+  ],
+  "key": {
+    "S": {
+      "item": "mysticalagriculture:supremium_essence"
+    },
+    "L": {
+      "item": "ae2:logic_processor"
+    },
+    "F": {
+      "item": "appliedagristics:planter_frame"
+    },
+    "C": {
+      "item": "ae2:cell_component_64k"
+    },
+    "G": {
+      "item": "ae2:quartz_glass"
+    }
+  },
+  "result": {
+    "id": "appliedagristics:seed_storage",
+    "count": 1
+  }
+}

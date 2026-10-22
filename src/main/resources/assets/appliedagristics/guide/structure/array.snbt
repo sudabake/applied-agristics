@@ -1,0 +1,312 @@
+{
+  "DataVersion": 3955,
+  "size": [
+    3,
+    4,
+    3
+  ],
+  "data": [
+    {
+      "pos": [
+        0,
+        0,
+        0
+      ],
+      "state": "appliedagristics:seed_storage"
+    },
+    {
+      "pos": [
+        1,
+        0,
+        0
+      ],
+      "state": "appliedagristics:planter_output_port"
+    },
+    {
+      "pos": [
+        2,
+        0,
+        0
+      ],
+      "state": "appliedagristics:essence_vault"
+    },
+    {
+      "pos": [
+        0,
+        0,
+        1
+      ],
+      "state": "appliedagristics:planter_speed_module"
+    },
+    {
+      "pos": [
+        1,
+        0,
+        1
+      ],
+      "state": "appliedagristics:planter_speed_module"
+    },
+    {
+      "pos": [
+        2,
+        0,
+        1
+      ],
+      "state": "appliedagristics:planter_speed_module"
+    },
+    {
+      "pos": [
+        0,
+        0,
+        2
+      ],
+      "state": "appliedagristics:planter_speed_module"
+    },
+    {
+      "pos": [
+        1,
+        0,
+        2
+      ],
+      "state": "appliedagristics:planter_parallel_module"
+    },
+    {
+      "pos": [
+        2,
+        0,
+        2
+      ],
+      "state": "appliedagristics:planter_parallel_module"
+    },
+    {
+      "pos": [
+        0,
+        1,
+        0
+      ],
+      "state": "appliedagristics:planter_input_port"
+    },
+    {
+      "pos": [
+        1,
+        1,
+        0
+      ],
+      "state": "appliedagristics:network_planter"
+    },
+    {
+      "pos": [
+        2,
+        1,
+        0
+      ],
+      "state": "appliedagristics:me_network_access"
+    },
+    {
+      "pos": [
+        0,
+        1,
+        1
+      ],
+      "state": "appliedagristics:planter_parallel_module"
+    },
+    {
+      "pos": [
+        1,
+        1,
+        1
+      ],
+      "state": "appliedagristics:cultivation_chamber"
+    },
+    {
+      "pos": [
+        2,
+        1,
+        1
+      ],
+      "state": "appliedagristics:planter_parallel_module"
+    },
+    {
+      "pos": [
+        0,
+        1,
+        2
+      ],
+      "state": "appliedagristics:planter_conversion_module"
+    },
+    {
+      "pos": [
+        1,
+        1,
+        2
+      ],
+      "state": "appliedagristics:planter_frame"
+    },
+    {
+      "pos": [
+        2,
+        1,
+        2
+      ],
+      "state": "appliedagristics:planter_frame"
+    },
+    {
+      "pos": [
+        0,
+        2,
+        0
+      ],
+      "state": "appliedagristics:planter_frame"
+    },
+    {
+      "pos": [
+        1,
+        2,
+        0
+      ],
+      "state": "appliedagristics:planter_frame"
+    },
+    {
+      "pos": [
+        2,
+        2,
+        0
+      ],
+      "state": "appliedagristics:planter_frame"
+    },
+    {
+      "pos": [
+        0,
+        2,
+        1
+      ],
+      "state": "appliedagristics:planter_frame"
+    },
+    {
+      "pos": [
+        1,
+        2,
+        1
+      ],
+      "state": "appliedagristics:cultivation_chamber"
+    },
+    {
+      "pos": [
+        2,
+        2,
+        1
+      ],
+      "state": "appliedagristics:planter_frame"
+    },
+    {
+      "pos": [
+        0,
+        2,
+        2
+      ],
+      "state": "appliedagristics:planter_frame"
+    },
+    {
+      "pos": [
+        1,
+        2,
+        2
+      ],
+      "state": "appliedagristics:planter_frame"
+    },
+    {
+      "pos": [
+        2,
+        2,
+        2
+      ],
+      "state": "appliedagristics:planter_frame"
+    },
+    {
+      "pos": [
+        0,
+        3,
+        0
+      ],
+      "state": "appliedagristics:planter_frame"
+    },
+    {
+      "pos": [
+        1,
+        3,
+        0
+      ],
+      "state": "appliedagristics:planter_frame"
+    },
+    {
+      "pos": [
+        2,
+        3,
+        0
+      ],
+      "state": "appliedagristics:planter_frame"
+    },
+    {
+      "pos": [
+        0,
+        3,
+        1
+      ],
+      "state": "appliedagristics:planter_frame"
+    },
+    {
+      "pos": [
+        1,
+        3,
+        1
+      ],
+      "state": "appliedagristics:planter_frame"
+    },
+    {
+      "pos": [
+        2,
+        3,
+        1
+      ],
+      "state": "appliedagristics:planter_frame"
+    },
+    {
+      "pos": [
+        0,
+        3,
+        2
+      ],
+      "state": "appliedagristics:planter_frame"
+    },
+    {
+      "pos": [
+        1,
+        3,
+        2
+      ],
+      "state": "appliedagristics:planter_frame"
+    },
+    {
+      "pos": [
+        2,
+        3,
+        2
+      ],
+      "state": "appliedagristics:planter_frame"
+    }
+  ],
+  "entities": [],
+  "palette": [
+    "appliedagristics:network_planter",
+    "appliedagristics:me_network_access",
+    "appliedagristics:planter_input_port",
+    "appliedagristics:planter_output_port",
+    "appliedagristics:seed_storage",
+    "appliedagristics:essence_vault",
+    "appliedagristics:cultivation_chamber",
+    "appliedagristics:planter_frame",
+    "appliedagristics:planter_speed_module",
+    "appliedagristics:planter_parallel_module",
+    "appliedagristics:planter_conversion_module"
+  ]
+}
