@@ -3,7 +3,7 @@ from pathlib import Path
 import json
 import struct
 import zlib
-import gzip
+from resource_bytes import gzip_bytes
 
 ROOT = Path(__file__).resolve().parents[1] / 'src/main/resources'
 NS = 'appliedagristics'
@@ -138,7 +138,7 @@ template += b'\x09' + nbt_name('palette') + b'\x0a' + struct.pack('>i', 1)
 template += b'\x08' + nbt_name('Name') + nbt_name('minecraft:air') + b'\0\0'
 template_path = ROOT / f'data/{NS}/structure/empty.nbt'
 template_path.parent.mkdir(parents=True, exist_ok=True)
-template_path.write_bytes(gzip.compress(template, mtime=0))
+template_path.write_bytes(gzip_bytes(template))
 
 # Shared layered masks. Primary/secondary tint comes from each entity's spawn egg.
 def mask_png(name, layer, seed):

@@ -16,6 +16,8 @@ jobs:
           distribution: temurin
           java-version: '21'
       - uses: gradle/actions/setup-gradle@v4
+      - name: Test portable resource exports
+        run: python3 -m unittest discover -s tools/tests -v
       - name: Check isolated resource rebuild
         run: python3 tools/check_resource_rebuild.py
       - name: Build and unit tests

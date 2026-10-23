@@ -45,6 +45,9 @@ def main():
         results.append({'run':run+1,'exit_code':process.returncode,'changed':changed,'new':extra,'same_collision_shapes':shape.read_bytes()==original_shape})
         if process.returncode or changed or extra or shape.read_bytes()!=original_shape:
             (workspace/'result.json').write_text(json.dumps(results,indent=2),encoding='utf-8')
+            print(json.dumps(results[-1],indent=2),flush=True)
+            if process.returncode:
+                print(process.stderr[-8000:],file=sys.stderr,flush=True)
             raise SystemExit(f'Resource rebuild differs from approved resources; inspect {workspace}')
     (workspace/'result.json').write_text(json.dumps(results,indent=2),encoding='utf-8')
     print(f'RESOURCE_REBUILD_PASSED twoRuns=true approvedResources={len(before)} collisionShapes=true report={workspace}')

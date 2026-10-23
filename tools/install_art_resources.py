@@ -53,7 +53,7 @@ public final class MachineShapes {
     private MachineShapes() {}
 }
 '''
-    (ROOT/'src/main/java/io/github/sudabake/appliedagristics/block/MachineShapes.java').write_text(source,encoding='utf-8')
+    (ROOT/'src/main/java/io/github/sudabake/appliedagristics/block/MachineShapes.java').write_text(source,encoding='utf-8',newline='\n')
 
 
 if __name__=='__main__': install()
