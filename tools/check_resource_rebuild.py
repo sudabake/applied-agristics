@@ -6,6 +6,7 @@ import json
 import shutil
 import subprocess
 import sys
+from resource_bytes import png_comparison_bytes
 
 ROOT=Path(__file__).resolve().parents[1]
 DRAFTS=('biology_items_v05','functional_faces_v01','cultivation_chamber_v02','array_faces_32_v06',
@@ -18,6 +19,8 @@ def snapshot(folder):
             continue
         if path.suffix in ('.json','.mcmeta'):
             value=json.dumps(json.loads(path.read_text(encoding='utf-8')),sort_keys=True,separators=(',',':')).encode()
+        elif path.suffix == '.png':
+            value=png_comparison_bytes(path)
         else:
             value=path.read_bytes()
         result[path.relative_to(folder).as_posix()]=hashlib.sha256(value).hexdigest()

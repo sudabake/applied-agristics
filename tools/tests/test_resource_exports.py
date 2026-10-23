@@ -5,14 +5,52 @@ import json
 import sys
 import tempfile
 import unittest
+import struct
+import zlib
 
 TOOLS = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(TOOLS))
-from resource_bytes import gzip_bytes
+from resource_bytes import gzip_bytes, png_comparison_bytes
 import install_art_resources
 
 
 class ResourceExportTests(unittest.TestCase):
+    @staticmethod
+    def png(pixels, level, metadata=b''):
+        def chunk(kind, payload):
+            return struct.pack('>I', len(payload)) + kind + payload + struct.pack('>I', zlib.crc32(kind + payload) & 0xffffffff)
+        return (b'\x89PNG\r\n\x1a\n' + chunk(b'IHDR', struct.pack('>IIBBBBB', 2, 1, 8, 6, 0, 0, 0))
+                + (chunk(b'gAMA', metadata) if metadata else b'')
+                + chunk(b'IDAT', zlib.compress(b'\0' + pixels, level)) + chunk(b'IEND', b''))
+
+    def test_png_different_compression_preserves_pixels(self):
+        pixels = bytes([10, 20, 30, 255, 50, 60, 70, 128])
+        with tempfile.TemporaryDirectory() as folder:
+            a, b = Path(folder) / 'a.png', Path(folder) / 'b.png'
+            a.write_bytes(self.png(pixels, 0)); b.write_bytes(self.png(pixels, 9))
+            self.assertNotEqual(a.read_bytes(), b.read_bytes())
+            self.assertEqual(png_comparison_bytes(a), png_comparison_bytes(b))
+
+    def test_png_pixel_alpha_and_color_metadata_changes_are_detected(self):
+        pixels = bytes([10, 20, 30, 255, 50, 60, 70, 128])
+        with tempfile.TemporaryDirectory() as folder:
+            a, b = Path(folder) / 'a.png', Path(folder) / 'b.png'
+            a.write_bytes(self.png(pixels, 9))
+            expected = png_comparison_bytes(a)
+            for changed, metadata in ((bytes([11]) + pixels[1:], b''),
+                                      (pixels[:-1] + bytes([127]), b''),
+                                      (pixels, struct.pack('>I', 45455))):
+                b.write_bytes(self.png(changed, 9, metadata))
+                self.assertNotEqual(expected, png_comparison_bytes(b))
+
+    def test_png_corrupt_crc_is_rejected(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / 'bad.png'
+            data = bytearray(self.png(bytes(range(8)), 9)); data[-1] ^= 1
+            path.write_bytes(data)
+            with self.assertRaisesRegex(ValueError, 'CRC'):
+                png_comparison_bytes(path)
+
     def test_gzip_matches_approved_nbt_without_host_metadata(self):
         approved = TOOLS.parent / 'src/main/resources/data/appliedagristics/structure/empty.nbt'
         encoded = approved.read_bytes()
