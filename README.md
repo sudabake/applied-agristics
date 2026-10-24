@@ -2,7 +2,7 @@
 
 Minecraft **1.21.1 · NeoForge 21.1.248 · Java 21** 的 AE2 × Mystical Agriculture 农业附属。
 
-当前版本为 **0.1.0-alpha.17**，仍处于测试和平衡阶段。可在 [GitHub Releases](https://github.com/sudabake/applied-agristics/releases/tag/v0.1.0-alpha.17) 下载安装包，源码构建方法见下文。1.20.1 Forge 是后续移植计划，当前不支持。
+当前公开源码版本为 **0.1.0-alpha.17**，仍处于测试和平衡阶段。**Alpha.17 安装包暂时下架，正在准备原创材质和下一版修正。** 源码构建方法见下文。1.20.1 Forge 是后续移植计划，当前不支持。
 
 ## 内容
 
