@@ -1,1 +1,17 @@
-{"parent":"appliedagristics:block/network_planter"}
+{
+  "parent": "appliedagristics:block/network_planter",
+  "display": {
+    "gui": {
+      "rotation": [
+        30,
+        45,
+        0
+      ],
+      "scale": [
+        0.625,
+        0.625,
+        0.625
+      ]
+    }
+  }
+}

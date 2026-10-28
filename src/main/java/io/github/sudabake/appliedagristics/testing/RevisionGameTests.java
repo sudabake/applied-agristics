@@ -22,7 +22,7 @@ public final class RevisionGameTests {
     public static void survivalRecipesLoadAndCraftAllEquipment(GameTestHelper h) {
         var level=h.getLevel(); var registries=level.registryAccess();
         var recipes=level.getRecipeManager().getAllRecipesFor(net.minecraft.world.item.crafting.RecipeType.CRAFTING);
-        var derived=Set.of(Agristics.BIO_SEED.get(),Agristics.BIO_ESSENCE.get(),Agristics.CULTURE.get(),Agristics.EXTRACT.get());
+        var derived=Set.of(Agristics.BIO_SEED.get(),Agristics.BIO_ESSENCE.get(),Agristics.CULTURE.get(),Agristics.EXTRACT.get(),Agristics.LEGACY_SEEDS_FIRST.get().asItem(),Agristics.LEGACY_SEEDS_SECOND.get().asItem());
         int checked=0;
         for(var entry:Agristics.ITEMS.getEntries()) {
             var item=entry.get(); if(derived.contains(item)) continue;
@@ -41,13 +41,13 @@ public final class RevisionGameTests {
             h.assertTrue(recipe.matches(input,level),"Real recipe accepts its ingredients: "+id);
             var actual=level.getRecipeManager().getRecipeFor(net.minecraft.world.item.crafting.RecipeType.CRAFTING,input,level).orElseThrow();
             h.assertTrue(actual.id().equals(id),"Workbench selects the intended recipe without a collision: "+id);
-            int expected=item==Agristics.NUTRIENT.get()?8:item==Agristics.CAPSULE.get()||item==Agristics.SAMPLER.get()||item==Agristics.PLANTER_FRAME.get().asItem()?4:1;
+            int expected=item==Agristics.PLANTER_FRAME.get().asItem()?4:1;
             var result=actual.value().assemble(input,registries);
             h.assertTrue(result.is(item)&&result.getCount()==expected,"Survival result and batch count: "+id);
             checked++;
         }
-        h.assertTrue(checked==17,"All fourteen blocks and three tools/consumables are craftable");
-        org.slf4j.LoggerFactory.getLogger("AppliedAgristicsTests").info("SURVIVAL_RECIPES_PASSED equipment=17 actualWorkbench=true ingredientTags=true batchCounts=true");
+        h.assertTrue(checked==20,"All fifteen current blocks and five tools/consumables are craftable");
+        org.slf4j.LoggerFactory.getLogger("AppliedAgristicsTests").info("SURVIVAL_RECIPES_PASSED equipment=20 actualWorkbench=true ingredientTags=true batchCounts=true");
         h.succeed();
     }
     @GameTest(template="empty",templateNamespace=Agristics.ID,timeoutTicks=240)

@@ -7,20 +7,22 @@ import io.github.sudabake.appliedagristics.menu.MachineMenu;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
-import java.util.List;
+import appeng.api.config.*;
+import io.github.sudabake.appliedagristics.block.ItemPort;
 
-/** Same AE screen and IO sub-screen as the altar, with a 4x4 port inventory. */
+/** Sixteen-slot storage; only the output port exposes an automatic export toggle. */
 public final class PortScreen extends AEBaseScreen<MachineMenu> {
+    private final SettingToggleButton<YesNo> autoOutput;
     public PortScreen(MachineMenu menu,Inventory inventory,Component title) {
         super(menu,inventory,title,StyleManager.loadStyleDoc("/screens/appliedagristics_port.json"));
-        addToLeftToolbar(new IconButton(b -> switchToScreen(new AltarIOScreen<>(this))) {
-            @Override protected Icon getIcon() { return Icon.ACCESS_READ_WRITE; }
-            @Override public List<Component> getTooltipMessage() { return List.of(Component.translatable("gui.appliedagristics.io_config")); }
-        });
+        if (!((ItemPort)menu.machine).isInput()) {
+            autoOutput=new SettingToggleButton<>(Settings.AUTO_EXPORT,YesNo.NO,(b,backwards)->AltarScreen.send(menu,8,0));
+            addToLeftToolbar(autoOutput);
+        } else autoOutput=null;
     }
     @Override public void drawBG(GuiGraphics graphics,int offsetX,int offsetY,int mouseX,int mouseY,float partialTick) {
         super.drawBG(graphics,offsetX,offsetY,mouseX,mouseY,partialTick);
-        for (var slot:menu.slots) Blitter.texture("guis/inscriber.png").src(7,94,18,18).dest(leftPos+slot.x-1,topPos+slot.y-1).blit(graphics);
+        for (var slot:menu.slots) Icon.SLOT_BACKGROUND.getBlitter().dest(leftPos+slot.x-1,topPos+slot.y-1).blit(graphics);
     }
-    @Override protected void updateBeforeRender() { super.updateBeforeRender(); setTextContent("dialog_title",menu.machine.getDisplayName()); setTextContent("state",Component.translatable("status.appliedagristics."+menu.state.getString("status"))); }
+    @Override protected void updateBeforeRender() { super.updateBeforeRender(); if (autoOutput!=null) autoOutput.set(menu.state.getBoolean("autoOutput")?YesNo.YES:YesNo.NO); setTextContent("dialog_title",menu.machine.getDisplayName()); setTextContent("state",Component.translatable("status.appliedagristics."+menu.state.getString("status"))); }
 }

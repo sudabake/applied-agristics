@@ -13,10 +13,16 @@ import net.neoforged.neoforge.network.PacketDistributor;
 
 /** Read-only list; extraction is available through the connected AE network. */
 public final class EssenceVaultScreen extends AEBaseScreen<MachineMenu> {
-    public EssenceVaultScreen(MachineMenu menu,Inventory inventory,Component title) { super(menu,inventory,title,StyleManager.loadStyleDoc("/screens/appliedagristics_vault.json")); }
+    public EssenceVaultScreen(MachineMenu menu,Inventory inventory,Component title) {
+        super(menu,inventory,title,StyleManager.loadStyleDoc("/screens/appliedagristics_vault.json"));
+        addToLeftToolbar(new appeng.client.gui.widgets.IconButton(b -> switchToScreen(new VaultPriorityScreen(this))) {
+            @Override protected appeng.client.gui.Icon getIcon() { return appeng.client.gui.Icon.PRIORITY; }
+            @Override public java.util.List<Component> getTooltipMessage() { return java.util.List.of(Component.translatable("gui.ae2.Priority")); }
+        });
+    }
     @Override public void drawBG(GuiGraphics graphics,int offsetX,int offsetY,int mouseX,int mouseY,float partialTick) {
         super.drawBG(graphics,offsetX,offsetY,mouseX,mouseY,partialTick);
-        for (var slot:menu.slots) Blitter.texture("guis/inscriber.png").src(7,94,18,18).dest(leftPos+slot.x-1,topPos+slot.y-1).blit(graphics);
+        for (var slot:menu.slots) appeng.client.gui.Icon.SLOT_BACKGROUND.getBlitter().dest(leftPos+slot.x-1,topPos+slot.y-1).blit(graphics);
     }
     @Override public void drawFG(GuiGraphics graphics,int offsetX,int offsetY,int mouseX,int mouseY) {
         super.drawFG(graphics,offsetX,offsetY,mouseX,mouseY);

@@ -1,1 +1,17 @@
-{"parent":"appliedagristics:block/essence_vault"}
+{
+  "parent": "appliedagristics:block/essence_vault",
+  "display": {
+    "gui": {
+      "rotation": [
+        30,
+        45,
+        0
+      ],
+      "scale": [
+        0.625,
+        0.625,
+        0.625
+      ]
+    }
+  }
+}

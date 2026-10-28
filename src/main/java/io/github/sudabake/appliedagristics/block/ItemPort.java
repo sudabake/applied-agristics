@@ -16,10 +16,9 @@ import net.neoforged.neoforge.items.IItemHandler;
 import java.util.*;
 
 /** Finite 16-slot input/output port. No physical AE node; storage belongs to the formed structure. */
-public final class ItemPort extends GridMachine implements IOControls, SeedBank, IStorageProvider {
+public final class ItemPort extends GridMachine implements SeedBank, IStorageProvider {
     private final boolean input;
-    private final int[] sides={2,1,1,1,1,1};
-    private boolean autoInput,autoOutput;
+    private boolean autoOutput;
     private PlanterStructure structure;
     private final Map<AEItemKey,Map<NetworkPlanter,Long>> leases=new HashMap<>();
     private final MEStorage networkInventory=new MEStorage() {
@@ -88,32 +87,28 @@ public final class ItemPort extends GridMachine implements IOControls, SeedBank,
         for (int i=0;i<items.getSlots() && left>0;i++) if (key.matches(items.getStackInSlot(i))) left-=items.extractItem(i,(int)Math.min(left,Integer.MAX_VALUE),simulate).getCount();
         return requested-left;
     }
-    @Override public void configureSide(int side,int mode) { if (side>=0 && side<6 && mode>=0 && mode<=3) { sides[side]=mode; setChanged(); } }
-    @Override public int sideMode(int side) { return sides[side]; }
-    @Override public void toggleAutoOutput() { autoOutput=!autoOutput; setChanged(); }
-    public void toggleAutoInput() { autoInput=!autoInput; setChanged(); }
+    public void toggleAutoOutput() { if (!input) { autoOutput=!autoOutput; setChanged(); } }
+    public Direction outputFace() { return getBlockState().getValue(PlanterPartBlock.FACING); }
     public IItemHandler automation(Direction side) {
         return new IItemHandler() {
-            private int mode() { return side==null ? 3 : sideMode(side.ordinal()); }
             @Override public int getSlots() { return items.getSlots(); }
             @Override public ItemStack getStackInSlot(int slot) { return items.getStackInSlot(slot); }
             @Override public int getSlotLimit(int slot) { return items.getSlotLimit(slot); }
-            @Override public boolean isItemValid(int slot,ItemStack stack) { return (mode()==1 || mode()==3) && valid(slot,stack); }
+            @Override public boolean isItemValid(int slot,ItemStack stack) { return input && valid(slot,stack); }
             @Override public ItemStack insertItem(int slot,ItemStack stack,boolean simulate) { return isItemValid(slot,stack) ? items.insertItem(slot,stack,simulate) : stack; }
-            @Override public ItemStack extractItem(int slot,int amount,boolean simulate) { return mode()==2 || mode()==3 ? items.extractItem(slot,amount,simulate) : ItemStack.EMPTY; }
+            @Override public ItemStack extractItem(int slot,int amount,boolean simulate) {
+                return input || side==null || side==outputFace() ? items.extractItem(slot,amount,simulate) : ItemStack.EMPTY;
+            }
         };
     }
     @Override public void step() {
         if (structure==null || !structure.formed()) { status="unformed"; return; }
         status=getMainNode().isActive() ? "online" : "offline";
-        if (!getMainNode().isActive()) return;
-        for (var side:Direction.values()) {
-            var pos=worldPosition.relative(side); if (!level.hasChunkAt(pos) || PlanterStructure.ownerAt(level,pos)==structure) continue;
-            var adjacent=level.getCapability(Capabilities.ItemHandler.BLOCK,pos,side.getOpposite()); if (adjacent==null) continue;
-            int mode=sideMode(side.ordinal());
-            if (autoOutput && (mode==2 || mode==3)) push(adjacent);
-            if (autoInput && (mode==1 || mode==3)) pull(adjacent);
-        }
+        if (input || !autoOutput || !getMainNode().isActive()) return;
+        var side=outputFace(); var pos=worldPosition.relative(side);
+        if (!level.hasChunkAt(pos) || PlanterStructure.ownerAt(level,pos)==structure) return;
+        var adjacent=level.getCapability(Capabilities.ItemHandler.BLOCK,pos,side.getOpposite());
+        if (adjacent!=null) push(adjacent);
     }
     private void push(IItemHandler target) {
         int budget=64;
@@ -125,28 +120,12 @@ public final class ItemPort extends GridMachine implements IOControls, SeedBank,
             }
         }
     }
-    private void pull(IItemHandler source) {
-        int budget=64;
-        for (int i=0;i<source.getSlots() && budget>0;i++) {
-            var offered=source.extractItem(i,budget,true); if (offered.isEmpty() || !valid(0,offered)) continue;
-            var key=AEItemKey.of(offered); int room=(int)insertLocal(key,offered.getCount(),true); if (room==0) continue;
-            var pulled=source.extractItem(i,room,false); if (pulled.isEmpty()) continue;
-            long accepted=insertLocal(AEItemKey.of(pulled),pulled.getCount(),false); budget-=(int)accepted;
-            // A third-party source can change between simulate and extract. Return or drop only that remainder.
-            if (accepted<pulled.getCount()) {
-                pulled.shrink((int)accepted);
-                var remainder=source.insertItem(i,pulled,false);
-                if (!remainder.isEmpty()) net.minecraft.world.Containers.dropItemStack(level,worldPosition.getX()+.5,worldPosition.getY()+.5,worldPosition.getZ()+.5,remainder);
-            }
-        }
-    }
-    @Override protected void saveAdditional(CompoundTag tag,HolderLookup.Provider registries) { super.saveAdditional(tag,registries); tag.putIntArray("sides",sides); tag.putBoolean("autoInput",autoInput); tag.putBoolean("autoOutput",autoOutput); }
+    @Override protected void saveAdditional(CompoundTag tag,HolderLookup.Provider registries) { super.saveAdditional(tag,registries); tag.putBoolean("autoOutput",autoOutput); }
     @Override protected void loadAdditional(CompoundTag tag,HolderLookup.Provider registries) {
-        super.loadAdditional(tag,registries); leases.clear(); autoInput=tag.getBoolean("autoInput"); autoOutput=tag.getBoolean("autoOutput");
-        var saved=tag.getIntArray("sides"); if (saved.length==6) for (int i=0;i<6;i++) sides[i]=Math.clamp(saved[i],0,3);
+        super.loadAdditional(tag,registries); leases.clear(); autoOutput=!input && tag.getBoolean("autoOutput");
     }
     @Override public CompoundTag snapshot(int page,String search) {
-        var tag=super.snapshot(page,search); tag.putIntArray("sides",sides); tag.putBoolean("autoInput",autoInput); tag.putBoolean("autoOutput",autoOutput); tag.putBoolean("inputPort",input);
+        var tag=super.snapshot(page,search); tag.putBoolean("autoOutput",autoOutput); tag.putBoolean("inputPort",input);
         var locked=new int[16]; for (int i=0;i<16;i++) locked[i]=slotInUse(i) ? 1 : 0; tag.putIntArray("lockedSlots",locked); return tag;
     }
 }

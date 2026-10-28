@@ -36,14 +36,37 @@ public final class BioData {
         if (!held.is(Agristics.SAMPLER.get())) return InteractionResult.PASS;
         if (target instanceof net.neoforged.neoforge.entity.PartEntity<?> part) target = part.getParent();
         if (!(target instanceof Mob) || !target.isAlive() || identity(held) != null || player.isSpectator()) return InteractionResult.PASS;
+        return giveSample(player,hand,BuiltInRegistries.ENTITY_TYPE.getKey(target.getType()));
+    }
+    private static InteractionResult giveSample(Player player,InteractionHand hand,ResourceLocation id) {
+        var held=player.getItemInHand(hand);
         if (!player.level().isClientSide) {
-            var sample = withIdentity(Agristics.SAMPLER.get(), BuiltInRegistries.ENTITY_TYPE.getKey(target.getType()));
+            var sample = withIdentity(Agristics.SAMPLER.get(),id);
             // Even in creative, split off exactly one blank swab; never label the whole stack.
             held.shrink(1);
             if (held.isEmpty()) player.setItemInHand(hand, sample);
             else if (!player.getInventory().add(sample)) player.drop(sample, false);
         }
         return InteractionResult.sidedSuccess(player.level().isClientSide);
+    }
+    public static InteractionResult sampleSpawner(Player player,InteractionHand hand,net.minecraft.core.BlockPos pos) {
+        var held=player.getItemInHand(hand);var level=player.level();
+        if(!held.is(Agristics.SAMPLER.get()) || identity(held)!=null || player.isSpectator()
+            || !(level.getBlockEntity(pos) instanceof net.minecraft.world.level.block.entity.SpawnerBlockEntity spawner)
+            || !level.mayInteract(player,pos)) return InteractionResult.PASS;
+        if(level.isClientSide) return InteractionResult.SUCCESS;
+        // Read only the configured identity: never tick, spawn, or reroll the cage.
+        var data=spawner.saveWithoutMetadata(level.registryAccess());
+        var id=ResourceLocation.tryParse(data.getCompound("SpawnData").getCompound("entity").getString("id"));
+        if(id==null || !BuiltInRegistries.ENTITY_TYPE.containsKey(id)) {
+            player.displayClientMessage(net.minecraft.network.chat.Component.translatable("gui.appliedagristics.unknown_spawner"),true);
+            return InteractionResult.FAIL;
+        }
+        return giveSample(player,hand,id);
+    }
+    @SubscribeEvent public static void interactBlock(PlayerInteractEvent.RightClickBlock event) {
+        var result=sampleSpawner(event.getEntity(),event.getHand(),event.getPos());
+        if(result!=InteractionResult.PASS) {event.setCancellationResult(result);event.setCanceled(true);}
     }
     @SubscribeEvent public static void interact(PlayerInteractEvent.EntityInteract event) {
         if (!event.getItemStack().is(Agristics.SAMPLER.get())) return;

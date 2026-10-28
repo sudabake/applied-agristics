@@ -178,7 +178,7 @@ def mask_png(name, layer, seed):
 for name in ['bio_seed','bio_essence']:
     for layer in range(3):mask_png(name,layer,name=='bio_seed')
     write(f'assets/{NS}/models/item/{name}.json', {'parent':'minecraft:item/generated','textures':{f'layer{i}':f'{NS}:item/{name}_{i}' for i in range(3)}})
-write(f'data/{NS}/recipe/bio_seed.json', {'type':f'{NS}:bio_seed','category':'misc'})
+(ROOT/f'data/{NS}/recipe/bio_seed.json').unlink(missing_ok=True)
 write(f'data/{NS}/recipe/bio_loot.json', {'type':f'{NS}:bio_loot','category':'misc'})
 from essence_layers import generate as generate_essence
 generate_essence(ROOT, write)

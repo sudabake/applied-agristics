@@ -1,10 +1,21 @@
 {
   "type": "minecraft:crafting_shaped",
   "category": "misc",
-  "pattern": ["G G", "G G", " N "],
+  "pattern": [
+    " N ",
+    "G G",
+    "N  "
+  ],
   "key": {
-    "G": {"item": "minecraft:glass"},
-    "N": {"item": "minecraft:iron_nugget"}
+    "N": {
+      "item": "minecraft:iron_nugget"
+    },
+    "G": {
+      "item": "minecraft:glass"
+    }
   },
-  "result": {"id": "appliedagristics:culture_capsule", "count": 4}
+  "result": {
+    "id": "appliedagristics:culture_capsule",
+    "count": 1
+  }
 }

@@ -36,15 +36,20 @@ public final class PlanterStructure {
     public List<ItemPort> ports() { refresh(); return ports; }
     public List<EssenceVault> vaults() { refresh(); return vaults; }
     public List<SeedBank> seedBanks() {
-        refresh(); var result=new ArrayList<SeedBank>(seeds);
-        ports.stream().filter(ItemPort::isInput).forEach(result::add); return List.copyOf(result);
+        refresh();
+        if (!seeds.isEmpty()) return List.copyOf(seeds);
+        return ports.stream().filter(ItemPort::isInput).map(port -> (SeedBank) port).toList();
     }
     private final appeng.api.storage.MEStorage outputs = new appeng.api.storage.MEStorage() {
         @Override public net.minecraft.network.chat.Component getDescription() { return controller.getDisplayName(); }
         @Override public long insert(appeng.api.stacks.AEKey key,long amount,appeng.api.config.Actionable mode,appeng.api.networking.security.IActionSource source) {
             if (!formed() || !(key instanceof appeng.api.stacks.AEItemKey item) || amount<=0) return 0;
+            if (controller.directNetworkOutput() && !io.github.sudabake.appliedagristics.Crops.essence(item.toStack(1))) {
+                var node=controller.getMainNode();var grid=node.getGrid();
+                return grid==null || !node.isActive() ? 0 : grid.getStorageService().getInventory().insert(key,amount,mode,source);
+            }
             boolean simulate=mode==appeng.api.config.Actionable.SIMULATE; long left=amount;
-            for (var vault:vaults) { left-=vault.storeProduced(item,left,simulate); if (left==0) break; }
+            for (var vault:vaults.stream().sorted(Comparator.comparingInt(EssenceVault::getPriority).reversed()).toList()) { left-=vault.storeProduced(item,left,simulate); if (left==0) break; }
             for (var port:ports) if (!port.isInput() && left>0) left-=port.insertLocal(item,left,simulate);
             return amount-left;
         }
@@ -155,7 +160,7 @@ public final class PlanterStructure {
                 var owner = ownerAt(level,pos);
                 if (owner != null && owner != this) { reject("structure_overlap"); return; }
                 var state = level.getBlockState(pos); cells[PlanterLayout.index(x,y,z)] = role(state); members.add(pos);
-                if (state.is(Agristics.SEEDS.get())) {
+                if (SeedStorage.isStorage(state)) {
                     if (!(level.getBlockEntity(pos) instanceof SeedStorage seed)) { dirty=true; reject("unformed"); return; }
                     foundSeeds.add(seed);
                 }
@@ -192,7 +197,7 @@ public final class PlanterStructure {
     private static PlanterLayout.Result invalid(String status) { return new PlanterLayout.Result(false,status,0,0,0); }
     public static PlanterLayout.Role role(BlockState state) {
         if (state.is(Agristics.NETWORK.get())) return PlanterLayout.Role.CONTROLLER;
-        if (state.is(Agristics.SEEDS.get())) return PlanterLayout.Role.SEEDS;
+        if (SeedStorage.isStorage(state)) return PlanterLayout.Role.SEEDS;
         if (state.is(Agristics.NETWORK_ACCESS.get())) return PlanterLayout.Role.ACCESS;
         if (state.is(Agristics.INPUT_PORT.get())) return PlanterLayout.Role.INPUT;
         if (state.is(Agristics.OUTPUT_PORT.get())) return PlanterLayout.Role.OUTPUT;

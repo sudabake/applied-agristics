@@ -2,9 +2,18 @@
   "type": "minecraft:crafting_shapeless",
   "category": "misc",
   "ingredients": [
-    {"tag": "c:seeds"},
-    {"item": "minecraft:bone_meal"},
-    {"item": "mysticalagriculture:inferium_essence"}
+    {
+      "tag": "c:seeds"
+    },
+    {
+      "item": "minecraft:bone_meal"
+    },
+    {
+      "item": "mysticalagriculture:inferium_essence"
+    }
   ],
-  "result": {"id": "appliedagristics:culture_nutrient", "count": 8}
+  "result": {
+    "id": "appliedagristics:culture_nutrient",
+    "count": 1
+  }
 }

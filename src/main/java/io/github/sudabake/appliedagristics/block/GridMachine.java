@@ -17,7 +17,7 @@ public abstract class GridMachine extends MachineEntity implements IGridConnecte
     private IManagedGridNode makeNode() {
         var result = GridHelper.createManagedNode(this, new IGridNodeListener<GridMachine>() {
             @Override public void onSaveChanges(GridMachine owner, IGridNode node) { owner.setChanged(); }
-        }).setInWorldNode(true).setFlags(GridFlags.REQUIRE_CHANNEL).setIdlePowerUsage(0).setVisualRepresentation(getBlockState().getBlock());
+        }).setInWorldNode(true).setFlags(this instanceof MEInfusionAltar ? new GridFlags[0] : new GridFlags[]{GridFlags.REQUIRE_CHANNEL}).setIdlePowerUsage(0).setVisualRepresentation(getBlockState().getBlock());
         if (this instanceof appeng.api.storage.IStorageProvider storage) result.addService(appeng.api.storage.IStorageProvider.class, storage);
         return result;
     }

@@ -15,10 +15,9 @@ public final class Balance {
     public static final ModConfigSpec.DoubleValue FULL_POWER = B.defineInRange("fullUpgradeAePerCropPerTick", 5000.0, 0.01, 1000000.0);
     public static final ModConfigSpec.IntValue ALTAR_TICKS = B.defineInRange("altarCycleTicks", 100, 20, 1200000);
     public static final ModConfigSpec.IntValue CULTURE_TICKS = B.defineInRange("cultureCycleTicks", 400, 20, 1200000);
-    public static final ModConfigSpec.IntValue CULTURE_POWER = B.defineInRange("cultureFePerTick", 40, 1, 1000000);
     public static final ModConfigSpec.IntValue CULTURE_WATER = B.defineInRange("cultureWaterMb", 100, 1, 16000);
+    public static final ModConfigSpec.IntValue NOURISHMENT_TICKS = B.defineInRange("nourishmentTicks",400,100,1200000);
     public static final ModConfigSpec.IntValue EXTRACT_TICKS = B.defineInRange("cultureExtractionTicks", 100, 20, 1200000);
-    public static final ModConfigSpec.IntValue EXTRACT_POWER = B.defineInRange("cultureExtractionFePerTick", 20, 1, 1000000);
     public static final ModConfigSpec.ConfigValue<java.util.List<? extends String>> BIO_LOOT_ADDITIONS = B.defineListAllowEmpty("bioLootAdditions", java.util.List.of(), value -> value instanceof String);
     public static final ModConfigSpec.ConfigValue<java.util.List<? extends String>> BIO_COLORS = B.defineListAllowEmpty("bioColors", java.util.List.of(), value -> value instanceof String);
     public static final ModConfigSpec SPEC = B.build();

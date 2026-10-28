@@ -33,9 +33,11 @@ public final class MachineMenu extends appeng.menu.AEBaseMenu implements appeng.
     }
     public MachineMenu(int id, Inventory inventory, MachineEntity machine) {
         super(Agristics.MENU.get(), id, inventory, machine); this.machine = machine; this.player = inventory.player;
+        if(machine instanceof NetworkPlanter && inventory.player.getPersistentData().getBoolean("appliedagristics.hideOrdinary")) search="hide_ordinary";
         if (machine instanceof CellCultivator) {
             addMachineSlot(0, 44, 29, false); addMachineSlot(1, 68, 29, false); addMachineSlot(2, 92, 29, false);
-            addMachineSlot(3, 44, 66, false); addMachineSlot(4, 116, 66, true); addMachineSlot(5, 140, 66, true);
+            addMachineSlot(3, 116, 48, true); addMachineSlot(4, 116, 70, true); addMachineSlot(5, 140, 70, true);
+
         } else if (machine instanceof ItemPort) {
             for (int i=0;i<16;i++) addMachineSlot(i,52+i%4*18,24+i/4*18,false);
         } else if (machine instanceof MEInfusionAltar) {
@@ -44,7 +46,7 @@ public final class MachineMenu extends appeng.menu.AEBaseMenu implements appeng.
         } else if (machine instanceof EarlyPlanter) {
             addMachineSlot(0, 26, 40, false); addMachineSlot(1, 62, 40, false);
             for (int i = 2; i < 11; i++) addMachineSlot(i, 108 + (i - 2) % 3 * 18, 34 + (i - 2) / 3 * 18, true);
-        } else if (machine instanceof SeedStorage) addMachineSlot(0, 24, 29, false);
+        } else if(machine instanceof SeedStorage) addMachineSlot(0,24,29,false);
         // ME planter upgrades now belong to physical structure modules, not inventory slots.
         machineSlots = slots.size();
         int inventoryX = machine instanceof CellCultivator || machine instanceof EarlyPlanter || machine instanceof AltarControls || machine instanceof ItemPort || machine instanceof EssenceVault ? 8 : 79;
@@ -73,6 +75,7 @@ public final class MachineMenu extends appeng.menu.AEBaseMenu implements appeng.
         }
         addSlot(new SlotItemHandler(machine.items, index, x, y) {
             @Override public boolean mayPlace(ItemStack stack) { return !output && super.mayPlace(stack); }
+            @Override public boolean isActive() { return !(machine instanceof CellCultivator && index>=4) || hasItem(); }
             @Override public boolean mayPickup(Player player) {
                 if (machine instanceof ItemPort port && port.isInput()) {
                     var locked=state.getIntArray("lockedSlots");

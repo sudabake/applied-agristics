@@ -20,6 +20,7 @@ neoForge {
         }
         server { server(); programArgument '--nogui' }
         gameTestServer {
+            if (project.hasProperty('gameTestDirectory')) gameDirectory = file(project.property('gameTestDirectory'))
             type = 'gameTestServer'
             systemProperty 'neoforge.enabledGameTestNamespaces', 'appliedagristics'
             systemProperty 'appliedagristics.tests', 'true'
@@ -54,16 +55,29 @@ dependencies {
 tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }
 tasks.named('test') { useJUnitPlatform() }
 processResources { inputs.property 'version', project.version; filesMatching('META-INF/neoforge.mods.toml') { expand version: project.version } }
+tasks.named('processResources') {
+    // Copy tasks can retain deleted input files; rebuild only this derived output directory.
+    doFirst {
+        def resourceOutput = destinationDir.toPath().toAbsolutePath().normalize()
+        def buildOutput = layout.buildDirectory.get().asFile.toPath().toAbsolutePath().normalize()
+        if (!resourceOutput.startsWith(buildOutput) || resourceOutput == buildOutput) {
+            throw new GradleException('Resource output must be a subdirectory of build')
+        }
+        project.delete(destinationDir)
+    }
+}
 jar {
+    archiveFileName = "applied-agristics-${release_name}.jar"
     exclude 'io/github/sudabake/appliedagristics/testing/**'
     exclude 'io/github/sudabake/appliedagristics/compat/jei/JeiSmoke*'
+    exclude 'data/appliedagristics/structure/empty.nbt'
     from('LICENSE', 'COPYING', 'THIRD_PARTY_NOTICES.md')
     from('third_party/jdte/LICENSE.txt') { into 'licenses/jdte' }
     from('third_party/mysticalagriculture/LICENSE.txt') { into 'licenses/mysticalagriculture' }
 }
 tasks.named('runGameTestServer').configure {
     doLast {
-        def log = file('run/logs/latest.log')
+        def log = file((project.findProperty('gameTestDirectory') ?: 'run') + '/logs/latest.log')
         if (!log.exists() || !(log.getText('UTF-8') =~ /All [1-9][0-9]* required tests passed/)) {
             throw new GradleException('GameTest server did not report passing required tests. Inspect run/logs/latest.log.')
         }

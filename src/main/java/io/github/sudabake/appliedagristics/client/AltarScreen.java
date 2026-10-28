@@ -32,9 +32,9 @@ public final class AltarScreen extends AEBaseScreen<MachineMenu> {
         super.drawBG(graphics, offsetX, offsetY, mouseX, mouseY, partialTick);
         for (var slot : menu.slots) {
             if (!menu.getSlots(SlotSemantics.UPGRADE).contains(slot) && slot.isActive())
-                Blitter.texture("guis/inscriber.png").src(7, 94, 18, 18).dest(leftPos + slot.x - 1, topPos + slot.y - 1).blit(graphics);
+                Icon.SLOT_BACKGROUND.getBlitter().dest(leftPos + slot.x - 1, topPos + slot.y - 1).blit(graphics);
         }
-        Blitter.texture("guis/molecular_assembler.png").src(85, 49, 34, 15).dest(leftPos + 83, topPos + 34).blit(graphics);
+        Blitter.texture("guis/molecular_assembler.png").src(85, 49, 34, 15).dest(leftPos + 76, topPos + 41).blit(graphics);
         Blitter.texture("guis/molecular_assembler.png").src(148, 48, 6, 18).dest(leftPos + 152, topPos + 39).blit(graphics);
     }
     @Override protected void updateBeforeRender() {

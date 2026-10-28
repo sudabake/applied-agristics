@@ -1,13 +1,10 @@
 # Project map
 
-- src/main/java: registration, machines, production, persistence, menus, messages and integrations.
-- src/test/java: pure JUnit logic tests.
-- src/main/java/.../testing: opt-in developer game/client fixtures, excluded from release JARs.
-- src/main/resources: runtime models, textures, recipes, language and GuideME pages.
-- tools: resource exporters and isolated rebuild verification.
-- art/drafts: approved rebuild exports; art/README.md lists their scope.
-- third_party and THIRD_PARTY_NOTICES.md: required upstream attribution.
-- docs/ME_MULTIBLOCK.md and docs/CROP_DATA.md: current gameplay/data interfaces.
-- docs/CODE_REVIEW_2026-10-23.md and docs/VERIFICATION.md: review and verification scope.
+- src/main/java: gameplay, networking, menus, integrations and opt-in development fixtures.
+- src/test/java: JUnit tests.
+- src/main/resources: committed runtime models, textures, recipes, language and guide pages.
+- tools: portable resource generation, isolated rebuild and release-resource audit.
+- art: required, privacy-screened resource rebuild exports.
+- third_party: retained copyright and license notices.
 
-Build and test commands are in the root README. Generated build/run directories are local and ignored.
+Current structure rules are in ME_MULTIBLOCK.md and crop interfaces in CROP_DATA.md. Build instructions are in the root README. Generated output, logs and game instances are local only.

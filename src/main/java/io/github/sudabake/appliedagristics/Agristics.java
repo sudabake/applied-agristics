@@ -4,6 +4,7 @@ import appeng.api.AECapabilities;
 import io.github.sudabake.appliedagristics.block.*;
 import io.github.sudabake.appliedagristics.menu.MachineMenu;
 import io.github.sudabake.appliedagristics.network.Messages;
+import io.github.sudabake.appliedagristics.multiblock.PlanterLayout;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.inventory.MenuType;
@@ -25,10 +26,16 @@ public final class Agristics {
     public static final DeferredRegister.Blocks BLOCKS = DeferredRegister.createBlocks(ID);
     public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(ID);
     public static final DeferredRegister<BlockEntityType<?>> ENTITIES = DeferredRegister.create(Registries.BLOCK_ENTITY_TYPE, ID);
+    public static final DeferredRegister<net.minecraft.world.entity.EntityType<?>> PROJECTILES=DeferredRegister.create(Registries.ENTITY_TYPE,ID);
+    public static final DeferredHolder<net.minecraft.world.entity.EntityType<?>,net.minecraft.world.entity.EntityType<io.github.sudabake.appliedagristics.biology.ThrownCulture>> THROWN_CULTURE=PROJECTILES.register("thrown_culture",()->net.minecraft.world.entity.EntityType.Builder.<io.github.sudabake.appliedagristics.biology.ThrownCulture>of(io.github.sudabake.appliedagristics.biology.ThrownCulture::new,net.minecraft.world.entity.MobCategory.MISC).sized(.25f,.25f).clientTrackingRange(4).updateInterval(10).build(ID+":thrown_culture"));
+    public static final DeferredRegister<net.minecraft.world.effect.MobEffect> EFFECTS=DeferredRegister.create(Registries.MOB_EFFECT,ID);
+    public static final DeferredHolder<net.minecraft.world.effect.MobEffect,io.github.sudabake.appliedagristics.biology.NourishmentEffect> NOURISHMENT=EFFECTS.register("nourishment",io.github.sudabake.appliedagristics.biology.NourishmentEffect::new);
     public static final DeferredRegister<MenuType<?>> MENUS = DeferredRegister.create(Registries.MENU, ID);
     public static final DeferredRegister<net.minecraft.world.item.crafting.RecipeSerializer<?>> RECIPES = DeferredRegister.create(Registries.RECIPE_SERIALIZER, ID);
     public static final DeferredRegister<net.minecraft.world.item.crafting.RecipeType<?>> RECIPE_TYPES=DeferredRegister.create(Registries.RECIPE_TYPE,ID);
     public static final DeferredHolder<net.minecraft.world.item.crafting.RecipeType<?>,net.minecraft.world.item.crafting.RecipeType<io.github.sudabake.appliedagristics.logic.PlantingRecipe>> PLANTING_TYPE=RECIPE_TYPES.register("planting",()->new net.minecraft.world.item.crafting.RecipeType<>() { @Override public String toString() { return ID+":planting"; } });
+    public static final DeferredHolder<net.minecraft.world.item.crafting.RecipeType<?>,net.minecraft.world.item.crafting.RecipeType<io.github.sudabake.appliedagristics.biology.BioInfusionRecipe>> BIO_INFUSION_TYPE=RECIPE_TYPES.register("bio_infusion",()->new net.minecraft.world.item.crafting.RecipeType<>() {});
+    public static final DeferredHolder<net.minecraft.world.item.crafting.RecipeSerializer<?>,io.github.sudabake.appliedagristics.biology.BioInfusionRecipe.Serializer> BIO_INFUSION_SERIALIZER=RECIPES.register("bio_infusion",io.github.sudabake.appliedagristics.biology.BioInfusionRecipe.Serializer::new);
     public static final DeferredHolder<net.minecraft.world.item.crafting.RecipeSerializer<?>,io.github.sudabake.appliedagristics.logic.PlantingRecipe.Serializer> PLANTING_SERIALIZER=RECIPES.register("planting",io.github.sudabake.appliedagristics.logic.PlantingRecipe.Serializer::new);
     public static final DeferredHolder<net.minecraft.world.item.crafting.RecipeSerializer<?>, io.github.sudabake.appliedagristics.logic.EmptyMachineRecipe.Serializer> EMPTY_MACHINE_RECIPE = RECIPES.register("empty_machine_upgrade", io.github.sudabake.appliedagristics.logic.EmptyMachineRecipe.Serializer::new);
     public static final DeferredRegister<net.minecraft.core.component.DataComponentType<?>> COMPONENTS = DeferredRegister.create(Registries.DATA_COMPONENT_TYPE, ID);
@@ -37,10 +44,14 @@ public final class Agristics {
     public static final DeferredHolder<net.minecraft.world.item.crafting.RecipeSerializer<?>, net.minecraft.world.item.crafting.SimpleCraftingRecipeSerializer<io.github.sudabake.appliedagristics.biology.BioLootRecipe>> BIO_LOOT_RECIPE = RECIPES.register("bio_loot", () -> new net.minecraft.world.item.crafting.SimpleCraftingRecipeSerializer<>(io.github.sudabake.appliedagristics.biology.BioLootRecipe::new));
     public static final DeferredRegister<CreativeModeTab> TABS = DeferredRegister.create(Registries.CREATIVE_MODE_TAB, ID);
     public static final DeferredBlock<MachineBlock> EARLY = block("early_planter", MachineBlock.Kind.EARLY);
+    // Load-only aliases for Alpha20 worlds/items, not creatable storage tiers.
+    public static final DeferredBlock<MachineBlock> LEGACY_SEEDS_FIRST = block("seed_storage_tier1", MachineBlock.Kind.SEEDS);
+    public static final DeferredBlock<MachineBlock> LEGACY_SEEDS_SECOND = block("seed_storage_tier2", MachineBlock.Kind.SEEDS);
     public static final DeferredBlock<MachineBlock> SEEDS = block("seed_storage", MachineBlock.Kind.SEEDS);
     public static final DeferredBlock<MachineBlock> NETWORK = block("network_planter", MachineBlock.Kind.NETWORK);
     public static final DeferredBlock<MachineBlock> CULTIVATOR = block("cell_cultivator", MachineBlock.Kind.CULTIVATOR);
     public static final DeferredBlock<MachineBlock> NETWORK_ACCESS = block("me_network_access", MachineBlock.Kind.ACCESS);
+    public static final DeferredBlock<MachineBlock> BIO_ALTAR = block("biological_altar", MachineBlock.Kind.BIO_ALTAR);
     public static final DeferredBlock<MachineBlock> ME_INFUSION = block("me_infusion_altar", MachineBlock.Kind.ME_INFUSION);
     public static final DeferredBlock<MachineBlock> INPUT_PORT = block("planter_input_port", MachineBlock.Kind.INPUT_PORT);
     public static final DeferredBlock<MachineBlock> OUTPUT_PORT = block("planter_output_port", MachineBlock.Kind.OUTPUT_PORT);
@@ -50,18 +61,23 @@ public final class Agristics {
     public static final DeferredBlock<PlanterPartBlock> SPEED_MODULE = part("planter_speed_module", io.github.sudabake.appliedagristics.multiblock.PlanterLayout.Role.SPEED);
     public static final DeferredBlock<PlanterPartBlock> PARALLEL_MODULE = part("planter_parallel_module", io.github.sudabake.appliedagristics.multiblock.PlanterLayout.Role.PARALLEL);
     public static final DeferredBlock<PlanterPartBlock> CONVERSION_MODULE = part("planter_conversion_module", io.github.sudabake.appliedagristics.multiblock.PlanterLayout.Role.CONVERSION);
-    public static final DeferredItem<Item> BIO_SEED = ITEMS.register("bio_seed", () -> new io.github.sudabake.appliedagristics.biology.BioItem(new Item.Properties()));
+    public static final DeferredBlock<io.github.sudabake.appliedagristics.biology.BioCropBlock> BIO_CROP = BLOCKS.register("bio_crop", () -> new io.github.sudabake.appliedagristics.biology.BioCropBlock(BlockBehaviour.Properties.ofFullCopy(net.minecraft.world.level.block.Blocks.WHEAT)));
+    public static final DeferredItem<Item> BIO_SEED = ITEMS.register("bio_seed", () -> new io.github.sudabake.appliedagristics.biology.BioSeedItem(BIO_CROP.get(),new Item.Properties()));
+    public static final DeferredHolder<BlockEntityType<?>,BlockEntityType<io.github.sudabake.appliedagristics.biology.BioCropEntity>> BIO_CROP_BE=ENTITIES.register("bio_crop",()->BlockEntityType.Builder.of(io.github.sudabake.appliedagristics.biology.BioCropEntity::new,BIO_CROP.get()).build(null));
     public static final DeferredItem<Item> BIO_ESSENCE = ITEMS.register("bio_essence", () -> new io.github.sudabake.appliedagristics.biology.BioItem(new Item.Properties()));
     public static final DeferredItem<Item> SAMPLER = ITEMS.register("bio_sampler", () -> new io.github.sudabake.appliedagristics.biology.BioItem(new Item.Properties()));
-    public static final DeferredItem<Item> CULTURE = ITEMS.register("mature_culture", () -> new io.github.sudabake.appliedagristics.biology.BioItem(new Item.Properties()));
+    public static final DeferredItem<Item> CULTURE = ITEMS.register("mature_culture", () -> new io.github.sudabake.appliedagristics.biology.CultureItem(new Item.Properties()));
     public static final DeferredItem<Item> EXTRACT = ITEMS.register("bio_extract", () -> new io.github.sudabake.appliedagristics.biology.BioItem(new Item.Properties()));
     public static final DeferredItem<Item> CAPSULE = ITEMS.registerSimpleItem("culture_capsule");
+    public static final DeferredItem<Item> EMPTY_BIO_SEED = ITEMS.registerSimpleItem("empty_bio_seed");
+    public static final DeferredItem<Item> CONDENSED_ESSENCE = ITEMS.registerSimpleItem("condensed_bio_essence");
     public static final DeferredItem<Item> NUTRIENT = ITEMS.registerSimpleItem("culture_nutrient");
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<EarlyPlanter>> EARLY_BE = ENTITIES.register("early_planter", () -> BlockEntityType.Builder.of(EarlyPlanter::new, EARLY.get()).build(null));
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<SeedStorage>> SEED_BE = ENTITIES.register("seed_storage", () -> BlockEntityType.Builder.of(SeedStorage::new, SEEDS.get()).build(null));
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<SeedStorage>> SEED_BE = ENTITIES.register("seed_storage", () -> BlockEntityType.Builder.of(SeedStorage::new, SEEDS.get(), LEGACY_SEEDS_FIRST.get(), LEGACY_SEEDS_SECOND.get()).build(null));
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<NetworkPlanter>> NETWORK_BE = ENTITIES.register("network_planter", () -> BlockEntityType.Builder.of(NetworkPlanter::new, NETWORK.get()).build(null));
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<CellCultivator>> CULTIVATOR_BE = ENTITIES.register("cell_cultivator", () -> BlockEntityType.Builder.of(CellCultivator::new, CULTIVATOR.get()).build(null));
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<NetworkAccess>> ACCESS_BE = ENTITIES.register("me_network_access", () -> BlockEntityType.Builder.of(NetworkAccess::new, NETWORK_ACCESS.get()).build(null));
+    public static final DeferredHolder<BlockEntityType<?>,BlockEntityType<BiologicalAltar>> BIO_ALTAR_BE=ENTITIES.register("biological_altar",()->BlockEntityType.Builder.of(BiologicalAltar::new,BIO_ALTAR.get()).build(null));
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<MEInfusionAltar>> INFUSION_BE = ENTITIES.register("me_infusion_altar", () -> BlockEntityType.Builder.of(MEInfusionAltar::new, ME_INFUSION.get()).build(null));
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<ItemPort>> INPUT_BE = ENTITIES.register("planter_input_port", () -> BlockEntityType.Builder.of((pos,state) -> new ItemPort(pos,state,true), INPUT_PORT.get()).build(null));
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<ItemPort>> OUTPUT_BE = ENTITIES.register("planter_output_port", () -> BlockEntityType.Builder.of((pos,state) -> new ItemPort(pos,state,false), OUTPUT_PORT.get()).build(null));
@@ -70,28 +86,30 @@ public final class Agristics {
     static {
         TABS.register("agriculture", () -> CreativeModeTab.builder().title(Component.translatable("itemGroup.appliedagristics"))
             .icon(() -> new ItemStack(EARLY.get())).displayItems((params, out) -> ITEMS.getEntries().stream()
-                .forEach(i -> out.accept(i.get()))).build());
+                .filter(i -> !i.getId().getPath().startsWith("seed_storage_tier")).forEach(i -> out.accept(i.get()))).build());
     }
     private static DeferredBlock<MachineBlock> block(String name, MachineBlock.Kind kind) {
-        var block = BLOCKS.register(name, () -> new MachineBlock(kind, BlockBehaviour.Properties.of().strength(3.5f).noOcclusion()));
+        var block = BLOCKS.register(name, () -> new MachineBlock(kind, BlockBehaviour.Properties.of().strength(2.5f).noOcclusion()));
         ITEMS.registerSimpleBlockItem(name, block);
         return block;
     }
     private static DeferredBlock<PlanterPartBlock> part(String name, io.github.sudabake.appliedagristics.multiblock.PlanterLayout.Role role) {
-        var block = BLOCKS.register(name, () -> new PlanterPartBlock(role, BlockBehaviour.Properties.of().strength(3.5f).noOcclusion()));
+        var block = BLOCKS.register(name, () -> new PlanterPartBlock(role, BlockBehaviour.Properties.of().strength(role==PlanterLayout.Role.FRAME ? 1.5f : 2.5f).noOcclusion()));
         ITEMS.registerSimpleBlockItem(name, block);
         return block;
     }
     public Agristics(IEventBus bus, ModContainer container) {
+        PROJECTILES.register(bus); EFFECTS.register(bus);
+        bus.addListener((net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent event)->event.enqueueWork(()->net.minecraft.world.level.block.DispenserBlock.registerProjectileBehavior(CULTURE.get())));
         BLOCKS.register(bus); ITEMS.register(bus); ENTITIES.register(bus); MENUS.register(bus); TABS.register(bus); RECIPES.register(bus); RECIPE_TYPES.register(bus); COMPONENTS.register(bus);
         container.registerConfig(ModConfig.Type.SERVER, Balance.SPEC);
         bus.addListener(this::capabilities);
         bus.addListener(Messages::register);
     }
     private void capabilities(RegisterCapabilitiesEvent event) {
+        event.registerBlockEntity(Capabilities.ItemHandler.BLOCK,BIO_ALTAR_BE.get(),(be,side)->be.automation(side));
         event.registerBlockEntity(Capabilities.ItemHandler.BLOCK, CULTIVATOR_BE.get(), (be, side) -> be.automation(side));
         event.registerBlockEntity(Capabilities.FluidHandler.BLOCK, CULTIVATOR_BE.get(), (be, side) -> be.water);
-        event.registerBlockEntity(Capabilities.EnergyStorage.BLOCK, CULTIVATOR_BE.get(), (be, side) -> be.energy);
         event.registerBlockEntity(Capabilities.ItemHandler.BLOCK, EARLY_BE.get(), (be, side) -> be.automation(side));
         event.registerBlockEntity(Capabilities.FluidHandler.BLOCK, EARLY_BE.get(), (be, side) -> be.water);
         event.registerBlockEntity(Capabilities.ItemHandler.BLOCK, SEED_BE.get(), (be, side) -> be.port);

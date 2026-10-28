@@ -1,10 +1,20 @@
 {
   "type": "minecraft:crafting_shaped",
   "category": "misc",
-  "pattern": ["W", "S"],
+  "pattern": [
+    " W",
+    "S "
+  ],
   "key": {
-    "W": {"tag": "minecraft:wool"},
-    "S": {"item": "minecraft:stick"}
+    "W": {
+      "tag": "minecraft:wool"
+    },
+    "S": {
+      "item": "minecraft:stick"
+    }
   },
-  "result": {"id": "appliedagristics:bio_sampler", "count": 4}
+  "result": {
+    "id": "appliedagristics:bio_sampler",
+    "count": 1
+  }
 }

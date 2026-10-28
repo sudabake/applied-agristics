@@ -14,6 +14,7 @@ import net.neoforged.neoforge.items.IItemHandler;
 import java.util.*;
 
 public final class SeedStorage extends GridMachine implements appeng.api.storage.IStorageProvider, io.github.sudabake.appliedagristics.multiblock.SeedBank {
+    public static boolean isStorage(BlockState state) { return state.getBlock() instanceof MachineBlock block && block.kind()==MachineBlock.Kind.SEEDS; }
     private io.github.sudabake.appliedagristics.multiblock.PlanterStructure structure;
     public void bind(io.github.sudabake.appliedagristics.multiblock.PlanterStructure structure) { this.structure=structure; }
     public void unbind(io.github.sudabake.appliedagristics.multiblock.PlanterStructure previous) { if (structure==previous) { structure=null; leases.clear(); } }
@@ -102,6 +103,12 @@ public final class SeedStorage extends GridMachine implements appeng.api.storage
         if (accepted > 0) { seeds.put(key, count(key) - accepted); if (count(key) == 0) seeds.remove(key); changed(); }
     }
     @Override public void step() {
+        if(!getBlockState().is(Agristics.SEEDS.get()) && level!=null && !level.isClientSide) {
+            var saved=saveWithFullMetadata(level.registryAccess());var state=Agristics.SEEDS.get().withPropertiesOf(getBlockState());
+            level.setBlockAndUpdate(worldPosition,state);
+            if(level.getBlockEntity(worldPosition) instanceof SeedStorage replacement){replacement.loadWithComponents(saved,level.registryAccess());replacement.setChanged();}
+            return;
+        }
         var stack = items.getStackInSlot(0);
         if (!stack.isEmpty()) {
             var key = AEItemKey.of(stack); long accepted = add(key, stack.getCount());
@@ -116,20 +123,23 @@ public final class SeedStorage extends GridMachine implements appeng.api.storage
     }
     @Override protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries); seeds.clear(); leases.clear();
-        for (var raw : tag.getList("seeds", Tag.TAG_COMPOUND)) {
-            var e = (CompoundTag) raw; var key = AEItemKey.fromTag(registries, e.getCompound("key"));
-            if (key != null && e.getLong("count") > 0) seeds.put(key, e.getLong("count"));
-        }
+        // Read the old map or merge every Alpha20 cell and overflow entry, without imposing a new limit.
+        for(var name:tag.getInt("seedStorageVersion")==2?List.of("seedCells","overflow"):List.of("seeds"))
+            for(var raw:tag.getList(name,Tag.TAG_COMPOUND)) {
+                var e=(CompoundTag)raw;var key=AEItemKey.fromTag(registries,e.getCompound("key"));long count=e.getLong("count");
+                if(key!=null && count>0)seeds.merge(key,count,Math::addExact);
+            }
     }
     @Override public CompoundTag snapshot(int page, String search) {
         var tag = super.snapshot(page, search);
         var filtered = seeds.keySet().stream().filter(k -> count(k) > 0)
             .sorted(Comparator.comparing(k -> Cultivations.id(k.toStack(1),level).toString())).toList();
-        var rows = new ListTag(); int start = Math.min(Math.max(0, filtered.size() - 4), Math.max(0, page));
-        for (var key : filtered.subList(start, Math.min(start + 4, filtered.size()))) {
+        int scrollRows=Math.max(1,(filtered.size()+2)/3-3);
+        var rows = new ListTag(); int start = Math.min(scrollRows-1,Math.max(0,page))*3;
+        for (var key : filtered.subList(start, Math.min(start + 12, filtered.size()))) {
             var row = new CompoundTag(); row.put("seed", key.toStack(1).save(level.registryAccess())); row.putString("id", Cultivations.id(key.toStack(1),level).toString());
             row.putString("name", key.getDisplayName().getString()); row.putLong("count", count(key)); row.putLong("used", used(key)); rows.add(row);
         }
-        tag.put("rows", rows); tag.putInt("pages", Math.max(1, filtered.size() - 3)); return tag;
+        tag.put("rows", rows); tag.putInt("pages",scrollRows); return tag;
     }
 }

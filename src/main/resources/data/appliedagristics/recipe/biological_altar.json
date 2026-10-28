@@ -1,0 +1,23 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " E ",
+    "SAS",
+    "SSS"
+  ],
+  "key": {
+    "E": {
+      "item": "mysticalagriculture:tertium_essence"
+    },
+    "S": {
+      "item": "minecraft:smooth_stone"
+    },
+    "A": {
+      "item": "mysticalagriculture:infusion_altar"
+    }
+  },
+  "result": {
+    "id": "appliedagristics:biological_altar",
+    "count": 1
+  }
+}

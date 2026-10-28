@@ -14,5 +14,9 @@ public final class TestingBootstrap {
         event.register(UniversalSeedGameTests.class);event.register(MultiblockGameTests.class);
         event.register(RemainingWorkGameTests.class);event.register(RevisionGameTests.class);
         event.register(AuditRegressionTests.class);event.register(DeepReviewTests.class);
+        event.register(Alpha18Tests.class);event.register(Alpha19Tests.class);event.register(Alpha20Tests.class);event.register(Alpha21Tests.class);
+        event.register(ReviewRegressionTests.class);
+        event.register(WordUpdateTests.class);
+        event.register(InteractionRevisionTests.class);
     }
 }

@@ -4,6 +4,19 @@
     "appliedagristics:early_planter",
     "appliedagristics:seed_storage",
     "appliedagristics:network_planter",
-    "appliedagristics:cell_cultivator"
+    "appliedagristics:cell_cultivator",
+    "appliedagristics:me_infusion_altar",
+    "appliedagristics:biological_altar",
+    "appliedagristics:seed_storage_tier1",
+    "appliedagristics:seed_storage_tier2",
+    "appliedagristics:me_network_access",
+    "appliedagristics:planter_frame",
+    "appliedagristics:cultivation_chamber",
+    "appliedagristics:planter_speed_module",
+    "appliedagristics:planter_parallel_module",
+    "appliedagristics:planter_conversion_module",
+    "appliedagristics:planter_input_port",
+    "appliedagristics:planter_output_port",
+    "appliedagristics:essence_vault"
   ]
 }

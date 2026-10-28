@@ -1,7 +1,7 @@
-# Alpha.17 validation
+# Beta 1.0 validation scope
 
-The review used an isolated Alpha.16 checkout to reproduce four defects before fixing production behavior. DeepReviewTests covers named-seed replant accounting, short infusion recipes, physical-slot container returns, external extraction followed by manual crafting, and transferred output components.
+Local pre-release validation passed 18 JUnit tests, 65 required GameTests on both the development and minimum dependency combinations, six portable resource-export tests and two isolated resource rebuilds. Inventory and protocol regressions cover same-key seed/output handling and long component-bearing control IDs. Upper-layer ports and modules are covered by a real-array GameTest.
 
-Local validation passed: 17 JUnit tests; 41 GameTests with default dependencies and 41 with minimum dependencies; eight client machine screens plus JEI/GuideME smoke checks; two isolated rebuilds with all 564 runtime resources and collision shapes unchanged. The allowlisted public snapshot independently passed clean build, 17 JUnit tests, 41 GameTests and resource rebuild checks. Initial reproductions and one old-world shutdown stall were retained locally; the final fresh-world runs exited normally. These checks do not establish crash-safe cross-file transactions, long-term multiplayer reliability, arbitrary mod compatibility or large-server performance.
+The release JAR is checked against current compiled classes and committed runtime resources. Retired textures, duplicate entries, missing model/texture references, orphan animation metadata, developer fixtures, local machine paths and PNG text/EXIF metadata are screened.
 
-No development logs, game saves or launcher files are included in this repository. Developer fixtures are excluded from the built JAR.
+These checks do not establish arbitrary modpack compatibility, long-term multiplayer reliability or large-server performance. No personal test worlds, logs, screenshots or launcher files are included. Hosted CI results are reported separately by GitHub Actions.

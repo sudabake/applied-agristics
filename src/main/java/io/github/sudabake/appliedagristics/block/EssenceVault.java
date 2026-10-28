@@ -15,6 +15,7 @@ import java.util.*;
 /** Machine-owned essence output storage. AE may extract, never insert. Drops as one data-bearing block. */
 public final class EssenceVault extends GridMachine implements IStorageProvider {
     private PlanterStructure structure;
+    private int priority;
     private final Map<AEItemKey,Long> contents=new LinkedHashMap<>();
     private final MEStorage networkInventory=new MEStorage() {
         @Override public net.minecraft.network.chat.Component getDescription() { return getDisplayName(); }
@@ -33,7 +34,13 @@ public final class EssenceVault extends GridMachine implements IStorageProvider 
     public void bind(PlanterStructure owner) { structure=owner; }
     public void unbind(PlanterStructure owner) { if (structure==owner) structure=null; }
     @Override public void release() { if (structure!=null) structure.invalidate(); super.release(); }
-    @Override public void mountInventories(IStorageMounts mounts) { mounts.mount(networkInventory,0); }
+    @Override public void mountInventories(IStorageMounts mounts) { mounts.mount(networkInventory,priority); }
+    public int getPriority() { return priority; }
+    public void setPriority(int value) {
+        if (priority==value) return;
+        priority=value; setChanged();
+        IStorageProvider.requestUpdate(getMainNode());
+    }
     public long storeProduced(AEItemKey key,long amount,boolean simulate) {
         if (amount<=0 || !Crops.essence(key.toStack(1))) return 0;
         long accepted=Amounts.insertable(contents.getOrDefault(key,0L),amount);
@@ -43,17 +50,17 @@ public final class EssenceVault extends GridMachine implements IStorageProvider 
     private void changed() { setChanged(); var grid=getMainNode().getGrid(); if (grid!=null) grid.getStorageService().invalidateCache(); }
     @Override public void step() { status=structure==null || !structure.formed() ? "unformed" : getMainNode().isActive() ? "online" : "offline"; }
     @Override protected void saveAdditional(CompoundTag tag,HolderLookup.Provider registries) {
-        super.saveAdditional(tag,registries); var list=new ListTag();
+        super.saveAdditional(tag,registries); tag.putInt("priority",priority); var list=new ListTag();
         contents.forEach((key,count)->{ var entry=new CompoundTag(); entry.put("key",key.toTag(registries)); entry.putLong("count",count); list.add(entry); }); tag.put("essences",list);
     }
     @Override protected void loadAdditional(CompoundTag tag,HolderLookup.Provider registries) {
-        super.loadAdditional(tag,registries); contents.clear();
+        super.loadAdditional(tag,registries); priority=tag.getInt("priority"); contents.clear();
         for (var raw:tag.getList("essences",10)) { var entry=(CompoundTag)raw; var key=AEItemKey.fromTag(registries,entry.getCompound("key")); long count=entry.getLong("count"); if (key!=null && count>0) contents.put(key,count); }
     }
     @Override public CompoundTag snapshot(int offset,String search) {
         var tag=super.snapshot(offset,search); var entries=List.copyOf(contents.entrySet());
         int start=Math.clamp(offset,0,Math.max(0,entries.size()-4)); var rows=new ListTag();
         for (var entry:entries.subList(start,Math.min(start+4,entries.size()))) { var row=new CompoundTag(); row.put("item",entry.getKey().toStack(1).save(level.registryAccess())); row.putLong("count",entry.getValue()); rows.add(row); }
-        tag.put("rows",rows); tag.putInt("pages",Math.max(1,entries.size()-3)); tag.putInt("types",contents.size()); return tag;
+        tag.put("rows",rows); tag.putInt("pages",Math.max(1,entries.size()-3)); tag.putInt("types",contents.size()); tag.putInt("priority",priority); return tag;
     }
 }

@@ -1,0 +1,10 @@
+{
+  "type": "appliedagristics:bio_infusion",
+  "center": {
+    "item": "appliedagristics:empty_bio_seed"
+  },
+  "essence": {
+    "item": "appliedagristics:condensed_bio_essence"
+  },
+  "ticks": 120
+}

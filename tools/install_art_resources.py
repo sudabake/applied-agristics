@@ -16,6 +16,14 @@ def collision_shapes(names):
         data=json.loads((ASSETS/f'models/block/{name}.json').read_text(encoding='utf-8'))
         elements=data.get('elements',[{'from':[0,0,0],'to':[16,16,16]}])
         elements=[e for e in elements if min(b-a for a,b in zip(e['from'],e['to']))>=(.03 if name=='cell_cultivator' else .2)]
+        if name == 'cell_cultivator':
+            # Only the external base, tank and pipe need collision/selection geometry.
+            # Internal cells and thin glass details create a huge voxel coordinate grid.
+            elements = [
+                {'from': [0, 0, 0], 'to': [16, 6, 16.55]},
+                {'from': [1.09, 5.9, 1.09], 'to': [14.91, 20.65, 14.91]},
+                {'from': [14.1, 5.7, 11.5], 'to': [16.6, 8.4, 12.9]},
+            ]
         boxes=','.join('{'+','.join(str(v) for v in e['from']+e['to'])+'}' for e in elements)
         statements.append(f'        shape{index}();')
         methods.append(f'    private static void shape{index}() {{ add("'+name+'",new double[][]{'+boxes+'}); }')

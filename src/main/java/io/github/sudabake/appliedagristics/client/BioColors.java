@@ -12,6 +12,9 @@ import net.neoforged.neoforge.client.event.RegisterColorHandlersEvent;
 @EventBusSubscriber(modid = Agristics.ID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public final class BioColors {
     @SubscribeEvent public static void setup(net.neoforged.fml.event.lifecycle.FMLClientSetupEvent event) {
+        event.enqueueWork(() -> net.minecraft.client.renderer.item.ItemProperties.register(Agristics.SAMPLER.get(),
+            net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(Agristics.ID,"sampled"),
+            (stack,level,entity,seed)->BioData.identified(stack)?1:0));
         event.enqueueWork(() -> net.minecraft.client.renderer.item.ItemProperties.register(Agristics.BIO_ESSENCE.get(),
             net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(Agristics.ID, "boss"), (stack, level, entity, seed) -> {
                 var id = BioData.identity(stack);
@@ -20,6 +23,11 @@ public final class BioColors {
     }
     @SubscribeEvent public static void colors(RegisterColorHandlersEvent.Item event) {
         event.register(BioColors::color, Agristics.BIO_SEED.get(), Agristics.BIO_ESSENCE.get());
+    }
+    @SubscribeEvent public static void blocks(RegisterColorHandlersEvent.Block event) {
+        event.register((state,level,pos,layer) -> level!=null && pos!=null
+            && level.getBlockEntity(pos) instanceof io.github.sudabake.appliedagristics.biology.BioCropEntity crop && crop.identity()!=null
+                ? color(BioData.withIdentity(Agristics.BIO_SEED.get(),crop.identity()),0) : 0xFF80A050,Agristics.BIO_CROP.get());
     }
     public static int color(ItemStack stack, int layer) {
         if (layer >= 2) return 0xFFFFFFFF;

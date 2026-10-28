@@ -16,10 +16,10 @@ public final class EmptyMachineRecipe extends ShapedRecipe {
     }
     @Override public boolean matches(CraftingInput input, Level level) {
         if (!super.matches(input, level)) return false;
-        for (var stack : input.items()) if (stack.is(Agristics.EARLY.get().asItem())) {
+        for (var stack : input.items()) if (stack.is(Agristics.EARLY.get().asItem()) || stack.is(Agristics.INPUT_PORT.get().asItem())) {
             var data = stack.get(DataComponents.BLOCK_ENTITY_DATA); if (data == null) continue;
             var tag = data.copyTag();
-            if (!tag.getCompound("inventory").getList("Items", 10).isEmpty() || !tag.getList("pending", 10).isEmpty()
+            if (!tag.getList("seedCells",10).isEmpty() || !tag.getList("seeds",10).isEmpty() || !tag.getList("overflow",10).isEmpty() || !tag.getCompound("inventory").getList("Items", 10).isEmpty() || !tag.getList("pending", 10).isEmpty()
                 || !net.neoforged.neoforge.fluids.FluidStack.parseOptional(level.registryAccess(), tag.getCompound("water").getCompound("Fluid")).isEmpty()) return false;
         }
         return true;

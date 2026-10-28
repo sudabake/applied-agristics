@@ -72,8 +72,10 @@ public final class JeiSmoke {
         require(manager.createRecipeLookup(AgristicsJei.STRUCTURE).get().count()==1,"Array structure recipe missing");
         require(manager.createRecipeLayoutDrawable(manager.getRecipeCategory(AgristicsJei.STRUCTURE),"agricultural_array",focus.getEmptyFocusGroup()).isPresent(),"Invalid array structure layout");
         var catalog = BioLootCatalog.clientCatalog(); var ingredientManager = runtime.getIngredientManager();
+        for(var retired:List.of(Agristics.LEGACY_SEEDS_FIRST.get().asItem(),Agristics.LEGACY_SEEDS_SECOND.get().asItem()))
+            require(ingredientManager.getAllItemStacks().stream().noneMatch(s->s.is(retired)),"Retired storage tiers must not appear in JEI");
         int equipment=0;
-        var derived=Set.of(Agristics.BIO_SEED.get(),Agristics.BIO_ESSENCE.get(),Agristics.CULTURE.get(),Agristics.EXTRACT.get());
+        var derived=Set.of(Agristics.BIO_SEED.get(),Agristics.BIO_ESSENCE.get(),Agristics.CULTURE.get(),Agristics.EXTRACT.get(),Agristics.LEGACY_SEEDS_FIRST.get().asItem(),Agristics.LEGACY_SEEDS_SECOND.get().asItem());
         for(var entry:Agristics.ITEMS.getEntries()) {
             var item=entry.get(); if(derived.contains(item)) continue;
             var output=focus.createFocus(RecipeIngredientRole.OUTPUT,VanillaTypes.ITEM_STACK,new ItemStack(item));
@@ -83,8 +85,8 @@ public final class JeiSmoke {
             for(var recipe:recipes) require(manager.createRecipeLayoutDrawable(manager.getRecipeCategory(RecipeTypes.CRAFTING),recipe,focus.getEmptyFocusGroup()).isPresent(),"Invalid equipment recipe layout: "+id);
             equipment++;
         }
-        require(equipment==17,"JEI equipment recipe coverage");
-        org.slf4j.LoggerFactory.getLogger("AppliedAgristicsTests").info("JEI_EQUIPMENT_RECIPES_PASSED equipment=17");
+        require(equipment==20,"JEI equipment recipe coverage");
+        org.slf4j.LoggerFactory.getLogger("AppliedAgristicsTests").info("JEI_EQUIPMENT_RECIPES_PASSED equipment=20");
         for (var entity : catalog.keySet()) for (var item : List.of(Agristics.BIO_SEED, Agristics.BIO_ESSENCE))
             require(ingredientManager.getAllItemStacks().stream().anyMatch(stack -> stack.is(item.get()) && entity.equals(BioData.identity(stack))), "Missing automatic variant: " + entity + "/" + item.getId());
         for (var item : List.of(Agristics.SAMPLER, Agristics.CULTURE, Agristics.EXTRACT)) {
@@ -98,13 +100,13 @@ public final class JeiSmoke {
         require(cowLoot.size() == catalog.get(COW).stream().filter(i->i!=Items.AIR).count(), "Wrong cow loot count: " + cowLoot.size());
         for (var recipe : cowLoot) require(catalog.get(COW).contains(recipe.value().getResultItem(Minecraft.getInstance().level.registryAccess()).getItem()), "Cross-species loot");
         var seedFocus = focus.createFocus(RecipeIngredientRole.OUTPUT, VanillaTypes.ITEM_STACK, BioData.withIdentity(Agristics.BIO_SEED.get(), COW));
-        require(manager.createRecipeLookup(RecipeTypes.CRAFTING).limitFocus(List.of(seedFocus)).get().count() == 1, "Seed recipe lookup");
+        require(manager.createRecipeLookup(AgristicsJei.RITUAL).limitFocus(List.of(seedFocus)).get().count() == 1, "Seed recipe lookup");
         var cultureFocus = focus.createFocus(RecipeIngredientRole.OUTPUT, VanillaTypes.ITEM_STACK, BioData.withIdentity(Agristics.CULTURE.get(), COW));
         require(manager.createRecipeLookup(AgristicsJei.CULTURE).limitFocus(List.of(cultureFocus)).get().count() == catalog.size(), "Generic culture must expose all species recipes");
         var extractFocus = focus.createFocus(RecipeIngredientRole.OUTPUT, VanillaTypes.ITEM_STACK, BioData.withIdentity(Agristics.EXTRACT.get(), COW));
         require(manager.createRecipeLookup(AgristicsJei.EXTRACTION).limitFocus(List.of(extractFocus)).get().count() == catalog.size(), "Generic extract must expose all species recipes");
         var emptyFocus = focus.getEmptyFocusGroup();
-        for (var type : List.of(AgristicsJei.SAMPLING, AgristicsJei.CULTURE, AgristicsJei.EXTRACTION, AgristicsJei.PLANTING))
+        for (var type : List.of(AgristicsJei.SAMPLING, AgristicsJei.CULTURE, AgristicsJei.EXTRACTION, AgristicsJei.PLANTING,AgristicsJei.RITUAL))
             for (var recipe : manager.createRecipeLookup(type).get().toList()) require(manager.createRecipeLayoutDrawable(manager.getRecipeCategory(type), recipe, emptyFocus).isPresent(), "Invalid process layout");
         var registries = Minecraft.getInstance().level.registryAccess();
         for (var holder : manager.createRecipeLookup(RecipeTypes.CRAFTING).get().filter(recipe -> recipe.id().getNamespace().equals(Agristics.ID) && recipe.id().getPath().startsWith("jei/")).toList()) {

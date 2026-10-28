@@ -1,6 +1,6 @@
 {
   "parent": "minecraft:item/generated",
   "textures": {
-    "layer0": "appliedagristics:item/jdte_ender_dragon_essence"
+    "layer0": "appliedagristics:item/ender_dragon_essence"
   }
 }

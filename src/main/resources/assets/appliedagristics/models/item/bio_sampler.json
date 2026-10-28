@@ -2,5 +2,13 @@
   "parent": "minecraft:item/generated",
   "textures": {
     "layer0": "appliedagristics:item/bio_sampler"
-  }
+  },
+  "overrides": [
+    {
+      "predicate": {
+        "appliedagristics:sampled": 1
+      },
+      "model": "appliedagristics:item/bio_sampler_sampled"
+    }
+  ]
 }

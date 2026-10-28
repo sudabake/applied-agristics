@@ -1,4 +1,4 @@
-"""Preserve licensed JDTE animation; split dragon art into tintable RGBA layers."""
+"""PNG helpers and tint layers for the project's original biological essence."""
 import struct
 import zlib
 from pathlib import Path
@@ -37,31 +37,34 @@ def write_rgba(path, width, height, rows):
         +chunk(b'IDAT', zlib.compress(b''.join(b'\0'+row for row in rows)))+chunk(b'IEND', b''))
 
 def generate(root, write):
-    source = Path(__file__).resolve().parents[1]/'third_party/jdte'
+    source = Path(__file__).resolve().parents[1]/'art/drafts/alpha18_original_v01'
     destination = root/'assets/appliedagristics/textures/item'
     for name in ['wither_essence', 'ender_dragon_essence']:
-        (destination/f'jdte_{name}.png').write_bytes((source/f'{name}.png').read_bytes())
-        write(f'assets/appliedagristics/textures/item/jdte_{name}.png.mcmeta', {'animation': {'frametime': 2, 'interpolate': False}})
+        stem='dragon_essence' if name=='ender_dragon_essence' else name
+        (destination/f'{name}.png').write_bytes((source/f'{stem}-sheet.png').read_bytes())
+        write(f'assets/appliedagristics/textures/item/{name}.png.mcmeta', {'animation': {'frametime': 3, 'interpolate': False}})
         write(f'assets/appliedagristics/models/item/bio_{name}.json', {'parent': 'minecraft:item/generated',
-            'textures': {'layer0': f'appliedagristics:item/jdte_{name}'}})
-    width, height, pixels = read_rgba(source/'ender_dragon_essence.png')
+            'textures': {'layer0': f'appliedagristics:item/{name}'}})
+        for suffix in ('.png','.png.mcmeta'):
+            (destination/f'jdte_{name}{suffix}').unlink(missing_ok=True)
+    width, height, pixels = read_rgba(source/'biological_essence-sheet.png')
+    # Native Aseprite palette: neutral membrane, primary body, secondary organelles.
+    palette={(0x24,0x3c,0x34):(2,0), (0x51,0x72,0x4b):(0,135),
+             (0x86,0xb7,0x5f):(0,210), (0xcc,0xec,0xa2):(1,220), (0xef,0xfb,0xd0):(1,255)}
     for layer in range(3):
         rows = []
         for source_row in pixels:
             row = bytearray()
             for x in range(width):
                 r,g,b,a = source_row[x*4:x*4+4]
-                colored = max(r,g,b)-min(r,g,b) > 20
-                body = not colored and max(r,g,b) > 30
-                target = 1 if colored else 0 if body else 2
+                target,shade = palette.get((r,g,b),(2,0))
                 if a == 0 or target != layer: row.extend((0,0,0,0))
-                elif layer == 2: row.extend((r,g,b,a))
+                elif layer == 2: row.extend((29,35,40,a))
                 else:
-                    shade = max(r,g,b) if colored else min(180,max(r,g,b)*3)
                     row.extend((shade,shade,shade,a))
             rows.append(row)
         write_rgba(destination/f'bio_essence_{layer}.png', width,height,rows)
-        write(f'assets/appliedagristics/textures/item/bio_essence_{layer}.png.mcmeta', {'animation': {'frametime': 2, 'interpolate': False}})
+        write(f'assets/appliedagristics/textures/item/bio_essence_{layer}.png.mcmeta', {'animation': {'frametime': 3, 'interpolate': False}})
     write('assets/appliedagristics/models/item/bio_essence.json', {'parent':'minecraft:item/generated',
         'textures': {f'layer{i}': f'appliedagristics:item/bio_essence_{i}' for i in range(3)},
         'overrides': [

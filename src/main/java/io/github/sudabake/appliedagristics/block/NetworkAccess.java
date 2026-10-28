@@ -5,7 +5,6 @@ import appeng.api.storage.IStorageProvider;
 import io.github.sudabake.appliedagristics.Agristics;
 import io.github.sudabake.appliedagristics.multiblock.PlanterStructure;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.block.state.BlockState;
 
@@ -30,8 +29,7 @@ public final class NetworkAccess extends GridMachine implements IStorageProvider
     }
     @Override public void step() { status = !connectedStructure() ? "unformed" : getMainNode().isActive() ? "online" : "offline"; }
     @Override public void open(ServerPlayer player) {
-        if (connectedStructure()) structure.controller().open(player);
-        else player.displayClientMessage(Component.translatable("status.appliedagristics.unformed"), true);
+        // Connection-only component; planter management belongs to the controller.
     }
     @Override public void release() {
         var previous = structure;

@@ -1,12 +1,24 @@
 {
   "type": "minecraft:crafting_shaped",
   "category": "misc",
-  "pattern": [" I ", "HFC", " I "],
+  "pattern": [
+    "C",
+    "F",
+    "H"
+  ],
   "key": {
-    "I": {"item": "minecraft:iron_ingot"},
-    "H": {"item": "minecraft:hopper"},
-    "F": {"item": "appliedagristics:planter_frame"},
-    "C": {"item": "ae2:formation_core"}
+    "H": {
+      "item": "minecraft:hopper"
+    },
+    "F": {
+      "item": "appliedagristics:planter_frame"
+    },
+    "C": {
+      "item": "minecraft:chest"
+    }
   },
-  "result": {"id": "appliedagristics:planter_output_port", "count": 1}
+  "result": {
+    "id": "appliedagristics:planter_output_port",
+    "count": 1
+  }
 }

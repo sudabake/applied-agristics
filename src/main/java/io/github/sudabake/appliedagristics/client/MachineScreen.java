@@ -18,6 +18,7 @@ public final class MachineScreen extends AbstractContainerScreen<MachineMenu> {
     private final List<EditBox> targets = new ArrayList<>();
     private final List<Button> applies = new ArrayList<>();
     private boolean draggingScroll;
+    private Button cropFilter;
     private String rowSignature = "";
     public MachineScreen(MachineMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title); imageWidth = menu.machine instanceof EarlyPlanter ? 176 : 320;
@@ -33,17 +34,19 @@ public final class MachineScreen extends AbstractContainerScreen<MachineMenu> {
         super.init(); checks.clear(); targets.clear(); applies.clear(); rowSignature = "";
         if (!menu.machine.networkMachine()) return;
         if (menu.machine instanceof NetworkPlanter) {
+            cropFilter=addRenderableWidget(Button.builder(Component.empty(),b -> send(12,"",0)).bounds(leftPos+174,topPos+5,104,18).build(AeButton::new));
+            addRenderableWidget(Button.builder(Component.literal("IO"),b -> minecraft.setScreen(new NetworkIOScreen(this))).bounds(leftPos+282,topPos+5,29,18).build(AeButton::new));
             addRenderableWidget(Button.builder(Component.translatable("gui.appliedagristics.enable_all"), b -> send(5, "", 0)).bounds(leftPos + 240, topPos + 26, 34, 18).build(AeButton::new));
             addRenderableWidget(Button.builder(Component.translatable("gui.appliedagristics.disable_all"), b -> send(6, "", 0)).bounds(leftPos + 277, topPos + 26, 34, 18).build(AeButton::new));
         }
         if (menu.machine instanceof SeedStorage) addRenderableWidget(Button.builder(Component.translatable("gui.appliedagristics.collect"), b -> send(0, "", 0)).bounds(leftPos + 48, topPos + 26, 48, 18).build(AeButton::new));
-        for (int i = 0; i < 4; i++) {
-            final int index = i; int y = topPos + 60 + i * 22;
+        for (int i = 0; i < (menu.machine instanceof SeedStorage ? 12 : 4); i++) {
+            final int index = i; int y = topPos + rowY(i);
             checks.add(addRenderableWidget(Button.builder(Component.literal("-"), b -> {
                 var row = row(index); if (row == null) return;
                 if (menu.machine instanceof SeedStorage) send(3, row.getString("id"), index);
                 else send(row.getBoolean("enabled") ? 2 : 1, row.getString("id"), target(index, row));
-            }).bounds(leftPos + 8, y, 20, 18).build(AeButton::new)));
+            }).bounds(leftPos + (menu.machine instanceof SeedStorage ? 86+i%3*100 : 8), y, menu.machine instanceof SeedStorage ? 16 : 20, 18).build(AeButton::new)));
             if (menu.machine instanceof NetworkPlanter) {
                 var target = addRenderableWidget(new EditBox(font, leftPos + 196, y, 64, 18, Component.translatable("gui.appliedagristics.target")));
                 target.setMaxLength(19); target.setFilter(s -> s.matches("[0-9]*|-1|-")); targets.add(target);
@@ -51,12 +54,14 @@ public final class MachineScreen extends AbstractContainerScreen<MachineMenu> {
             }
         }
     }
+    private int rowY(int index) { return 60+(menu.machine instanceof SeedStorage ? index/3 : index)*22; }
     private CompoundTag row(int index) { var rows = menu.state.getList("rows", Tag.TAG_COMPOUND); return index < rows.size() ? rows.getCompound(index) : null; }
     private long target(int index, CompoundTag row) { try { return Long.parseLong(targets.get(index).getValue()); } catch (NumberFormatException e) { return row.getLong("target"); } }
     @Override protected void containerTick() {
         super.containerTick();
         if (menu.machine.networkMachine()) menu.page = Math.clamp(menu.page, 0, Math.max(0, menu.state.getInt("pages") - 1));
-        var signature = new StringBuilder(); for (int i = 0; i < 4; i++) { var row = row(i); if (row != null) signature.append(row.getString("id")).append(';'); }
+        if(cropFilter!=null) cropFilter.setMessage(Component.translatable(menu.state.getBoolean("hideOrdinary")?"gui.appliedagristics.show_ordinary":"gui.appliedagristics.hide_ordinary"));
+        var signature = new StringBuilder(); for (int i = 0; i < checks.size(); i++) { var row = row(i); if (row != null) signature.append(row.getString("id")).append(';'); }
         boolean changed = !signature.toString().equals(rowSignature); rowSignature = signature.toString();
         for (int i = 0; i < checks.size(); i++) {
             var row = row(i); checks.get(i).visible = row != null;
@@ -71,7 +76,8 @@ public final class MachineScreen extends AbstractContainerScreen<MachineMenu> {
         panel(g, leftPos, topPos, imageWidth, imageHeight);
         for (var slot : menu.slots) {
             int x = leftPos + slot.x - 1, y = topPos + slot.y - 1;
-            boolean basic = menu.machine instanceof EarlyPlanter;
+            if (menu.machine.networkMachine()) { appeng.client.gui.Icon.SLOT_BACKGROUND.getBlitter().dest(x,y).blit(g); continue; }
+            boolean basic = true;
             g.fill(x, y, x + 18, y + 18, basic ? 0xFF373737 : 0xFF88899E);
             g.fill(x + 1, y + 1, x + 18, y + 18, 0xFFF1F1F5);
             g.fill(x + 1, y + 1, x + 17, y + 17, basic ? 0xFF8B8B8B : 0xFFA8A9BE);
@@ -85,14 +91,17 @@ public final class MachineScreen extends AbstractContainerScreen<MachineMenu> {
             if (menu.machine instanceof NetworkPlanter) g.drawString(font, font.plainSubstrByWidth("×" + compact(menu.state.getDouble("speed")) + "  " + compact(menu.state.getDouble("power")) + " AE/t", 220), leftPos + 16, topPos + 31, 0x404054, false);
             label(g, menu.machine instanceof NetworkPlanter ? "seed_parallel" : "seed_count", 54, 48);
             if (menu.machine instanceof NetworkPlanter) { label(g, "stock", 145, 48); label(g, "target", 196, 48); label(g, "state", 288, 48); }
-            for (int i = 0; i < 4; i++) {
-                var row = row(i); if (row == null) continue; int y = topPos + 60 + i * 22;
-                g.fill(leftPos + 32, y - 1, leftPos + 310, y + 21, 0xFFBFC0CE);
-                var seed = ItemStack.parseOptional(minecraft.level.registryAccess(), row.getCompound("seed")); g.renderItem(seed, leftPos + 34, y);
+            for (int i = 0; i < checks.size(); i++) {
+                var row = row(i); if (row == null) continue; int y = topPos + rowY(i);
+                boolean storage=menu.machine instanceof SeedStorage;
+                int x=leftPos+(storage ? 8+i%3*100 : 32);
+                g.fill(x, y - 1, storage?x+96:leftPos+310, y + 21, 0xFFBFC0CE);
+                var seed = ItemStack.parseOptional(minecraft.level.registryAccess(), row.getCompound("seed")); g.renderItem(seed, x+2, y);
                 var crop = com.blakebr0.mysticalagriculture.registry.CropRegistry.getInstance().getCropById(net.minecraft.resources.ResourceLocation.tryParse(row.getString("id")));
                 String name = io.github.sudabake.appliedagristics.biology.BioData.seed(seed) ? net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.get(io.github.sudabake.appliedagristics.biology.BioData.identity(seed)).getDescription().getString() : crop == null ? seed.getHoverName().getString() : crop.getDisplayName().getString();
-                g.drawString(font, font.plainSubstrByWidth(name, 70), leftPos + 54, y + 1, 0x404054, false);
-                g.drawString(font, row.getLong("used") + "/" + row.getLong("count"), leftPos + 54, y + 11, 0x66667A, false);
+                boolean hover=mouseX>=x && mouseX<x+96 && mouseY>=y && mouseY<y+22;
+                rowText(g,name,x+22,y+1,storage?52:70,0x404054,storage&&hover);
+                rowText(g,row.getLong("used") + "/" + row.getLong("count"),x+22,y+11,storage?52:70,0x66667A,hover);
                 if (menu.machine instanceof NetworkPlanter) {
                     var output = ItemStack.parseOptional(minecraft.level.registryAccess(), row.getCompound("output")); g.renderItem(output, leftPos + 126, y);
                     g.drawString(font, font.plainSubstrByWidth(Long.toString(row.getLong("stock")), 48), leftPos + 145, y + 4, 0x404054, false);
@@ -107,16 +116,19 @@ public final class MachineScreen extends AbstractContainerScreen<MachineMenu> {
             }
         }
     }
-    private void drawWaterTank(GuiGraphics graphics,int x,int y,int width,int height) {
-        appeng.client.gui.Icon.SLOT_BACKGROUND.getBlitter().dest(x,y,width,height).blit(graphics);
-        int filled=Math.clamp(menu.state.getInt("water")*(height-4)/16000,0,height-4);
-        if (filled>0) {
-            graphics.enableScissor(x+2,y+height-2-filled,x+width-2,y+height-2);
-            var fluid=appeng.client.gui.style.FluidBlitter.create(new net.neoforged.neoforge.fluids.FluidStack(net.minecraft.world.level.material.Fluids.WATER,1));
-            for (int py=y+2;py<y+height-2;py+=16) fluid.dest(x+2,py,width-4,16).blit(graphics);
-            graphics.disableScissor();
+    private void rowText(GuiGraphics g,String value,int x,int y,int width,int color,boolean scroll) {
+        if(scroll && font.width(value)>width) RowText.draw(g,font,Component.literal(value),x,y,x+width,y+9,color);
+        else g.drawString(font,font.plainSubstrByWidth(value,width),x,y,color,false);
+    }
+    /** Reuse Minecraft's own clipped marquee text. */
+    private abstract static class RowText extends AbstractWidget {
+        private RowText() { super(0,0,0,0,Component.empty()); }
+        static void draw(GuiGraphics g,net.minecraft.client.gui.Font font,Component text,int x,int y,int right,int bottom,int color) {
+            renderScrollingString(g,font,text,x,y,right,bottom,color);
         }
-        for (int py=y+6;py<y+height-3;py+=8) graphics.fill(x+width-6,py,x+width-2,py+1,0xFFBFC0CE);
+    }
+    private void drawWaterTank(GuiGraphics graphics,int x,int y,int width,int height) {
+        WaterGauge.draw(graphics,x,y,width,height,menu.state.getInt("water"));
     }
     private static final class AeButton extends appeng.client.gui.widgets.AE2Button {
         private AeButton(Button.Builder builder) { this(builder.build()); }
@@ -154,7 +166,7 @@ public final class MachineScreen extends AbstractContainerScreen<MachineMenu> {
             if (mouseX >= leftPos + 16 && mouseX < leftPos + 236) g.renderComponentTooltip(font, List.of(
                 Component.translatable("gui.appliedagristics.module_summary", menu.state.getInt("speedModules"), menu.state.getInt("parallelModules"), menu.state.getBoolean("conversion") ? "✓" : "×"),
                 Component.translatable("gui.appliedagristics.network_speed", String.format(Locale.ROOT, "%.3f", menu.state.getDouble("speed"))),
-                Component.translatable("gui.appliedagristics.network_power", String.format(Locale.ROOT, "%.2f", menu.state.getDouble("power")))), mouseX, mouseY);
+                Component.translatable("gui.appliedagristics.network_power", compact(menu.state.getDouble("power")))), mouseX, mouseY);
         }
         if (menu.machine instanceof EarlyPlanter && mouseX >= leftPos + 8 && mouseX < leftPos + 168 && mouseY >= topPos + 94 && mouseY < topPos + 122) {
             var tips = new ArrayList<Component>();
@@ -168,15 +180,22 @@ public final class MachineScreen extends AbstractContainerScreen<MachineMenu> {
             g.renderComponentTooltip(font, tips, mouseX, mouseY);
         }
         for (int i = 0; i < checks.size(); i++) {
-            var row = row(i); if (row == null) continue; int y = topPos + 60 + i * 22;
+            var row = row(i); if (row == null) continue; int y = topPos + rowY(i);
             if (mouseY >= y && mouseY < y + 20) {
+                if(menu.machine instanceof SeedStorage) {
+                    int x=leftPos+8+i%3*100;
+                    if(mouseX>=x && mouseX<x+76) g.renderComponentTooltip(font,List.of(
+                        ItemStack.parseOptional(minecraft.level.registryAccess(),row.getCompound("seed")).getHoverName(),
+                        Component.literal(row.getLong("used")+" / "+row.getLong("count"))),mouseX,mouseY);
+                    continue;
+                }
                 if (menu.machine instanceof NetworkPlanter && mouseX >= leftPos + 196 && mouseX < leftPos + 260) g.renderTooltip(font, Component.translatable("gui.appliedagristics.target_help"), mouseX, mouseY);
                 if (mouseX >= leftPos + 34 && mouseX < leftPos + 50) g.renderTooltip(font, ItemStack.parseOptional(minecraft.level.registryAccess(), row.getCompound("seed")), mouseX, mouseY);
                 else if (menu.machine instanceof NetworkPlanter && mouseX >= leftPos + 145 && mouseX < leftPos + 192) g.renderTooltip(font, Component.literal(Long.toString(row.getLong("stock"))), mouseX, mouseY);
                 else if (menu.machine instanceof NetworkPlanter && mouseX >= leftPos + 288 && mouseX < leftPos + 318) g.renderTooltip(font, Component.translatable("status.appliedagristics." + row.getString("status")), mouseX, mouseY);
                 else if (menu.machine instanceof NetworkPlanter && mouseX >= leftPos + 54 && mouseX < leftPos + 124) g.renderComponentTooltip(font, List.of(
                     Component.literal(row.getLong("used") + " / " + row.getLong("count")),
-                    Component.translatable("gui.appliedagristics.network_power", String.format(Locale.ROOT, "%.2f", row.getDouble("power"))),
+                    Component.translatable("gui.appliedagristics.network_power", compact(row.getDouble("power"))),
                     Component.translatable("gui.appliedagristics.required_power", compact(row.getDouble("requiredPower"))),
                     Component.translatable("gui.appliedagristics.next_speed_power", compact(row.getDouble("nextSpeedPower"))),
                     Component.translatable("gui.appliedagristics.next_parallel_power", compact(row.getDouble("nextParallelPower")))), mouseX, mouseY);
@@ -203,6 +222,7 @@ public final class MachineScreen extends AbstractContainerScreen<MachineMenu> {
         return super.mouseReleased(x, y, button);
     }
     private static String compact(double value) {
+        if(value>0 && value<.01) return String.format(Locale.ROOT,"%.3g",value);
         if (value >= 1e9) return String.format(Locale.ROOT, "%.2fG", value / 1e9);
         if (value >= 1e6) return String.format(Locale.ROOT, "%.2fM", value / 1e6);
         if (value >= 1e3) return String.format(Locale.ROOT, "%.1fk", value / 1e3);

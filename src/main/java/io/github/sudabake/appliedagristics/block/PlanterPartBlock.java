@@ -4,7 +4,6 @@ import io.github.sudabake.appliedagristics.multiblock.PlanterLayout;
 import io.github.sudabake.appliedagristics.multiblock.PlanterStructure;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.context.BlockPlaceContext;
@@ -48,10 +47,7 @@ public final class PlanterPartBlock extends Block {
         PlanterStructure.changed(level, source);
     }
     @Override protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
-        if (!level.isClientSide && player instanceof ServerPlayer server) {
-            var owner = PlanterStructure.ownerAt(level, pos);
-            if (owner != null) owner.controller().open(server);
-        }
-        return InteractionResult.sidedSuccess(level.isClientSide);
+        // Passive casing must also let the held item's placement action continue.
+        return InteractionResult.PASS;
     }
 }

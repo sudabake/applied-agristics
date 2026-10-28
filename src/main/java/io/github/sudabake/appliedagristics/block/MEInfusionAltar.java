@@ -50,6 +50,14 @@ public final class MEInfusionAltar extends GridMachine implements AltarControls,
     @Override public net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket getUpdatePacket() { return net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket.create(this); }
     @Override public void onDataPacket(net.minecraft.network.Connection connection,net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket packet,HolderLookup.Provider registries) { handleUpdateTag(packet.getTag(),registries); }
     @Override public int accelerationCards() { int count=0; for (int i=2;i<6;i++) if (items.getStackInSlot(i).is(appeng.core.definitions.AEItems.SPEED_CARD.asItem())) count++; return count; }
+    public boolean insertAcceleration(ItemStack held, boolean simulate) {
+        if (!held.is(appeng.core.definitions.AEItems.SPEED_CARD.asItem())) return false;
+        for (int i=2;i<6;i++) if (items.getStackInSlot(i).isEmpty()) {
+            if (!simulate) items.setStackInSlot(i,held.copyWithCount(1));
+            return true;
+        }
+        return false;
+    }
     public int speed() { return 1 << accelerationCards(); }
     @Override public void configureSide(int side,int mode) { if (side>=0 && side<6 && mode>=0 && mode<=3) { sides[side]=mode; setChanged(); } }
     @Override public int sideMode(int side) { return sides[side]; }

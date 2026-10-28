@@ -2,16 +2,13 @@
   "type": "minecraft:crafting_shaped",
   "category": "misc",
   "pattern": [
-    "CGC",
+    "S S",
     "PHP",
-    "CCC"
+    "SSS"
   ],
   "key": {
-    "C": {
-      "item": "minecraft:copper_ingot"
-    },
-    "G": {
-      "item": "minecraft:glass"
+    "S": {
+      "item": "minecraft:stone"
     },
     "P": {
       "item": "mysticalagriculture:prosperity_shard"

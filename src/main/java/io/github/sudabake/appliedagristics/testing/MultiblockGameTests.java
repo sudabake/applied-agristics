@@ -43,17 +43,16 @@ public final class MultiblockGameTests {
         h.getLevel().setBlockAndUpdate(f.output().getBlockPos().north(),Blocks.CHEST.defaultBlockState());
         h.getLevel().setBlockAndUpdate(f.input().getBlockPos().north(),Blocks.CHEST.defaultBlockState());
         h.runAtTickTime(100,()->{
-            var port=f.output(); port.items.setStackInSlot(0,new ItemStack(Items.WHEAT,12)); port.configureSide(Direction.NORTH.ordinal(),2); port.toggleAutoOutput(); port.step();
+            var port=f.output(); port.items.setStackInSlot(0,new ItemStack(Items.WHEAT,12)); port.toggleAutoOutput(); port.step();
             var chest=h.getLevel().getCapability(Capabilities.ItemHandler.BLOCK,port.getBlockPos().north(),Direction.SOUTH);
             h.assertTrue(chest!=null && chest.getStackInSlot(0).is(Items.WHEAT) && chest.getStackInSlot(0).getCount()==12,"Configured auto output pushes to neighboring inventory");
             h.assertTrue(port.items.getSlots()==16 && port.items.getStackInSlot(0).isEmpty(),"Output has sixteen slots and moves actual items once");
-            port.configureSide(Direction.NORTH.ordinal(),0); h.assertTrue(port.automation(Direction.NORTH).insertItem(0,new ItemStack(Items.DIRT),true).getCount()==1,"Disabled face rejects insertion");
+            h.assertTrue(port.automation(Direction.NORTH).insertItem(0,new ItemStack(Items.DIRT),true).getCount()==1,"Output rejects external insertion");
             var save=port.saveWithFullMetadata(h.getLevel().registryAccess()); var restored=new ItemPort(port.getBlockPos(),port.getBlockState(),false); restored.setLevel(h.getLevel()); restored.loadWithComponents(save,h.getLevel().registryAccess());
-            h.assertTrue(restored.sideMode(Direction.NORTH.ordinal())==0 && restored.snapshot(0,"").getBoolean("autoOutput"),"Port IO modes and automatic output survive serialization");
-            var supply=h.getLevel().getCapability(Capabilities.ItemHandler.BLOCK,f.input().getBlockPos().north(),Direction.SOUTH);
-            supply.insertItem(0,new ItemStack(Items.WHEAT_SEEDS,10),false); supply.insertItem(1,new ItemStack(Items.DIRT,5),false);
-            f.input().configureSide(Direction.NORTH.ordinal(),1); f.input().toggleAutoInput(); f.input().step();
-            h.assertTrue(f.input().count(AEItemKey.of(new ItemStack(Items.WHEAT_SEEDS)))==10 && supply.getStackInSlot(0).isEmpty() && supply.getStackInSlot(1).getCount()==5,"Automatic input takes only valid seeds from the configured neighbor");
+            h.assertTrue(restored.snapshot(0,"").getBoolean("autoOutput"),"Automatic output survives serialization");
+            var input=f.input().automation(Direction.NORTH);
+            h.assertTrue(input.insertItem(0,new ItemStack(Items.WHEAT_SEEDS,10),false).isEmpty()
+                && input.insertItem(1,new ItemStack(Items.DIRT,5),false).getCount()==5,"Seed storage accepts piped seeds and rejects dirt without IO settings");
             for (int i=0;i<16;i++) port.items.setStackInSlot(i,new ItemStack(Items.DIRT,64));
             f.input().items.setStackInSlot(0,new ItemStack(Items.WHEAT_SEEDS)); var crop=Cultivations.seed(new ItemStack(Items.WHEAT_SEEDS),h.getLevel(),f.controller().getBlockPos());
             f.controller().configure(crop.getId(),true,-1); f.controller().step();
@@ -66,11 +65,11 @@ public final class MultiblockGameTests {
         h.runAtTickTime(100,()->{
             var player=h.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
             player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND,AEItems.CERTUS_QUARTZ_WRENCH.stack());
-            var pos=f.output().getBlockPos(); int mode=f.output().sideMode(Direction.NORTH.ordinal());
+            var pos=f.output().getBlockPos(); var facing=f.output().outputFace();
             var hit=new net.minecraft.world.phys.BlockHitResult(net.minecraft.world.phys.Vec3.atCenterOf(pos),Direction.NORTH,pos,false);
             var event=new net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickBlock(player,net.minecraft.world.InteractionHand.MAIN_HAND,pos,hit);
             MachineWrench.wrench(event);
-            h.assertTrue(event.isCanceled() && f.output().sideMode(Direction.NORTH.ordinal())==(mode+1)%4,"Native AE wrench cycles the clicked IO face");
+            h.assertTrue(event.isCanceled() && f.output().outputFace()==facing,"Wrench does not alter the fixed output face of a formed array");
             var essence=AEItemKey.of(new ItemStack(Crops.all().getFirst().getEssenceItem()));
             f.vault().storeProduced(essence,10_000_000_000L,false); var expected=f.vault().saveWithFullMetadata(h.getLevel().registryAccess()).getList("essences",10);
             pos=f.vault().getBlockPos(); player.setShiftKeyDown(true);

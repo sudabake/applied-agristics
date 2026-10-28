@@ -1,0 +1,15 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "mysticalagriculture:prosperity_seed_base"
+    },
+    {
+      "item": "mysticalagriculture:soulium_ingot"
+    }
+  ],
+  "result": {
+    "id": "appliedagristics:empty_bio_seed",
+    "count": 1
+  }
+}

@@ -1,5 +1,5 @@
 {
-  "type": "minecraft:crafting_shaped",
+  "type": "appliedagristics:empty_machine_upgrade",
   "category": "misc",
   "pattern": [
     "SCS",
@@ -14,7 +14,7 @@
       "item": "ae2:logic_processor"
     },
     "F": {
-      "item": "appliedagristics:planter_frame"
+      "item": "appliedagristics:planter_input_port"
     },
     "C": {
       "item": "ae2:cell_component_64k"

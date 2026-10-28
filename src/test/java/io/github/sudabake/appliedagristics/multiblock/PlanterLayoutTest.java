@@ -54,9 +54,10 @@ class PlanterLayoutTest {
             cells[i]=original;
         }
     }
-    @Test void upperShellIsFixedAndUpgradeCountsAreLimited() {
+    @Test void upperShellAcceptsUpgradesAndCountsRemainLimited() {
         var upper=valid(); upper[index(0,2,0)]=Role.SPEED;
-        assertEquals("fixed_upper_shell",validate(i->upper[i]).status());
+        assertTrue(validate(i->upper[i]).formed());
+        assertEquals(1,validate(i->upper[i]).speed());
         var check=valid();
         int placed=0;
         for(int y=0;y<2;y++) for(int z=0;z<3;z++) for(int x=0;x<3;x++)
@@ -64,6 +65,18 @@ class PlanterLayoutTest {
         assertEquals("too_many_speed_modules",validate(i->check[i]).status());
         for(int i=0;i<check.length;i++) if(check[i]==Role.SPEED) check[i]=Role.PARALLEL;
         assertEquals("too_many_parallel_modules",validate(i->check[i]).status());
+    }
+    @Test void modulesAndStorageWorkAtEveryFreeShellPosition() {
+        for(int cell=0;cell<36;cell++) for(var role:new Role[]{Role.SPEED,Role.PARALLEL,Role.CONVERSION,Role.INPUT,Role.OUTPUT,Role.SEEDS,Role.VAULT}) {
+            var cells=valid(); if(cells[cell]!=Role.FRAME) continue;
+            cells[cell]=role;
+            assertTrue(validate(i->cells[i]).formed(),role+" at shell cell "+cell);
+        }
+        for(int cell=0;cell<36;cell++) {
+            var cells=valid(); if(cells[cell]!=Role.FRAME) continue;
+            cells[index(2,1,0)]=Role.FRAME; cells[cell]=Role.ACCESS;
+            assertTrue(validate(i->cells[i]).formed(),"Network access at shell cell "+cell);
+        }
     }
 }
 

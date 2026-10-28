@@ -36,8 +36,6 @@ public final class PlanterLayout {
                 if (role != Role.CONTROLLER) return invalid("invalid_controller");
             } else if (interior(x, y, z)) {
                 if (role != Role.CHAMBER) return invalid("missing_chamber");
-            } else if (y >= 2) {
-                if (role != Role.FRAME) return invalid("fixed_upper_shell");
             } else {
                 switch (role) {
                     case SEEDS -> seeds++;
