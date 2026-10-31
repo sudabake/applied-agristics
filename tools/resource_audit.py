@@ -67,11 +67,12 @@ def audit_jar(path,assets):
     with zipfile.ZipFile(path)as jar:
         names=jar.namelist();base='assets/'+NS+'/'
         if len(set(names))!=len(names):result['problems'].append('Duplicate JAR entries')
-        expected={base+p.relative_to(assets).as_posix():p.read_bytes() for p in assets.rglob('*') if p.is_file()}
+        expected={base+p.relative_to(assets).as_posix():p.read_bytes() for p in assets.rglob('*') if p.is_file() and p.name!='.gitkeep'}
         actual={name:jar.read(name) for name in names if name.startswith(base) and not name.endswith('/')}
         for name in sorted(set(expected)|set(actual)):
             if expected.get(name)!=actual.get(name):result['problems'].append('Source/JAR resource mismatch: '+name)
         for name in names:
+            if name.rsplit('/',1)[-1]=='.gitkeep':result['problems'].append('Development placeholder: '+name)
             if '/testing/' in name or '/JeiSmoke' in name or name=='data/appliedagristics/structure/empty.nbt' or name.startswith(('art/','docs/','run/','build/')):
                 result['problems'].append('Development-only JAR entry: '+name)
             data=jar.read(name)

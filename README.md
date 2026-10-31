@@ -2,21 +2,29 @@
 
 Minecraft **1.21.1 / NeoForge 21.1.248 / Java 21** 的 AE2 × Mystical Agriculture 农业附属。
 
-**Beta 1.0** 是首个公开测试版，仍处于测试和平衡阶段。下载见 [Releases](https://github.com/sudabake/applied-agristics/releases)。当前不支持 1.20.1 Forge。
+**Beta 1.1** 是公开测试版，仍处于测试和平衡阶段。下载见 [Releases](https://github.com/sudabake/applied-agristics/releases)。当前不支持 1.20.1 Forge。
+
+An AE2 × Mystical Agriculture addon bridging early farming and mid-game resource automation.
+
+An AE2 × Mystical Agriculture addon bridging early farming and mid-game resource automation.
 
 ## 内容
 
 - 独立免电基础种植站：耕地、可选用水加速、静态作物展示与管道接口。
 - 3×3×4 ME 农业阵列：外壳各层可替换，连续外框，速度与并行模块各最多四块。
-- 种子仓、ME 种子仓、输出口与只读精华存储器；通过独立 ME 接入模块联网。
+- 种子仓、ME 种子仓、输出口与只读作物仓；通过独立 ME 接入模块联网。
 - 按全网库存目标自动补货，目标 -1 持续生产；新增种子优先补并行，转换只处理新增的多余种子。
-- 生物采样、一次性培养、萃取、生物种子与精华兑换；支持耕地种植、JEI 与 GuideME。
+- 新生种子优先直接进入同阵列 ME 种子仓；其他收获物优先进入作物仓，再进入输出口。普通种子仓不自动回填。
+- 新生种子优先直接进入同阵列 ME 种子仓；其他收获物优先进入作物仓，再进入输出口。普通种子仓不自动回填。
+- 生物棉签采样、一次性培养、萃取、生物种子与精华兑换；支持耕地种植、JEI 与 GuideME。
+- 背包／JEI 悬停显示用途，Shift 展开详情；G 接入 AE2 共享指南，U／G 结构页支持拖动旋转。
+- 背包／JEI 悬停显示用途，Shift 展开详情；G 接入 AE2 共享指南，U／G 结构页支持拖动旋转。
 - ME 注魔祭坛保留八个真实基座，支持 AE 处理样板、四张独立加速卡与自动输出。
-- 仅 ME 种子仓和精华存储器拆卸后保留库存数据，其余设备单独掉出内部物品。
+- 仅 ME 种子仓和作物仓拆卸后保留库存数据，其余设备单独掉出内部物品。
 
 ## 安装
 
-将 `applied-agristics-beta1.0.jar` 放入 Minecraft 1.21.1 NeoForge 实例的 `mods` 目录，并安装以下前置。不要同时加载多个本 Mod 版本。
+将 `applied-agristics-beta1.1.jar` 放入 Minecraft 1.21.1 NeoForge 实例的 `mods` 目录，并安装以下前置。不要同时加载多个本 Mod 版本。
 
 | 前置 | 最低要求 | 开发版本 |
 | --- | --- | --- |
@@ -38,9 +46,9 @@ cd applied-agristics
 .\gradlew.bat build
 ```
 
-Linux / macOS 使用 `bash gradlew build`。产物为 `build/libs/applied-agristics-beta1.0.jar`。
+Linux / macOS 使用 `bash gradlew build`。产物为 `build/libs/applied-agristics-beta1.1.jar`。
 
-内部版本号为 `1.0.0-beta.1`；下载名称与 Git 标签采用 `beta1.0`。
+内部版本号为 `1.0.0-beta.2`；下载名称与 Git 标签采用 `beta1.1`。
 
 ## 开发
 

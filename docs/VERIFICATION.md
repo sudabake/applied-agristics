@@ -1,7 +1,19 @@
-# Beta 1.0 validation scope
+# Beta1.1 validation
 
-Local pre-release validation passed 18 JUnit tests, 65 required GameTests on both the development and minimum dependency combinations, six portable resource-export tests and two isolated resource rebuilds. Inventory and protocol regressions cover same-key seed/output handling and long component-bearing control IDs. Upper-layer ports and modules are covered by a real-array GameTest.
+18 JUnit tests and 6 Python resource-export tests passed. Both default and minimum
+dependency combinations passed 78 GameTests and saved/exited normally. The first
+minimum-dependency run passed its assertions but stalled in vanilla chunk unload
+during shutdown; its records were retained and a fresh-directory retry exited normally.
+No production shutdown workaround was added.
 
-The release JAR is checked against current compiled classes and committed runtime resources. Retired textures, duplicate entries, missing model/texture references, orphan animation metadata, developer fixtures, local machine paths and PNG text/EXIF metadata are screened.
+Two isolated resource rebuilds preserved 585 resources and collision geometry.
+An isolated client-world copy passed eight machine menus, controller filter alignment,
+scrolling, packets, JEI biological variants/recipes, the shared AE2 guide and existing
+rendering/animation checks. The client saved and exited normally. Outdated fixture
+assumptions about the removed ordinary-storage IO page and fixed toolbar coordinates
+were corrected before the successful client run.
 
-These checks do not establish arbitrary modpack compatibility, long-term multiplayer reliability or large-server performance. No personal test worlds, logs, screenshots or launcher files are included. Hosted CI results are reported separately by GitHub Actions.
+The JAR was checked against resource and compiled-class outputs. No development tests,
+placeholder files, retired controller IO screen, PNG text/EXIF metadata or configured
+local-path patterns were found. These checks do not establish arbitrary mod compatibility
+or long-term large-server performance. Saves, launcher files and local logs are excluded.

@@ -56,7 +56,7 @@ public final class ReviewRegressionTests {
             controller.tasks.get(crop.getId()).progress = 32 * Balance.LATE_TICKS.get();
             controller.step();
             h.assertTrue(fixture.seeds().count(key) == 1, "Existing reserved seed is not consumed or converted");
-            h.assertTrue(fixture.output().count(key) > 0, "Completed native harvest reaches output instead of disappearing");
+            h.assertTrue(fixture.producedCount(key) > 0, "Completed native harvest reaches output instead of disappearing");
             h.succeed();
         });
     }
@@ -75,11 +75,11 @@ public final class ReviewRegressionTests {
             var task = controller.tasks.get(id);
             task.progress = 200;
             controller.step();
-            h.assertTrue(fixture.seeds().count(key) == 4 && task.occupied == 4 && fixture.output().count(key) == 0,
+            h.assertTrue(fixture.seeds().count(key) == 4 && task.occupied == 4 && fixture.producedCount(key) == 0,
                     "First three net products fill parallel capacity exactly");
             task.progress = 400;
             controller.step();
-            h.assertTrue(fixture.seeds().count(key) == 4 && fixture.output().count(key) == 6,
+            h.assertTrue(fixture.seeds().count(key) == 4 && fixture.producedCount(key) == 6,
                     "Two full batches output exactly six, with neither loss nor duplication");
             controller.configure(id, false, -1);
             h.assertTrue(fixture.seeds().used(key) == 0 && fixture.seeds().count(key) == 4,
@@ -104,12 +104,12 @@ public final class ReviewRegressionTests {
             var task = controller.tasks.get(id);
             task.progress = 200;
             controller.step();
-            h.assertTrue(fixture.seeds().count(seed) == 4 && fixture.output().count(product) == 2,
+            h.assertTrue(fixture.seeds().count(seed) == 4 && fixture.producedCount(product) == 2,
                     "New seeds fill parallel capacity before any conversion");
             fixture.seeds().add(seed, 10);
             task.progress = 400;
             controller.step();
-            h.assertTrue(fixture.seeds().count(seed) == 14 && fixture.output().count(product) == 12,
+            h.assertTrue(fixture.seeds().count(seed) == 14 && fixture.producedCount(product) == 12,
                     "Two batches add four products plus six converted seeds; all stored seeds remain");
             h.succeed();
         }));

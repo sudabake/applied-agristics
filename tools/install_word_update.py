@@ -14,7 +14,8 @@ def write(path, data):
 def install():
     for source in (ROOT / 'art/approved/user_items_16_20261028').glob('*.png*'):
         shutil.copyfile(source, ASSETS / 'textures/item' / source.name)
-    shutil.copyfile(ROOT / 'art/drafts/sampler_sampled_16_v01/bio_sampler_sampled.png', ASSETS / 'textures/item/bio_sampler_sampled.png')
+    for name in ('bio_sampler','bio_sampler_sampled'):
+        shutil.copyfile(ROOT / f'art/approved/user_sampler_16_20261031/{name}.png', ASSETS / f'textures/item/{name}.png')
     write(ASSETS / 'models/item/bio_sampler.json', {'parent': 'minecraft:item/generated',
         'textures': {'layer0': 'appliedagristics:item/bio_sampler'},
         'overrides': [{'predicate': {'appliedagristics:sampled': 1}, 'model': 'appliedagristics:item/bio_sampler_sampled'}]})
@@ -62,11 +63,13 @@ def install():
         'block.appliedagristics.planter_output_port': ('输出口', 'Output Port'),
         'block.appliedagristics.bio_crop': ('生物植株', 'Biological Crop'),
         'gui.appliedagristics.collect': ('拉取种子', 'Pull Seeds'),
+        'gui.appliedagristics.show_ordinary': ('显示普通作物', 'Show ordinary'),
+        'gui.appliedagristics.hide_ordinary': ('隐藏普通作物', 'Hide ordinary'),
         'gui.appliedagristics.culture_progress': ('%s / %s 秒', '%s / %s seconds'),
         'jei.appliedagristics.culture_duration': ('培养时间：%s 秒；无需电力', 'Cultivation: %s s; no power required'),
         'jei.appliedagristics.planting_help': ('可种在耕地上，也可使用种植机', 'Plant on farmland or grow in a planter'),
         'status.appliedagristics.missing_input_port': ('缺少种子来源：种子仓或 ME 种子仓', 'Missing seed storage or ME seed storage'),
-        'jei.appliedagristics.optional_storages': ('ME 种子仓、精华仓可用种子仓／输出口替代', 'Seed storage/output ports replace optional ME storages'),
+        'jei.appliedagristics.optional_storages': ('ME 种子仓、作物仓可用种子仓／输出口替代', 'Seed storage/output ports replace optional ME storages'),
     }
     for index, lang in enumerate(('zh_cn', 'en_us')):
         path = ASSETS / f'lang/{lang}.json'
@@ -75,6 +78,8 @@ def install():
         write(path, data)
     from install_native_block_art import install as install_native_blocks
     install_native_blocks()
+    from install_item_tooltips import install as install_item_tooltips
+    install_item_tooltips()
 
 if __name__ == '__main__':
     install()

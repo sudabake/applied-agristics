@@ -6,3 +6,9 @@
 - Preserve license notices. Check public AE2/addon APIs before duplicating mechanisms.
 - Run meaningful regressions and the isolated resource rebuild after affected changes. Developer fixtures must remain excluded from release JARs.
 - Never commit credentials, private paths, logs, saves, launcher settings or local backups. Publication requires maintainer authorization.
+
+- Beta1.1 storage: all array harvests can enter Crop Storage (legacy essence_vault ID), extraction-only through AE. New seeds prefer the same array ME seed storage; ordinary seed storage does not auto-refill.
+- AE2 guide integration uses the shared AE2 guide; ordinary seed storage has no IO page. Preserve packet numbers and old inventory migration.
+
+- Beta1.1 storage: all array harvests can enter Crop Storage (legacy essence_vault ID), extraction-only through AE. New seeds prefer the same array ME seed storage; ordinary seed storage does not auto-refill.
+- AE2 guide integration uses the shared AE2 guide; ordinary seed storage has no IO page. Preserve packet numbers and old inventory migration.

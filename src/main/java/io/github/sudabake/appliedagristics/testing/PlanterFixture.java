@@ -34,6 +34,14 @@ public record PlanterFixture(NetworkPlanter controller,SeedStorage seeds,ItemPor
             (DriveBlockEntity)level.getBlockEntity(center.east(3)),center.east(2));
     }
     private static void set(Level level,BlockPos pos,Block block) { level.setBlockAndUpdate(pos,block.defaultBlockState()); }
+    public long producedCount(appeng.api.stacks.AEItemKey key) {
+        long[] count={output.count(key)};
+        if(vault!=null && controller.getLevel().getBlockEntity(vault.getBlockPos())==vault)
+            vault.mountInventories((storage,priority)->{
+                var available=new appeng.api.stacks.KeyCounter();storage.getAvailableStacks(available);count[0]+=available.get(key);
+            });
+        return count[0];
+    }
     public void modules(int speed,int parallel,boolean conversion) {
         var level=controller.getLevel(); var origin=controller.getBlockPos().offset(-1,-1,0); var candidates=new ArrayList<BlockPos>();
         for (int y=0;y<2;y++) for (int z=0;z<3;z++) for (int x=0;x<3;x++) {

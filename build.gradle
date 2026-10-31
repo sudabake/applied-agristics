@@ -16,6 +16,7 @@ neoForge {
     runs {
         client {
             client()
+            if (project.hasProperty('clientDirectory')) gameDirectory = file(project.property('clientDirectory'))
             if (project.hasProperty('clientSmoke')) systemProperty 'appliedagristics.clientSmoke', 'true'
         }
         server { server(); programArgument '--nogui' }
@@ -71,9 +72,11 @@ jar {
     exclude 'io/github/sudabake/appliedagristics/testing/**'
     exclude 'io/github/sudabake/appliedagristics/compat/jei/JeiSmoke*'
     exclude 'data/appliedagristics/structure/empty.nbt'
+    exclude '**/.gitkeep'
     from('LICENSE', 'COPYING', 'THIRD_PARTY_NOTICES.md')
     from('third_party/jdte/LICENSE.txt') { into 'licenses/jdte' }
     from('third_party/mysticalagriculture/LICENSE.txt') { into 'licenses/mysticalagriculture' }
+    from('third_party/ae2/LICENSE.txt') { into 'licenses/ae2' }
 }
 tasks.named('runGameTestServer').configure {
     doLast {
@@ -85,7 +88,8 @@ tasks.named('runGameTestServer').configure {
 }
 tasks.named('runClient').configure {
     doLast {
-        if (project.hasProperty('clientSmoke') && !file('run/logs/latest.log').getText('UTF-8').contains('CLIENT_SMOKE_PASSED'))
-            throw new GradleException('Client smoke test did not pass. Inspect run/logs/latest.log.');
+        def log = file((project.findProperty('clientDirectory') ?: 'run') + '/logs/latest.log')
+        if (project.hasProperty('clientSmoke') && (!log.exists() || !log.getText('UTF-8').contains('CLIENT_SMOKE_PASSED')))
+            throw new GradleException('Client smoke test did not pass. Inspect ' + log);
     }
 }

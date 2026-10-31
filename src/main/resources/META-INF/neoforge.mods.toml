@@ -6,6 +6,7 @@ issueTrackerURL="https://github.com/sudabake/applied-agristics/issues"
 modId="appliedagristics"
 version="${version}"
 displayName="Applied Agristics"
+logoFile="assets/appliedagristics/logo.png"
 authors="sudabake"
 description='''Compact agriculture and automatic essence stocking for AE2 and Mystical Agriculture.'''
 [[dependencies.appliedagristics]]

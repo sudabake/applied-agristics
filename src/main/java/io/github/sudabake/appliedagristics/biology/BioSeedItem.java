@@ -16,6 +16,6 @@ public final class BioSeedItem extends ItemNameBlockItem {
     @Override public Component getName(ItemStack stack) { return BioItem.identityName(stack,super.getName(stack)); }
     @Override public void appendHoverText(ItemStack stack,TooltipContext context,List<Component> lines,TooltipFlag flag) {
         var id=BioData.identity(stack);
-        if (id!=null) lines.add(Component.translatable("gui.appliedagristics.bio_identity",id.toString()));
+        if (id!=null && flag.isAdvanced()) lines.add(Component.translatable("gui.appliedagristics.bio_identity",id.toString()).withStyle(net.minecraft.ChatFormatting.DARK_GRAY));
     }
 }

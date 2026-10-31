@@ -50,9 +50,6 @@ public final class NetworkPlanter extends GridMachine {
     }
     public final Map<ResourceLocation, Task> tasks = new LinkedHashMap<>();
     private int fairnessCursor;
-    private boolean directNetworkOutput;
-    public boolean directNetworkOutput() { return directNetworkOutput; }
-    public void toggleDirectNetworkOutput() { directNetworkOutput=!directNetworkOutput; setChanged(); }
     public NetworkPlanter(BlockPos pos, BlockState state) { super(Agristics.NETWORK_BE.get(), pos, state, 4); }
     @Override protected boolean valid(int slot, ItemStack stack) {
         return false;
@@ -80,6 +77,14 @@ public final class NetworkPlanter extends GridMachine {
         for (var drive : seedStores()) for (var key : drive.keys())
             if (drive.count(key) > 0) owned.add(Cultivations.id(key.toStack(1),level));
         for (var id : owned) configure(id, enabled, tasks.containsKey(id) ? tasks.get(id).target : -1);
+    }
+    public void pauseForSeedRemoval(AEItemKey seed) {
+        var task=tasks.get(Cultivations.id(seed.toStack(1),level));
+        if (task==null) return;
+        task.enabled=false;
+        releaseTask(task);
+        task.status="disabled";
+        setChanged();
     }
     private void releaseTask(Task task) {
         task.allocations.keySet().forEach(a -> a.drive.unclaim(a.key, this));
@@ -129,7 +134,7 @@ public final class NetworkPlanter extends GridMachine {
         for (int i = 0; i < enabled.size(); i++) {
             var entry = enabled.get(Math.floorMod(i + fairnessCursor, enabled.size())); var task = entry.getValue(); task.power = 0;
             if (!task.pending.isEmpty()) {
-                if (!flush(task, destination, source)) { task.status = blockedOutput(task.pending.keySet()); continue; }
+                if (!flush(task, destination, source)) { task.status = blockedOutput(); continue; }
                 available = storage.getAvailableStacks();
             }
             if (!task.enabled) { task.status = "disabled"; continue; }
@@ -141,10 +146,10 @@ public final class NetworkPlanter extends GridMachine {
             var seed=task.allocations.keySet().iterator().next().key.toStack(1);
             if (!Harvests.canGrowNetwork((ServerLevel)level,worldPosition,seed)) { task.status="wrong_farmland"; continue; }
             int duration=CropSources.ticks(level,worldPosition,seed,Harvests.networkSoil(level,seed),Balance.LATE_TICKS.get());
-            long batchLimit=Math.min(Harvests.maximumBatch(level,seed),structure.vaults().isEmpty() || !Crops.essence(crop.essenceStack()) ? 64L : Integer.MAX_VALUE);
+            long batchLimit=Math.min(Harvests.maximumBatch(level,seed),structure.vaults().isEmpty() ? 64L : Integer.MAX_VALUE);
             var output = AEItemKey.of(crop.essenceStack()); long stock = available.get(output);
             if (Amounts.harvestSize(stock, task.target, 1) == 0) { task.status = "target_reached"; continue; }
-            if (destination.insert(output, 1, Actionable.SIMULATE, source) == 0) { task.status = blockedOutput(List.of(output)); continue; }
+            if (destination.insert(output, 1, Actionable.SIMULATE, source) == 0) { task.status = blockedOutput(); continue; }
             double perTick = ProductionMath.power(task.occupied, speed(), Balance.POWER.get(), (double)Balance.PARALLEL_MAX.get() * Balance.SPEED_MAX.get(), Balance.FULL_POWER.get());
             double requestedWork=5*task.occupied*speed();
             double work=Math.min(requestedWork,batchLimit*(double)duration);
@@ -161,8 +166,12 @@ public final class NetworkPlanter extends GridMachine {
                     var key = AEItemKey.of(seed); long extra = task.pending.getOrDefault(key, 0L);
                     // Only this new batch is eligible for conversion. Stored seeds are never consumed.
                     long needed = Math.max(0, parallel() - task.occupied);
-                    long toStore = conversion() ? Math.min(needed, extra) : extra;
+                    // Edible planting materials remain harvests after parallel is filled.
+                    long toStore = conversion() || output.equals(key) ? Math.min(needed, extra) : extra;
+                    // Only this array's ME seed banks collect new seeds. Ordinary
+                    // input slots never refill, independently of the output storage.
                     for (var location : locations.getOrDefault(crop.getId(), List.of())) {
+                        if (!(location.drive instanceof SeedStorage)) continue;
                         long accepted = location.drive.add(key, toStore); extra -= accepted; toStore -= accepted; if (toStore == 0) break;
                     }
                     reserve(task, locations.getOrDefault(crop.getId(), List.of()));
@@ -174,7 +183,7 @@ public final class NetworkPlanter extends GridMachine {
                     }
                     if (extra == 0) task.pending.remove(key); else task.pending.put(key, extra);
                 }
-                if (!flush(task, destination, source)) task.status = blockedOutput(task.pending.keySet());
+                if (!flush(task, destination, source)) task.status = blockedOutput();
                 available = storage.getAvailableStacks();
             }
         }
@@ -185,13 +194,11 @@ public final class NetworkPlanter extends GridMachine {
         for (var e : task.pending.entrySet()) e.setValue(e.getValue() - storage.insert(e.getKey(), e.getValue(), Actionable.MODULATE, source));
         task.pending.values().removeIf(n -> n <= 0); setChanged(); return task.pending.isEmpty();
     }
-    private String blockedOutput(java.util.Collection<AEItemKey> outputs) {
-        boolean ordinary=outputs.stream().anyMatch(k->!Crops.essence(k.toStack(1)));
-        if (ordinary && directNetworkOutput) return "network_output_full";
-        return structure.ports().stream().noneMatch(p->!p.isInput()) && ordinary ? "requires_output_port" : "output_full";
+    private String blockedOutput() {
+        return "output_full";
     }
     @Override protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.saveAdditional(tag, registries); tag.putBoolean("directNetworkOutput",directNetworkOutput); var list = new ListTag();
+        super.saveAdditional(tag, registries); var list = new ListTag();
         tasks.forEach((id, t) -> {
             var e = new CompoundTag(); e.putString("id", id.toString()); e.putBoolean("enabled", t.enabled); e.putLong("target", t.target); e.putDouble("work", t.progress);
             var pending = new ListTag(); t.pending.forEach((key, count) -> { var p = new CompoundTag(); p.put("key", key.toTag(registries)); p.putLong("count", count); pending.add(p); }); e.put("batch", pending);
@@ -200,7 +207,7 @@ public final class NetworkPlanter extends GridMachine {
     }
     @Override protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
-        directNetworkOutput=tag.getBoolean("directNetworkOutput");
+        // Legacy directNetworkOutput is ignored; existing paid batches still load below.
         if (Crops.farmland(items.getStackInSlot(0)) && items.getStackInSlot(3).isEmpty()) {
             items.setStackInSlot(3, items.getStackInSlot(0)); items.setStackInSlot(0, ItemStack.EMPTY);
         }
@@ -243,7 +250,7 @@ public final class NetworkPlanter extends GridMachine {
             row.putLong("count", parallel()); row.putLong("used", t.occupied); row.putDouble("power", t.power); rows.add(row);
         }
         tag.put("rows", rows); tag.putInt("pages", Math.max(1, crops.size() - 3)); tag.putInt("parallel", parallel()); tag.putDouble("speed", speed());
-        tag.putBoolean("hideOrdinary",hideOrdinary);tag.putBoolean("directNetworkOutput",directNetworkOutput);
+        tag.putBoolean("hideOrdinary",hideOrdinary);
         tag.putDouble("power", tasks.values().stream().mapToDouble(t -> t.power).sum());
         tag.putBoolean("formed",structure.formed()); tag.putInt("speedModules",structure.speedModules()); tag.putInt("parallelModules",structure.parallelModules()); tag.putBoolean("conversion",conversion());
         if (!structure.formed()) tag.putString("status",structure.status());

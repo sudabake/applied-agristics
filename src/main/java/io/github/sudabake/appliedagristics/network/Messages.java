@@ -57,7 +57,7 @@ public final class Messages {
                 case 7 -> { if (machine instanceof IOControls io && p.value >= 0 && p.value < 6) io.configureSide((int)p.value,(io.sideMode((int)p.value)+1)%4); }
                 case 8 -> { if (machine instanceof ItemPort port) port.toggleAutoOutput(); else if (machine instanceof IOControls io) io.toggleAutoOutput(); }
                 case 9 -> { if (machine instanceof CellCultivator cultivator) cultivator.toggleAutoExtract(); }
-                case 11 -> { if (machine instanceof NetworkPlanter planter) planter.toggleDirectNetworkOutput(); }
+                case 11 -> { /* Retired controller IO action: ignore without reusing its ID. */ }
                 case 12 -> { if (machine instanceof NetworkPlanter) { menu.search="hide_ordinary".equals(menu.search)?"":"hide_ordinary";menu.page=0; player.getPersistentData().putBoolean("appliedagristics.hideOrdinary","hide_ordinary".equals(menu.search)); } }
                 case 13 -> { if (machine instanceof EssenceVault vault && p.value>=Integer.MIN_VALUE && p.value<=Integer.MAX_VALUE) vault.setPriority((int)p.value); }
                 default -> { return; }

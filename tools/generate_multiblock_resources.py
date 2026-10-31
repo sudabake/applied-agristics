@@ -16,7 +16,7 @@ PARTS={
     'planter_conversion_module':('种子转换模块','Seed Conversion Module',(137,186,115)),
     'planter_input_port':('农业输入口','Agricultural Input Port',(104,176,102)),
     'planter_output_port':('农业输出口','Agricultural Output Port',(204,166,93)),
-    'essence_vault':('精华存储器','Essence Storage',(161,121,198))}
+    'essence_vault':('作物仓','Crop Storage',(161,121,198))}
 LEGACY=('compact_altar','awakening_upgrade','speed_upgrade','parallel_upgrade','seed_conversion_upgrade','essence_cell')
 
 def write(path,value):
@@ -38,8 +38,7 @@ for lang,index in (('zh_cn',0),('en_us',1)):
         'status.appliedagristics.invalid_shell':('外壳不完整或部件不符','Invalid or incomplete shell'),
         'status.appliedagristics.missing_seed_storage':('缺少种子仓','Missing seed storage bay'),
         'status.appliedagristics.missing_input_port':('缺少种子来源：输入口或种子仓','Missing seed source: input port or seed bay'),
-        'status.appliedagristics.missing_output_port':('缺少产物去向：输出口或精华存储器','Missing output: output port or essence storage'),
-        'status.appliedagristics.requires_output_port':('非精华产物需要输出口','Non-essence produce needs an output port'),
+        'status.appliedagristics.missing_output_port':('缺少产物去向：输出口或作物仓','Missing output: output port or crop storage'),
         'status.appliedagristics.missing_network_access':('缺少 ME 网络接入模块','Missing ME network access'),
         'status.appliedagristics.multiple_network_access':('每座结构需要且仅允许一个 ME 接入模块','Exactly one ME network access required'),
         'status.appliedagristics.structure_unloaded':('部分结构区块未加载','Part of structure not loaded'),
@@ -49,17 +48,13 @@ for lang,index in (('zh_cn',0),('en_us',1)):
         'gui.appliedagristics.auto_input_label':('自动输入','Auto input'),
         'gui.appliedagristics.auto_input_on':('自动输入：开','Auto input: on'),
         'gui.appliedagristics.auto_input_off':('自动输入：关','Auto input: off'),
-        'gui.appliedagristics.vault_readonly':('%s 种精华；AE 仅可提取','%s types; AE extraction only'),
+        'gui.appliedagristics.vault_readonly':('%s 种作物；AE 仅可提取','%s types; AE extraction only'),
         'gui.appliedagristics.next_speed_power':('再加一个速度模块：%s AE/t','One more speed module: %s AE/t'),
         'gui.appliedagristics.next_parallel_power':('再加一个并行模块：%s AE/t（按已有种子）','One more parallel module: %s AE/t (available seeds)'),
         'gui.appliedagristics.all_crops':('全部作物','All crops'),
         'gui.appliedagristics.ordinary_crops':('普通作物','Ordinary crops'),
-        'gui.appliedagristics.direct_output':('普通产物直入 ME','Produce to ME'),
-        'gui.appliedagristics.direct_output_on':('开启：非精华产物直接进入 ME 网络；网络满时暂停','On: non-essence output enters ME; pauses when full'),
-        'gui.appliedagristics.direct_output_off':('关闭：产物进入本结构仓储或输出口','Off: output stays in local vaults or output ports'),
         'gui.appliedagristics.unknown_spawner':('无法识别刷怪笼中的生物','Cannot identify the mob configured in this spawner'),
         'gui.appliedagristics.network_power':('实际耗电：%s AE/t','Actual power: %s AE/t'),
-        'status.appliedagristics.network_output_full':('ME 网络无法接收产物','ME network cannot accept output'),
     }.items(): values[key]=pair[index]
     write(path,values)
 

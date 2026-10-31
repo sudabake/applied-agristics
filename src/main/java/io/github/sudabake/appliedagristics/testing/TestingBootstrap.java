@@ -18,5 +18,7 @@ public final class TestingBootstrap {
         event.register(ReviewRegressionTests.class);
         event.register(WordUpdateTests.class);
         event.register(InteractionRevisionTests.class);
+        event.register(VideoDemoTests.class);
+        event.register(CropStorageTests.class);
     }
 }

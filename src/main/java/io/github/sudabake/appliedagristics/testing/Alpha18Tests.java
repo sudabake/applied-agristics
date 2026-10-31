@@ -67,18 +67,17 @@ public final class Alpha18Tests {
             var a=f.controller();h.assertTrue(a.structure.formed(),"Vault-only output is a valid structure");
             var key=AEItemKey.of(new ItemStack(Items.WHEAT));var source=IActionSource.ofMachine(a);
             var target=a.structure.outputs();var network=a.getMainNode().getGrid().getStorageService().getInventory();
-            h.assertTrue(target.insert(key,11,Actionable.MODULATE,source)==0,"Local mode cannot put ordinary produce into an essence vault");
-            a.toggleDirectNetworkOutput();
             h.assertTrue(target.insert(key,11,Actionable.SIMULATE,source)==11 && network.getAvailableStacks().get(key)==0,"Simulation cannot duplicate or insert items");
-            h.assertTrue(target.insert(key,11,Actionable.MODULATE,source)==11 && network.getAvailableStacks().get(key)==11,"ME disk receives the exact output count");
+            h.assertTrue(target.insert(key,11,Actionable.MODULATE,source)==11 && network.getAvailableStacks().get(key)==11,"Crop storage receives ordinary produce and exposes its exact count to AE");
+            h.assertTrue(ItemStack.isSameItemSameComponents(f.drive().getInternalInventory().getStackInSlot(0),AEItems.ITEM_CELL_1K.stack()),"ME disk components remain empty while crop storage holds the output");
             h.assertTrue(network.extract(key,11,Actionable.MODULATE,source)==11,"AE can retrieve it exactly once");
             var save=a.saveWithFullMetadata(h.getLevel().registryAccess());var restored=new NetworkPlanter(a.getBlockPos(),a.getBlockState());restored.setLevel(h.getLevel());restored.loadWithComponents(save,h.getLevel().registryAccess());
-            h.assertTrue(restored.directNetworkOutput(),"Output mode survives saving");
+            h.assertTrue(!restored.saveWithFullMetadata(h.getLevel().registryAccess()).contains("directNetworkOutput"),"Retired direct-output mode is absent from saved controller data");
             f.drive().getInternalInventory().setItemDirect(0,ItemStack.EMPTY);
-            h.assertTrue(target.insert(key,11,Actionable.MODULATE,source)==0,"Unavailable ME storage must refuse output");
+            h.assertTrue(target.insert(key,11,Actionable.MODULATE,source)==11,"Crop storage accepts output even with no ME disk");
             f.seeds().add(AEItemKey.of(new ItemStack(Items.WHEAT_SEEDS)),1);
             var crop=Cultivations.seed(new ItemStack(Items.WHEAT_SEEDS),h.getLevel(),a.getBlockPos());a.configure(crop.getId(),true,-1);a.step();
-            h.assertTrue(a.tasks.get(crop.getId()).progress==0 && a.tasks.get(crop.getId()).status.equals("network_output_full"),"Blocked ME output pauses production before charging");h.succeed();
+            h.assertTrue(a.tasks.get(crop.getId()).progress>0 && !a.tasks.get(crop.getId()).status.equals("network_output_full"),"No disk or retired IO flag can block local crop storage");h.succeed();
         });
     }
     @GameTest(template="empty",templateNamespace=Agristics.ID,timeoutTicks=240)

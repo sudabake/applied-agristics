@@ -49,7 +49,7 @@ for name, color in items.items():
 names = {
     'early_planter': ('基础种植机', 'Basic Planter'), 'seed_storage': ('种子存储驱动器', 'Seed Storage Drive'),
     'network_planter': ('ME 种植机', 'ME Planter'),
-    'cell_cultivator': ('细胞培养器', 'Cell Cultivator'), 'bio_sampler': ('生物采样器', 'Biological Sampler'), 'mature_culture': ('成熟培养物', 'Mature Culture'), 'bio_extract': ('生物萃取物', 'Biological Extract'), 'culture_capsule': ('空培养胶囊', 'Empty Culture Capsule'), 'culture_nutrient': ('营养剂', 'Culture Nutrient'), 'bio_seed': ('生物种子', 'Biological Seed'), 'bio_essence': ('生物精华', 'Biological Essence')}
+    'cell_cultivator': ('细胞培养器', 'Cell Cultivator'), 'bio_sampler': ('生物棉签', 'Biological Swab'), 'mature_culture': ('成熟培养物', 'Mature Culture'), 'bio_extract': ('生物萃取物', 'Biological Extract'), 'culture_capsule': ('空培养胶囊', 'Empty Culture Capsule'), 'culture_nutrient': ('营养剂', 'Culture Nutrient'), 'bio_seed': ('生物种子', 'Biological Seed'), 'bio_essence': ('生物精华', 'Biological Essence')}
 labels = {
     'search_hint': ('英文作物 ID，如 iron', 'Crop ID, e.g. iron'), 'seed_count': ('种子（占用 / 总数）', 'Seeds (used / total)'),
     'stock': ('现有库存', 'Stock'), 'state': ('状态', 'State'),

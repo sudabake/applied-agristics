@@ -45,6 +45,15 @@ public final class BiologyGameTests {
         ItemStack.STREAM_CODEC.encode(buffer, restored); var decoded = ItemStack.STREAM_CODEC.decode(buffer); buffer.release();
         h.assertTrue(ItemStack.isSameItemSameComponents(restored, decoded), "Identity survives inventory network synchronization");
         h.assertTrue(!ItemStack.isSameItemSameComponents(sample, BioData.withIdentity(Agristics.SAMPLER.get(), PIG)), "Different mobs cannot stack together");
+        for(var described:java.util.List.of(sample,BioData.withIdentity(Agristics.BIO_SEED.get(),COW))) {
+            var normal=new java.util.ArrayList<net.minecraft.network.chat.Component>();
+            var advanced=new java.util.ArrayList<net.minecraft.network.chat.Component>();
+            described.getItem().appendHoverText(described,Item.TooltipContext.of(h.getLevel()),normal,TooltipFlag.NORMAL);
+            described.getItem().appendHoverText(described,Item.TooltipContext.of(h.getLevel()),advanced,TooltipFlag.ADVANCED);
+            h.assertTrue(normal.stream().noneMatch(line->line.getString().contains(COW.toString()))
+                && advanced.stream().anyMatch(line->line.getString().contains(COW.toString())),
+                "Species IDs appear only in advanced tooltips without changing sampled item data");
+        }
         player.setItemInHand(InteractionHand.MAIN_HAND, sample);
         BioData.sample(player, InteractionHand.MAIN_HAND, EntityType.PIG.create(h.getLevel()));
         h.assertTrue(COW.equals(BioData.identity(player.getMainHandItem())), "An existing sample cannot be relabeled");

@@ -44,10 +44,6 @@ public final class PlanterStructure {
         @Override public net.minecraft.network.chat.Component getDescription() { return controller.getDisplayName(); }
         @Override public long insert(appeng.api.stacks.AEKey key,long amount,appeng.api.config.Actionable mode,appeng.api.networking.security.IActionSource source) {
             if (!formed() || !(key instanceof appeng.api.stacks.AEItemKey item) || amount<=0) return 0;
-            if (controller.directNetworkOutput() && !io.github.sudabake.appliedagristics.Crops.essence(item.toStack(1))) {
-                var node=controller.getMainNode();var grid=node.getGrid();
-                return grid==null || !node.isActive() ? 0 : grid.getStorageService().getInventory().insert(key,amount,mode,source);
-            }
             boolean simulate=mode==appeng.api.config.Actionable.SIMULATE; long left=amount;
             for (var vault:vaults.stream().sorted(Comparator.comparingInt(EssenceVault::getPriority).reversed()).toList()) { left-=vault.storeProduced(item,left,simulate); if (left==0) break; }
             for (var port:ports) if (!port.isInput() && left>0) left-=port.insertLocal(item,left,simulate);

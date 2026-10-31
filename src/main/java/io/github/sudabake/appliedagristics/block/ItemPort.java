@@ -82,6 +82,11 @@ public final class ItemPort extends GridMachine implements SeedBank, IStoragePro
         return input && !stack.isEmpty() ? (int)Math.min(Math.max(0,requested),Math.max(0,count(AEItemKey.of(stack))-used(AEItemKey.of(stack)))) : requested;
     }
     public boolean slotInUse(int slot) { var stack=items.getStackInSlot(slot); return input && !stack.isEmpty() && used(AEItemKey.of(stack))>0; }
+    /** Only actual player removals stop a crop; pipe probes keep their reservation guard. */
+    public void releaseForManualExtraction(ItemStack stack) {
+        if (input && !stack.isEmpty() && structure!=null && used(AEItemKey.of(stack))>0)
+            structure.controller().pauseForSeedRemoval(AEItemKey.of(stack));
+    }
     private long remove(AEItemKey key,long requested,boolean simulate) {
         long left=requested;
         for (int i=0;i<items.getSlots() && left>0;i++) if (key.matches(items.getStackInSlot(i))) left-=items.extractItem(i,(int)Math.min(left,Integer.MAX_VALUE),simulate).getCount();

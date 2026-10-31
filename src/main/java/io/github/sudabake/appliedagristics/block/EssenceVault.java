@@ -12,7 +12,7 @@ import net.minecraft.nbt.*;
 import net.minecraft.world.level.block.state.BlockState;
 import java.util.*;
 
-/** Machine-owned essence output storage. AE may extract, never insert. Drops as one data-bearing block. */
+/** Crop output storage; retains its original registry ID and NBT format for upgrades. */
 public final class EssenceVault extends GridMachine implements IStorageProvider {
     private PlanterStructure structure;
     private int priority;
@@ -42,7 +42,7 @@ public final class EssenceVault extends GridMachine implements IStorageProvider 
         IStorageProvider.requestUpdate(getMainNode());
     }
     public long storeProduced(AEItemKey key,long amount,boolean simulate) {
-        if (amount<=0 || !Crops.essence(key.toStack(1))) return 0;
+        if (amount<=0 || key.toStack(1).isEmpty()) return 0;
         long accepted=Amounts.insertable(contents.getOrDefault(key,0L),amount);
         if (!simulate && accepted>0) { contents.merge(key,accepted,Long::sum); changed(); }
         return accepted;

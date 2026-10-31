@@ -1,5 +1,9 @@
-# Rebuild exports
+# Approved art exports
 
-This directory contains only PNG/model exports required by the resource rebuild chain. Draft selections are defined by tools/check_resource_rebuild.py and tools/install_native_block_art.py. Current user-authored item exports live under approved/; current connected shells use drafts/array_connected_16_v02/runtime/.
-
-Unselected local experiments, prompts, editor history, Blender previews and machine-specific drawing scripts are excluded. Older exports retained here are inputs to intermediate installation stages; the final installer selects approved art and prunes retired runtime textures. Ordinary builds use committed runtime resources and need no art tools.
+This directory includes PNG/model exports required by the resource rebuild tools.
+Current items use approved/user_items_16_20261028; the two swab PNGs in
+approved/user_sampler_16_20261031 override the earlier swab exports.
+Selected block exports are declared in tools/install_native_block_art.py and
+tools/install_connected_array_art.py. Ordinary builds use src/main/resources
+and do not need Aseprite, Blender or Python. Editor history, prompts, previews,
+local paths and rejected artwork are excluded. Preserve upstream licenses.

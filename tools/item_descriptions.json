@@ -1,0 +1,98 @@
+{
+  "early_planter": {
+    "zh_cn": ["无需供电的独立种植设备", "放入种子与合适的耕地", "供水加速，缺水仍可工作"],
+    "en_us": ["Standalone planting without power", "Insert seeds and suitable soil", "Water speeds up growth; works without water"]
+  },
+  "cell_cultivator": {
+    "zh_cn": ["将生物样本培养为成熟培养物", "放入已采样棉签、营养剂和空胶囊", "需要供水；完成后消耗一份样本"],
+    "en_us": ["Grows biological samples into mature cultures", "Insert a sampled swab, nutrient and empty capsule", "Requires water; consumes one sample per culture"]
+  },
+  "network_planter": {
+    "zh_cn": ["管理农业阵列的生产与库存目标", "需要完整的 3×3×4 农业阵列", "达到库存目标暂停，消耗后自动补货"],
+    "en_us": ["Manages array production and stock targets", "Requires a complete 3x3x4 agricultural array", "Pauses at the stock target and replenishes after use"]
+  },
+  "planter_input_port": {
+    "zh_cn": ["为农业阵列提供种子", "16 个槽位，每格最多 64 颗", "手动取出占用种子会暂停对应作物"],
+    "en_us": ["Supplies seeds to the agricultural array", "16 slots, up to 64 seeds per slot", "Manually taking reserved seeds pauses that crop"]
+  },
+  "seed_storage": {
+    "zh_cn": ["集中管理本阵列使用的种子", "自动收容新生种子，占用部分不供 AE 提取", "点击“拉取种子”导入网络已有种子"],
+    "en_us": ["Central seed storage for this array", "Collects new seeds; AE cannot extract reserved seeds", "Use Pull Seeds to import existing network seeds"]
+  },
+  "essence_vault": {
+    "zh_cn": ["保存阵列产生的全部收获物", "AE 仅可提取，不能存入", "拆卸后保留库存与优先级"],
+    "en_us": ["Stores all harvests produced by the array", "AE can extract, but cannot insert", "Retains its contents and priority when dismantled"]
+  },
+  "planter_output_port": {
+    "zh_cn": ["缓存并输出阵列产生的收获物", "16 个槽位，可向正面容器自动输出", "联网时也可由 AE 提取"],
+    "en_us": ["Buffers and outputs array harvests", "16 slots; can push to the container in front", "AE can also extract while the array is online"]
+  },
+  "planter_speed_module": {
+    "zh_cn": ["缩短阵列的生产周期", "每座阵列最多安装 %s 个", "提高速度，也会增加运行耗电"],
+    "en_us": ["Shortens the array's production cycle", "At most %s per array", "Higher speed also increases running power"]
+  },
+  "planter_parallel_module": {
+    "zh_cn": ["提高同种作物的并行上限", "每座阵列最多安装 %s 个", "需要实际种子逐渐填满并行"],
+    "en_us": ["Raises the parallel limit for each crop", "At most %s per array", "Fill parallel capacity with actual seeds"]
+  },
+  "planter_conversion_module": {
+    "zh_cn": ["将多余的新生种子转为对应收获物", "优先补足并行，不消耗已有种子", "不转换同时作为主产物的种植材料"],
+    "en_us": ["Converts surplus new seeds into crop output", "Fills parallel first; never consumes stored seeds", "Does not convert planting items that are also the main crop"]
+  },
+  "me_network_access": {
+    "zh_cn": ["为成型的农业阵列接入 ME 网络", "每座阵列需要且只能安装一个"],
+    "en_us": ["Connects a formed array to the ME network", "Exactly one is required per array"]
+  },
+  "planter_frame": {
+    "zh_cn": ["ME 农业阵列的基础外壳"],
+    "en_us": ["Basic casing for the ME agricultural array"]
+  },
+  "cultivation_chamber": {
+    "zh_cn": ["放置在农业阵列内部中轴的培养舱"],
+    "en_us": ["Cultivation chamber for the array's inner column"]
+  },
+  "biological_altar": {
+    "zh_cn": ["将生物萃取物凝聚为生物种子", "附近投入萃取物与凝聚生物精华", "随后右键放入空白生物种子，无需基座"],
+    "en_us": ["Creates biological seeds from biological extract", "Drop extract and condensed essence nearby", "Then use a blank biological seed; no pedestals needed"]
+  },
+  "me_infusion_altar": {
+    "zh_cn": ["通过 ME 网络自动完成神秘农业注魔", "替换原注魔祭坛中心，保留八个基座", "支持 AE 加工样板与四张独立加速卡"],
+    "en_us": ["Automates Mystical Agriculture infusion through ME", "Replaces the altar center; keep all eight pedestals", "Supports processing patterns and four separate acceleration cards"]
+  },
+  "bio_sampler": {
+    "zh_cn": ["右键生物采集样本", "采样不伤害生物", "采样后放入细胞培养器使用"],
+    "en_us": ["Use on a mob to collect a sample", "Sampling does not hurt the mob", "Place the sampled swab in a Cell Cultivator"]
+  },
+  "culture_capsule": {
+    "zh_cn": ["用于封装生物培养物的空胶囊"],
+    "en_us": ["An empty capsule used for biological cultures"]
+  },
+  "culture_nutrient": {
+    "zh_cn": ["为细胞培养提供营养"],
+    "en_us": ["Provides nutrients for cell cultivation"]
+  },
+  "mature_culture": {
+    "zh_cn": ["投掷后获得对应的生物萃取物", "右键投掷，或使用发射器", "破碎后使附近玩家获得滋养效果"],
+    "en_us": ["Throw to obtain the matching biological extract", "Use to throw, or launch with a dispenser", "Breaking it nourishes nearby players"]
+  },
+  "bio_extract": {
+    "zh_cn": ["用于制作对应生物的种子"],
+    "en_us": ["Used to create seeds for the matching mob"]
+  },
+  "empty_bio_seed": {
+    "zh_cn": ["在生物祭坛中凝聚为生物种子", "先投入萃取物与凝聚精华，再右键放入"],
+    "en_us": ["Becomes a biological seed at the Biological Altar", "Drop extract and condensed essence, then use on the altar"]
+  },
+  "condensed_bio_essence": {
+    "zh_cn": ["制作生物种子所需的通用材料"],
+    "en_us": ["A shared ingredient for creating biological seeds"]
+  },
+  "bio_seed": {
+    "zh_cn": ["种植后产出对应的生物精华", "可种在耕地上，也可使用种植机"],
+    "en_us": ["Grows into the matching biological essence", "Plant on farmland or grow in a planter"]
+  },
+  "bio_essence": {
+    "zh_cn": ["用于兑换对应生物的掉落物"],
+    "en_us": ["Crafts into drops from the matching mob"]
+  }
+}

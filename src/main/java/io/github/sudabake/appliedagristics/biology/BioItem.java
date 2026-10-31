@@ -19,6 +19,6 @@ public class BioItem extends Item {
     }
     @Override public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> lines, TooltipFlag flag) {
         var id = BioData.identity(stack);
-        if (id != null) lines.add(Component.translatable("gui.appliedagristics.bio_identity", id.toString()));
+        if (id != null && flag.isAdvanced()) lines.add(Component.translatable("gui.appliedagristics.bio_identity", id.toString()).withStyle(net.minecraft.ChatFormatting.DARK_GRAY));
     }
 }

@@ -49,6 +49,14 @@ public final class ClientSmoke {
     private static int sceneTicks;
     private static boolean scenePending;
     private static ItemStack infusionExpected=ItemStack.EMPTY;
+    private static void clickToolbar(net.minecraft.client.gui.screens.Screen screen, String tooltipKey) {
+        var label=net.minecraft.network.chat.Component.translatable(tooltipKey).getString();
+        var button=screen.children().stream().filter(appeng.client.gui.widgets.IconButton.class::isInstance)
+            .map(appeng.client.gui.widgets.IconButton.class::cast)
+            .filter(candidate -> candidate.getTooltipMessage().stream().anyMatch(text -> text.getString().equals(label)))
+            .findFirst().orElseThrow(() -> new IllegalStateException("Missing toolbar action: "+tooltipKey));
+        screen.mouseClicked(button.getX()+button.getWidth()/2.0,button.getY()+button.getHeight()/2.0,0);
+    }
     @SubscribeEvent public static void tick(ClientTickEvent.Post event) {
         if (!Boolean.getBoolean("appliedagristics.clientSmoke")) return;
         var mc = Minecraft.getInstance();
@@ -186,7 +194,9 @@ public final class ClientSmoke {
                 var tooltip=new java.util.ArrayList<net.minecraft.network.chat.Component>(); essence.getItem().appendHoverText(essence,net.minecraft.world.item.Item.TooltipContext.of(mc.level),tooltip,net.minecraft.world.item.TooltipFlag.NORMAL);
                 var before=mc.screen; var use=essence.getItem().use(mc.level,mc.player,net.minecraft.world.InteractionHand.MAIN_HAND);
                 corePassed &= !net.minecraft.network.chat.Component.translatable("effect.appliedagristics.nourishment.desc").getString().equals("effect.appliedagristics.nourishment.desc");
-                corePassed &= tooltip.size()==1 && use.getResult()==net.minecraft.world.InteractionResult.PASS && mc.screen==before;
+                corePassed &= tooltip.isEmpty() && use.getResult()==net.minecraft.world.InteractionResult.PASS && mc.screen==before;
+                essence.getItem().appendHoverText(essence,net.minecraft.world.item.Item.TooltipContext.of(mc.level),tooltip,net.minecraft.world.item.TooltipFlag.ADVANCED);
+                corePassed &= tooltip.size()==1 && tooltip.getFirst().getString().contains(cowId.toString());
                 if (corePassed && io.github.sudabake.appliedagristics.biology.BioLootCatalog.clientDrops(cowId).contains(net.minecraft.world.item.Items.BEEF)
                     && mc.getItemColors().getColor(cowSeed, 0) == (0xFF000000 | egg.getColor(0)) && mc.getItemColors().getColor(cowSeed, 0) != mc.getItemColors().getColor(pigSeed, 0))
                     org.slf4j.LoggerFactory.getLogger("AppliedAgristicsTests").info("CLIENT_SMOKE_PASSED menus=8 formedModels=true plantDisplay=true jeiOnlyRecipes=true spawnEggTint=true");
@@ -283,22 +293,22 @@ public final class ClientSmoke {
             mc.screen.mouseReleased(left + 314, top + 144, 0);
             dragPassed = menu.page == Math.max(0, menu.state.getInt("pages") - 1);
         }
-        if(stage==2 && ticks==32) mc.screen.mouseClicked((mc.screen.width-320)/2+195,(mc.screen.height-240)/2+12,0);
+        if(stage==2 && ticks==32) mc.screen.mouseClicked((mc.screen.width-320)/2+275,(mc.screen.height-240)/2+12,0);
         if(stage==2 && ticks==38) {
             arrayControlsPassed=menu.state.getBoolean("hideOrdinary") && menu.state.getList("rows",10).size()==4;
-            mc.screen.mouseClicked((mc.screen.width-320)/2+195,(mc.screen.height-240)/2+12,0);
+            mc.screen.mouseClicked((mc.screen.width-320)/2+275,(mc.screen.height-240)/2+12,0);
         }
-        if(stage==2 && ticks==44) mc.screen.mouseClicked((mc.screen.width-320)/2+294,(mc.screen.height-240)/2+12,0);
-        if(stage==2 && ticks==47 && mc.screen instanceof io.github.sudabake.appliedagristics.client.NetworkIOScreen)
-            mc.screen.mouseClicked((mc.screen.width-176)/2+20,(mc.screen.height-100)/2+40,0);
         if(stage==2 && ticks==54) {
-            arrayControlsPassed &= mc.screen instanceof io.github.sudabake.appliedagristics.client.NetworkIOScreen && menu.state.getBoolean("directNetworkOutput");
-            Screenshot.grab(mc.gameDirectory,"agr-network-io.png",mc.getMainRenderTarget(),message->{});
-            mc.screen.onClose();
+            int left=(mc.screen.width-320)/2;
+            arrayControlsPassed &= mc.screen instanceof io.github.sudabake.appliedagristics.client.MachineScreen
+                && !menu.state.contains("directNetworkOutput")
+                && mc.screen.children().stream().noneMatch(w->w instanceof net.minecraft.client.gui.components.Button b && b.getMessage().getString().equals("IO"))
+                && mc.screen.children().stream().anyMatch(w->w instanceof net.minecraft.client.gui.components.Button b && b.getX()==left+240 && b.getWidth()==71);
+            Screenshot.grab(mc.gameDirectory,"agr-network-header.png",mc.getMainRenderTarget(),message->{});
         }
         if(stage==2 && ticks==58) {
             arrayControlsPassed &= mc.screen instanceof io.github.sudabake.appliedagristics.client.MachineScreen && mc.player.containerMenu==menu;
-            org.slf4j.LoggerFactory.getLogger("AppliedAgristicsTests").info("CLIENT_ARRAY_FILTER_IO_RESULT {}",arrayControlsPassed);
+            org.slf4j.LoggerFactory.getLogger("AppliedAgristicsTests").info("CLIENT_ARRAY_FILTER_LAYOUT_RESULT {}",arrayControlsPassed);
             net.neoforged.neoforge.network.PacketDistributor.sendToServer(new io.github.sudabake.appliedagristics.network.Messages.Control(menu.machine.getBlockPos(),11,"",0,ItemStack.EMPTY));
         }
         if (stage == 3 && ticks == 27) mc.getSingleplayerServer().execute(() -> {
@@ -312,7 +322,7 @@ public final class ClientSmoke {
         });
         if (stage == 3 && ticks == 11) org.lwjgl.glfw.GLFW.glfwSetCursorPos(mc.getWindow().getWindow(), 0, 0);
         if (stage == 3 && ticks == 12) Screenshot.grab(mc.gameDirectory, "agr-me-infusion-altar.png", mc.getMainRenderTarget(), message -> {});
-        if (stage == 3 && ticks == 15 && mc.screen instanceof io.github.sudabake.appliedagristics.client.AltarScreen screen) mc.screen.mouseClicked(screen.getGuiLeft() - 14, screen.getGuiTop() + 12, 0);
+        if (stage == 3 && ticks == 15 && mc.screen instanceof io.github.sudabake.appliedagristics.client.AltarScreen screen) clickToolbar(screen, "gui.appliedagristics.io_config");
         if (stage == 3 && ticks == 18 && mc.screen instanceof io.github.sudabake.appliedagristics.client.AltarIOScreen screen) {
             mc.screen.mouseClicked(screen.getGuiLeft() + 101, screen.getGuiTop() + 57, 0);
             mc.screen.mouseClicked(screen.getGuiLeft() + 151, screen.getGuiTop() + 113, 0);
@@ -330,13 +340,13 @@ public final class ClientSmoke {
             org.lwjgl.glfw.GLFW.glfwSetCursorPos(mc.getWindow().getWindow(), 0, 0);
         }
         if ((stage==5 || stage==6) && ticks==12) nativeScreensPassed &= mc.screen instanceof io.github.sudabake.appliedagristics.client.PortScreen && menu.machine.items.getSlots()==16;
-        if (stage==5 && ticks==15 && mc.screen instanceof io.github.sudabake.appliedagristics.client.PortScreen screen)
-            mc.screen.mouseClicked(screen.getGuiLeft()-14,screen.getGuiTop()+12,0);
-        if (stage==5 && ticks==25) nativeScreensPassed &= mc.screen instanceof io.github.sudabake.appliedagristics.client.AltarIOScreen;
+        if (stage==5 && ticks==25) nativeScreensPassed &= mc.screen instanceof io.github.sudabake.appliedagristics.client.PortScreen
+            && mc.screen.children().stream().noneMatch(child -> child instanceof appeng.client.gui.widgets.IconButton button
+                && button.getTooltipMessage().stream().anyMatch(text -> text.getString().equals(net.minecraft.network.chat.Component.translatable("gui.appliedagristics.io_config").getString())));
         if (stage==7 && ticks==12) nativeScreensPassed &= mc.screen instanceof io.github.sudabake.appliedagristics.client.EssenceVaultScreen && menu.state.getInt("types")==5;
         if (ticks < (stage==2 ? 60 : stage==1 ? 50 : 30)) return;
         ticks = 0;
-        String[] names = {"early-planter", "seed-storage", "network-planter", "me-infusion-altar-io", "cell-cultivator", "input-port-io", "output-port", "essence-vault", "biological-altar"};
+        String[] names = {"early-planter", "seed-storage", "network-planter", "me-infusion-altar-io", "cell-cultivator", "input-port", "output-port", "essence-vault", "biological-altar"};
         Screenshot.grab(mc.gameDirectory, "agr-" + names[stage] + ".png", mc.getMainRenderTarget(), message -> org.slf4j.LoggerFactory.getLogger("AppliedAgristicsTests").info("CLIENT_SMOKE_SCREENSHOT {}", message.getString()));
         if (++stage >= 8) {
             mc.getSingleplayerServer().execute(() -> {

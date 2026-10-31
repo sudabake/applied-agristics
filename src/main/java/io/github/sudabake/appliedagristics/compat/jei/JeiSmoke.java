@@ -50,8 +50,8 @@ public final class JeiSmoke {
             }
             if(ticks==90) Screenshot.grab(Minecraft.getInstance().gameDirectory,"agr-jei-array-layer.png",Minecraft.getInstance().getMainRenderTarget(),message->{});
             if(ticks==92) {
-                require(io.github.sudabake.appliedagristics.client.ArrayGuide.GUIDE.pageExists(io.github.sudabake.appliedagristics.client.ArrayGuide.PAGE),"Guide page missing from index");
-                var guidePage=io.github.sudabake.appliedagristics.client.ArrayGuide.GUIDE.getPage(io.github.sudabake.appliedagristics.client.ArrayGuide.PAGE);
+                require(io.github.sudabake.appliedagristics.client.ArrayGuide.guide().pageExists(io.github.sudabake.appliedagristics.client.ArrayGuide.PAGE),"Guide page missing from AE's shared index");
+                var guidePage=io.github.sudabake.appliedagristics.client.ArrayGuide.guide().getPage(io.github.sudabake.appliedagristics.client.ArrayGuide.PAGE);
                 var scene=guidePage.document().getBlocks().stream().filter(guideme.scene.LytGuidebookScene.class::isInstance)
                     .map(guideme.scene.LytGuidebookScene.class::cast).findFirst().orElseThrow(()->new IllegalStateException("Guide scene missing"));
                 require(scene.getScene().getLevel().getFilledBlocks().count()==36,"Guide scene must contain the complete array");

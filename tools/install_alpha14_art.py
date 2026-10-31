@@ -102,7 +102,7 @@ def install():
     cp(src/'bio_extract.png',A/'textures/item/bio_extract.png')
     # Load-only Alpha20 aliases use the ordinary storage appearance, with no tier artwork.
     for name in ('seed_storage_tier1','seed_storage_tier2'):
-        write(A/f'models/block/{name}.json',{'parent':'appliedagristics:block/seed_storage'})
+        (A/f'models/block/{name}.json').unlink(missing_ok=True)
         write(A/f'models/item/{name}.json',{'parent':'appliedagristics:block/seed_storage'})
         write(A/f'blockstates/{name}.json',json.loads((A/'blockstates/seed_storage.json').read_text()))
         for path in (A/'models/block/formed').glob(name+'_*.json'):path.unlink()
@@ -119,9 +119,10 @@ def install():
           'key.appliedagristics.guide':'阵列说明（世界中）'if lang=='zh_cn'else'Array guide (in world)',
           'key.categories.appliedagristics':'Applied Agristics','jei.appliedagristics.structure':'农业阵列结构'if lang=='zh_cn'else'Agricultural Array',
           'jei.appliedagristics.rotate':'旋转'if lang=='zh_cn'else'Rotate','jei.appliedagristics.all_layers':'全部层'if lang=='zh_cn'else'All layers',
+          'jei.appliedagristics.drag_rotate':'按住左键拖动旋转；下方可切换分层'if lang=='zh_cn'else'Hold left mouse and drag to rotate; use the layer button below',
           'jei.appliedagristics.layer':'第 %s 层'if lang=='zh_cn'else'Layer %s','jei.appliedagristics.guide':'打开说明'if lang=='zh_cn'else'Open guide',
           'jei.appliedagristics.example_materials':'满升级搭建示例用量'if lang=='zh_cn'else'Fully upgraded example materials',
-          'jei.appliedagristics.optional_storages':'种子仓、精华仓可用输入／输出口替代'if lang=='zh_cn'else'Input/output ports can replace the optional storages'})
+          'jei.appliedagristics.optional_storages':'ME 种子仓、作物仓可用种子仓／输出口替代'if lang=='zh_cn'else'Seed storage/output ports replace optional ME storages'})
         lines=['3×3×4 结构','外壳各层可替换','控制器位置固定','速度 ≤ 4 块','并行 ≤ 4 块','中轴两个培养舱']if lang=='zh_cn'else['3 x 3 x 4','All shell layers modular','Fixed controller position','Speed: up to 4','Parallel: up to 4','2 inner chambers']
         data.update({f'jei.appliedagristics.array_line{i}':text for i,text in enumerate(lines)});write(path,data)
     from install_word_update import install as install_word_update

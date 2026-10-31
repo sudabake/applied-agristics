@@ -132,7 +132,7 @@ public final class RevisionGameTests {
             h.assertTrue(inventory.getAvailableStacks().get(AEItemKey.of(new ItemStack(crop.getEssenceItem())))>=1,"Essence is produced into the vault without a finite output port");
             f.seeds().add(AEItemKey.of(new ItemStack(Items.WHEAT_SEEDS)),1); var ordinary=Cultivations.seed(new ItemStack(Items.WHEAT_SEEDS),h.getLevel(),machine.getBlockPos());
             machine.configure(ordinary.getId(),true,-1); machine.step();
-            h.assertTrue(machine.tasks.get(ordinary.getId()).status.equals("requires_output_port"),"Ordinary produce pauses with a clear reason when the only output accepts essence"); h.succeed();
+            h.assertTrue(machine.tasks.get(ordinary.getId()).progress>0,"Crop storage supports ordinary produce without a redundant output port"); h.succeed();
         });
     }
     @GameTest(template="empty",templateNamespace=Agristics.ID,timeoutTicks=240)
