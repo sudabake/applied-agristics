@@ -11,7 +11,7 @@ from resource_bytes import png_comparison_bytes
 ROOT=Path(__file__).resolve().parents[1]
 DRAFT_SELECTED=('conversion_module_16_v01','me_network_access_user_16_v01','controller_16_v01','controller_16_v03','cultivation_chamber_16_v01','array_connected_16_v02','output_port_user_16_v01')
 DRAFTS=('biology_items_v05','functional_faces_v01','cultivation_chamber_v02','array_faces_32_v06',
-        'basic_planter_v05','cell_cultivator_v06','me_infusion_altar_v05','controller_animation_v01','alpha18_original_v01','alpha19_biology_v01','alpha20_storage_dna_v01','sampler_sampled_16_v01','block_faces_16_v01','boss_essences_uniform_16_v01','planter_frame_16_v01','planter_frame_16_v02','speed_module_16_v01','parallel_module_16_v01','seed_storage_16_v01','me_seed_storage_16_v01','essence_vault_16_v01','output_port_16_v03')
+        'basic_planter_v05','me_infusion_altar_v05','controller_animation_v01','alpha18_original_v01','alpha19_biology_v01','alpha20_storage_dna_v01','sampler_sampled_16_v01','block_faces_16_v01','boss_essences_uniform_16_v01','planter_frame_16_v01','planter_frame_16_v02','speed_module_16_v01','parallel_module_16_v01','seed_storage_16_v01','me_seed_storage_16_v01','essence_vault_16_v01','output_port_16_v03')
 
 def snapshot(folder):
     result={}
@@ -34,8 +34,15 @@ def main():
         shutil.copytree(ROOT/name,workspace/name,ignore=shutil.ignore_patterns('__pycache__','*.pyc'))
     for draft in (*DRAFTS,*DRAFT_SELECTED):
         relative=Path('art/drafts')/draft
-        shutil.copytree(ROOT/relative,workspace/relative)
+        if (ROOT/relative).exists():
+            shutil.copytree(ROOT/relative,workspace/relative)
+        else:
+            (workspace/relative).mkdir(parents=True)
     shutil.copytree(ROOT/'art/approved',workspace/'art/approved')
+    if (ROOT/'art/derived').exists():
+        shutil.copytree(ROOT/'art/derived',workspace/'art/derived')
+    else:
+        (workspace/'art/derived').mkdir(parents=True)
     resources=workspace/'src/main/resources'
     before=snapshot(resources)
     shape=workspace/'src/main/java/io/github/sudabake/appliedagristics/block/MachineShapes.java'

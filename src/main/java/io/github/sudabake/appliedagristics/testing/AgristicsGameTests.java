@@ -41,10 +41,13 @@ public final class AgristicsGameTests {
         h.assertTrue(be.items.getStackInSlot(0).getCount() == 1, "Seed is preserved");
         var saved = drop.get(DataComponents.BLOCK_ENTITY_DATA).copyTag();
         h.assertTrue(saved.getList("pending", 10).equals(restored.saveWithFullMetadata(h.getLevel().registryAccess()).getList("pending", 10)), "Blocked random harvest survives save/load without rerolling");
-        var legacy = new net.neoforged.neoforge.items.ItemStackHandler(3);
-        legacy.setStackInSlot(0, new ItemStack(crop.getSeedsItem())); legacy.setStackInSlot(1, new ItemStack(Blocks.FARMLAND)); legacy.setStackInSlot(2, new ItemStack(crop.getEssenceItem(), 4));
-        saved.put("inventory", legacy.serializeNBT(h.getLevel().registryAccess())); restored.loadWithComponents(saved, h.getLevel().registryAccess());
-        h.assertTrue(restored.items.getSlots() == 12 && restored.items.getStackInSlot(2).getCount() == 4, "Legacy three-slot inventory expands without losing items"); h.succeed();
+        h.assertTrue(restored.items.getSlots() == 11, "Basic planter contains exactly two inputs and nine outputs");
+        var bottom = restored.automation(Direction.DOWN);
+        h.assertTrue(bottom.getSlots() == 9 && bottom.extractItem(8, 1, true).getCount() == 1,
+            "Bottom automation exposes all nine output slots after reload");
+        h.assertTrue(restored.automation(Direction.UP).getSlots() == 2,
+            "Other sides expose only the seed and soil inputs");
+        h.succeed();
     }
     @GameTest(template = "empty", templateNamespace = Agristics.ID)
     public static void nativeHarvestRules(GameTestHelper h) {
@@ -119,10 +122,8 @@ public final class AgristicsGameTests {
             h.assertTrue(early.status.equals("wrong_farmland"), "Basic special seed requires its crux");
             h.setBlock(pos.below(), Blocks.DIAMOND_BLOCK); for (int i = 0; i < 10; i++) early.step();
             h.assertTrue(!early.items.getStackInSlot(2).isEmpty(), "Basic planter requires the physically placed crux below it");
-            var oldInventory = new net.neoforged.neoforge.items.ItemStackHandler(1); oldInventory.setStackInSlot(0, soil);
-            var legacy = new net.minecraft.nbt.CompoundTag(); legacy.put("inventory", oldInventory.serializeNBT(h.getLevel().registryAccess()));
-            var restored = new NetworkPlanter(early.getBlockPos(), Agristics.NETWORK.get().defaultBlockState()); restored.setLevel(h.getLevel()); restored.loadWithComponents(legacy, h.getLevel().registryAccess());
-            h.assertTrue(restored.items.getSlots() == 4 && restored.items.getStackInSlot(0).isEmpty() && ItemStack.isSameItemSameComponents(restored.items.getStackInSlot(3), soil), "Old ME soil moves to the reserved slot without deletion");
+            var controller = new NetworkPlanter(early.getBlockPos(), Agristics.NETWORK.get().defaultBlockState());
+            h.assertTrue(controller.items.getSlots() == 0, "Controller has no retired card or farmland slots");
             long start = System.nanoTime();
             var large = io.github.sudabake.appliedagristics.logic.Harvests.networkBatch(h.getLevel(), early.getBlockPos(), seed, 107_374_182L, new java.util.HashMap<>());
             h.assertTrue(large.get(AEItemKey.of(new ItemStack(crop.getEssenceItem()))) >= 107_374_182L, "Large parallel batches use long counts instead of item entities");

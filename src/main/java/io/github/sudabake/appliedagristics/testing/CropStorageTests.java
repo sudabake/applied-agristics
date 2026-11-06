@@ -72,37 +72,37 @@ public final class CropStorageTests {
     }
 
     @GameTest(template="empty",templateNamespace=Agristics.ID)
-    public static void legacyVaultItemKeepsAllCountsAndPriority(GameTestHelper h) {
+    public static void cropStorageItemKeepsAllCountsAndPriority(GameTestHelper h) {
         var pos=new BlockPos(1,1,1);h.setBlock(pos,Agristics.ESSENCE_VAULT.get());EssenceVault vault=h.getBlockEntity(pos);
         var essence=AEItemKey.of(new ItemStack(Crops.all().getFirst().getEssenceItem()));var wheat=AEItemKey.of(new ItemStack(Items.WHEAT));
         var old=new CompoundTag();var entries=new ListTag();var entry=new CompoundTag();
         entry.put("key",essence.toTag(h.getLevel().registryAccess()));entry.putLong("count",10_000_000_000L);entries.add(entry);
         old.put("essences",entries);old.putInt("priority",37);vault.loadWithComponents(old,h.getLevel().registryAccess());
-        h.assertTrue(vault.storeProduced(wheat,11,false)==11,"Legacy essence inventory can receive new non-essence crops");
+        h.assertTrue(vault.storeProduced(wheat,11,false)==11,"Crop storage accepts essence and ordinary crops");
         var player=h.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
         var drop=Block.getDrops(vault.getBlockState(),h.getLevel(),vault.getBlockPos(),vault,player,ItemStack.EMPTY).getFirst();
         var next=new BlockPos(2,1,1);h.setBlock(next,Agristics.ESSENCE_VAULT.get());var absolute=h.absolutePos(next);
-        h.assertTrue(BlockItem.updateCustomBlockEntityTag(h.getLevel(),player,absolute,drop),"Existing portable block identity restores without registry migration");
+        h.assertTrue(BlockItem.updateCustomBlockEntityTag(h.getLevel(),player,absolute,drop),"Portable crop storage restores its inventory");
         EssenceVault restored=h.getBlockEntity(next);var counter=new appeng.api.stacks.KeyCounter();restored.mountInventories((storage,priority)->storage.getAvailableStacks(counter));
-        h.assertTrue(counter.get(essence)==10_000_000_000L && counter.get(wheat)==11 && restored.getPriority()==37,"Old essence counts, new crops and priority survive dismantling and replacing");
-        h.assertTrue(restored.saveWithFullMetadata(h.getLevel().registryAccess()).getList("essences",10).size()==2,"The old NBT inventory format is still supported");h.succeed();
+        h.assertTrue(counter.get(essence)==10_000_000_000L && counter.get(wheat)==11 && restored.getPriority()==37,"All crop counts and priority survive dismantling and replacing");
+        h.assertTrue(restored.saveWithFullMetadata(h.getLevel().registryAccess()).getList("essences",10).size()==2,"Current crop storage uses long-count essences entries");h.succeed();
     }
 
     @GameTest(template="empty",templateNamespace=Agristics.ID,timeoutTicks=240)
-    public static void legacyIoFlagDoesNotLosePaidBatches(GameTestHelper h) {
+    public static void savedPaidBatchesPublishExactlyOnce(GameTestHelper h) {
         var f=install(h,true,true);
         h.runAtTickTime(100,()->{
             var a=f.controller();var wheat=AEItemKey.of(new ItemStack(Items.WHEAT));
             var id=Cultivations.id(new ItemStack(Items.WHEAT_SEEDS),h.getLevel());
-            var old=a.saveWithFullMetadata(h.getLevel().registryAccess());old.putBoolean("directNetworkOutput",true);
+            var old=a.saveWithFullMetadata(h.getLevel().registryAccess());
             var batch=new ListTag();var item=new CompoundTag();item.put("key",wheat.toTag(h.getLevel().registryAccess()));item.putLong("count",5);batch.add(item);
             var tasks=new ListTag();var task=new CompoundTag();task.putString("id",id.toString());task.putBoolean("enabled",false);task.putLong("target",111);task.putDouble("work",123.5);task.put("batch",batch);tasks.add(task);old.put("tasks",tasks);
             a.loadWithComponents(old,h.getLevel().registryAccess());a.step();
-            h.assertTrue(f.producedCount(wheat)==5 && a.tasks.get(id).progress==123.5 && a.tasks.get(id).target==111,"Legacy paid output, work and stock target survive the removed IO option");
+            h.assertTrue(f.producedCount(wheat)==5 && a.tasks.get(id).progress==123.5 && a.tasks.get(id).target==111,"Paid output, work and stock target survive reload");
             var saved=a.saveWithFullMetadata(h.getLevel().registryAccess());
             h.assertTrue(!saved.contains("directNetworkOutput") && !a.snapshot(0,"").contains("directNetworkOutput"),"Retired setting is absent from saves and UI snapshots");
             a.loadWithComponents(saved,h.getLevel().registryAccess());a.step();
-            h.assertTrue(f.producedCount(wheat)==5,"Loading the upgraded state cannot publish the paid batch twice");h.succeed();
+            h.assertTrue(f.producedCount(wheat)==5,"Reloading cannot publish the paid batch twice");h.succeed();
         });
     }
 }

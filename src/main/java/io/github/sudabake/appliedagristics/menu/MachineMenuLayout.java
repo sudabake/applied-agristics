@@ -12,14 +12,11 @@ record MachineMenuLayout(List<MachineSlot> slots, int inventoryX, int inventoryY
     var slots = new ArrayList<MachineSlot>();
     int inventoryX = 8;
     int inventoryY;
-    if (machine instanceof CellCultivator) {
-      slots.add(new MachineSlot(0, 44, 29, false));
-      slots.add(new MachineSlot(1, 68, 29, false));
-      slots.add(new MachineSlot(2, 92, 29, false));
-      slots.add(new MachineSlot(3, 116, 48, true));
-      slots.add(new MachineSlot(4, 116, 70, true));
-      slots.add(new MachineSlot(5, 140, 70, true));
-      inventoryY = 112;
+    if (machine instanceof MEBioCultivator) {
+      for(int i=0;i<3;i++) slots.add(new MachineSlot(i,18+i*18,40,false));
+      slots.add(new MachineSlot(3,116,40,true));
+      for(int i=4;i<8;i++) slots.add(new MachineSlot(i,179,5+(i-4)*18,false));
+      inventoryY=100;
     } else if (machine instanceof ItemPort) {
       for (int i = 0; i < 16; i++)
         slots.add(new MachineSlot(i, 52 + i % 4 * 18, 24 + i / 4 * 18, false));
@@ -40,7 +37,7 @@ record MachineMenuLayout(List<MachineSlot> slots, int inventoryX, int inventoryY
     } else {
       inventoryX = machine instanceof AltarControls ? 8 : 79;
       inventoryY = 160;
-      if (machine instanceof SeedStorage) slots.add(new MachineSlot(0, 24, 29, false));
+      if (machine instanceof SeedStorage) slots.add(new MachineSlot(0, 24, 27, false));
       // ME planter upgrades are structure modules, not inventory slots.
     }
     return new MachineMenuLayout(List.copyOf(slots), inventoryX, inventoryY);

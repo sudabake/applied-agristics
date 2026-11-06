@@ -11,6 +11,32 @@ import net.minecraft.world.level.block.state.BlockState;
 /** The only physical AE node of a formed planter. */
 public final class NetworkAccess extends GridMachine implements IStorageProvider {
     private PlanterStructure structure;
+    private appeng.api.stacks.KeyCounter productionInventory;
+    private boolean storageDirty;
+
+    /** Server-thread production scope. Reflect local mutations before the next crop's target check. */
+    public void beginProduction(appeng.api.stacks.KeyCounter inventory) {
+        if (productionInventory!=null) throw new IllegalStateException("Production batch already active");
+        productionInventory=inventory;
+        storageDirty=false;
+    }
+    void storageChanged(appeng.api.stacks.AEKey key,long delta) {
+        if (productionInventory!=null) {
+            if (key!=null && delta!=0) productionInventory.add(key,delta);
+            storageDirty=true;
+        } else {
+            var grid=getMainNode().getGrid();
+            if (grid!=null) grid.getStorageService().invalidateCache();
+        }
+    }
+    public void endProduction() {
+        productionInventory=null;
+        if (storageDirty) {
+            storageDirty=false;
+            var grid=getMainNode().getGrid();
+            if (grid!=null) grid.getStorageService().invalidateCache();
+        }
+    }
     public NetworkAccess(BlockPos pos, BlockState state) { super(Agristics.ACCESS_BE.get(), pos, state, 0); }
     public void bind(PlanterStructure structure) { this.structure = structure; invalidateCapabilities(); }
     public void unbind(PlanterStructure previous) {

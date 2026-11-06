@@ -1,19 +1,20 @@
 {
   "render_type": "minecraft:cutout",
   "textures": {
-    "plant": "appliedagristics:block/bio_plant",
-    "particle": "appliedagristics:block/bio_plant"
+    "base": "appliedagristics:block/bio_crop_0_base",
+    "pods": "appliedagristics:block/bio_crop_0_pods",
+    "particle": "appliedagristics:block/bio_crop_0_base"
   },
   "elements": [
     {
       "from": [
         0,
-        0,
+        -1,
         8
       ],
       "to": [
         16,
-        4.0,
+        15,
         8
       ],
       "shade": false,
@@ -35,8 +36,7 @@
             16,
             16
           ],
-          "texture": "#plant",
-          "tintindex": 0
+          "texture": "#base"
         },
         "south": {
           "uv": [
@@ -45,20 +45,19 @@
             16,
             16
           ],
-          "texture": "#plant",
-          "tintindex": 0
+          "texture": "#base"
         }
       }
     },
     {
       "from": [
         0,
-        0,
+        -1,
         8
       ],
       "to": [
         16,
-        4.0,
+        15,
         8
       ],
       "shade": false,
@@ -80,7 +79,50 @@
             16,
             16
           ],
-          "texture": "#plant",
+          "texture": "#base"
+        },
+        "south": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#base"
+        }
+      }
+    },
+    {
+      "from": [
+        0,
+        -1,
+        8
+      ],
+      "to": [
+        16,
+        15,
+        8
+      ],
+      "shade": false,
+      "rotation": {
+        "origin": [
+          8,
+          0,
+          8
+        ],
+        "axis": "y",
+        "angle": -45,
+        "rescale": true
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#pods",
           "tintindex": 0
         },
         "south": {
@@ -90,7 +132,52 @@
             16,
             16
           ],
-          "texture": "#plant",
+          "texture": "#pods",
+          "tintindex": 0
+        }
+      }
+    },
+    {
+      "from": [
+        0,
+        -1,
+        8
+      ],
+      "to": [
+        16,
+        15,
+        8
+      ],
+      "shade": false,
+      "rotation": {
+        "origin": [
+          8,
+          0,
+          8
+        ],
+        "axis": "y",
+        "angle": 45,
+        "rescale": true
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#pods",
+          "tintindex": 0
+        },
+        "south": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#pods",
           "tintindex": 0
         }
       }

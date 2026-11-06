@@ -67,24 +67,6 @@ public final class UniversalSeedGameTests {
         });
     }
     @GameTest(template = "empty", templateNamespace = Agristics.ID)
-    public static void biologicalSeedCraftingAndGrowth(GameTestHelper h) {
-        var oldInput=CraftingInput.of(2,1,List.of(BioData.withIdentity(Agristics.EXTRACT.get(),COW),new ItemStack(com.blakebr0.mysticalagriculture.init.ModItems.PROSPERITY_SEED_BASE.get())));
-        var manager=h.getLevel().getRecipeManager();
-        h.assertTrue(manager.getRecipeFor(RecipeType.CRAFTING,oldInput,h.getLevel()).isEmpty(),"Former one-extract workbench shortcut is removed");
-        var ritualInputs=new ArrayList<ItemStack>();ritualInputs.add(new ItemStack(Agristics.EMPTY_BIO_SEED.get()));
-        ritualInputs.add(BioData.withIdentity(Agristics.EXTRACT.get(),COW));ritualInputs.add(new ItemStack(Agristics.CONDENSED_ESSENCE.get()));
-        var input=CraftingInput.of(3,1,ritualInputs);var recipe=manager.getRecipeFor(Agristics.BIO_INFUSION_TYPE.get(),input,h.getLevel()).orElseThrow();
-        var seed=recipe.value().assemble(input,h.getLevel().registryAccess());
-        h.assertTrue(seed.is(Agristics.BIO_SEED.get()) && COW.equals(BioData.identity(seed)),"Ritual recipe produces the identified biological seed");
-        h.assertTrue(io.github.sudabake.appliedagristics.logic.Harvests.seed(seed), "Universal seed is accepted by cultivation system");
-        h.setBlock(1, 1, 1, Agristics.EARLY.get()); EarlyPlanter be = h.getBlockEntity(new BlockPos(1, 1, 1));
-        be.items.setStackInSlot(0, seed); be.items.setStackInSlot(1, new ItemStack(Blocks.FARMLAND)); for (int i = 0; i < Balance.EARLY_TICKS.get() / 20; i++) be.step();
-        h.assertTrue(be.items.getStackInSlot(2).is(Agristics.BIO_ESSENCE.get()) && COW.equals(BioData.identity(be.items.getStackInSlot(2))), "Basic planter grows species-specific essence");
-        h.assertTrue(COW.equals(BioData.identity(be.items.getStackInSlot(0))) && be.items.getStackInSlot(0).getCount() == 1, "Physical seed retained with identity");
-        h.assertTrue(Crops.essence(be.items.getStackInSlot(2)) && !Crops.essence(new ItemStack(Agristics.BIO_ESSENCE.get())), "Only identified essence enters essence cell");
-        h.succeed();
-    }
-    @GameTest(template = "empty", templateNamespace = Agristics.ID)
     public static void lootPatternsAndAECompatibility(GameTestHelper h) {
         var drops = BioLootCatalog.drops(h.getLevel(), COW);
         h.assertTrue(drops.contains(Items.BEEF) && drops.contains(Items.LEATHER) && drops.contains(Items.COOKED_BEEF), "Enumerate raw and conditional cooked loot types");

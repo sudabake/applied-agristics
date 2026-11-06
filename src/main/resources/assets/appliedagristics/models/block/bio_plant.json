@@ -1,1 +1,3 @@
-{"parent": "minecraft:block/tinted_cross", "render_type": "minecraft:cutout", "textures": {"cross": "appliedagristics:block/bio_plant"}}
+{
+  "parent": "appliedagristics:block/bio_crop_7"
+}

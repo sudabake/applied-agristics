@@ -6,37 +6,44 @@ import io.github.sudabake.appliedagristics.network.Messages;
 import java.util.*;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.*;
-import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.nbt.*;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.PacketDistributor;
 
-public final class MachineScreen extends AbstractContainerScreen<MachineMenu> {
-  private final List<Button> checks = new ArrayList<>();
+public final class MachineScreen extends appeng.client.gui.AEBaseScreen<MachineMenu> {
+  private final List<appeng.client.gui.widgets.AECheckbox> checks = new ArrayList<>();
   private final List<EditBox> targets = new ArrayList<>();
   private final List<Button> applies = new ArrayList<>();
   private boolean draggingScroll;
-  private Button cropFilter;
+  private appeng.client.gui.widgets.AECheckbox cropFilter;
+  private appeng.client.gui.widgets.AECheckbox autoNewSeeds;
   private String rowSignature = "";
+  private final appeng.client.gui.widgets.IconButton recoveryWarning;
 
   public MachineScreen(MachineMenu menu, Inventory inventory, Component title) {
-    super(menu, inventory, title);
+    super(menu, inventory, title, appeng.client.gui.style.StyleManager.loadStyleDoc(menu.machine instanceof EarlyPlanter ? "/screens/appliedagristics_early.json" : "/screens/appliedagristics_planter.json"));
+    recoveryWarning = addToLeftToolbar(new appeng.client.gui.widgets.IconButton(button -> {}) {
+      @Override protected appeng.client.gui.Icon getIcon() { return appeng.client.gui.Icon.INVALID; }
+      @Override public List<Component> getTooltipMessage() {
+        return List.of(Component.translatable("gui.appliedagristics.inventory_unresolved", menu.state.getInt("unresolved")));
+      }
+    });
     imageWidth = menu.machine instanceof EarlyPlanter ? 176 : 320;
     imageHeight = menu.machine instanceof EarlyPlanter ? 218 : 240;
     inventoryLabelX = menu.machine instanceof EarlyPlanter ? 8 : 79;
     inventoryLabelY = menu.machine instanceof EarlyPlanter ? 126 : 150;
   }
 
+  @Override
+  protected boolean shouldAddToolbar() {
+    return !(menu.machine instanceof EarlyPlanter);
+  }
+
   private void send(int action, String id, long value) {
-    var seed =
-        action == 3 && row((int) value) != null
-            ? ItemStack.parseOptional(
-                minecraft.level.registryAccess(), row((int) value).getCompound("seed"))
-            : ItemStack.EMPTY;
     PacketDistributor.sendToServer(
-        new Messages.Control(menu.machine.getBlockPos(), action, id, value, seed));
+        new Messages.Control(menu.machine.getBlockPos(), menu.containerId, menu.sessionToken, action, id, value, ItemStack.EMPTY));
   }
 
   @Override
@@ -48,52 +55,36 @@ public final class MachineScreen extends AbstractContainerScreen<MachineMenu> {
     rowSignature = "";
     if (!menu.machine.networkMachine()) return;
     if (menu.machine instanceof NetworkPlanter) {
-      cropFilter =
-          addRenderableWidget(
-              Button.builder(Component.empty(), b -> send(12, "", 0))
-                  .bounds(leftPos + 240, topPos + 5, 71, 18)
-                  .build(AeButton::new));
+      autoNewSeeds = addRenderableWidget(new appeng.client.gui.widgets.AECheckbox(
+          leftPos + 136, topPos + 6, 94, 16, style,
+          Component.translatable("gui.appliedagristics.auto_new_seeds")));
+      autoNewSeeds.setChangeListener(() -> send(14, "", 0));
+      cropFilter = addRenderableWidget(new appeng.client.gui.widgets.AECheckbox(
+          leftPos + 232, topPos + 6, 80, 16, style,
+          Component.translatable("gui.appliedagristics.hide_vanilla")));
+      cropFilter.setChangeListener(() -> send(12, "", 0));
       addRenderableWidget(
           Button.builder(
                   Component.translatable("gui.appliedagristics.enable_all"), b -> send(5, "", 0))
-              .bounds(leftPos + 240, topPos + 26, 34, 18)
+              .bounds(leftPos + 232, topPos + 26, 38, 18)
               .build(AeButton::new));
       addRenderableWidget(
           Button.builder(
                   Component.translatable("gui.appliedagristics.disable_all"), b -> send(6, "", 0))
-              .bounds(leftPos + 277, topPos + 26, 34, 18)
+              .bounds(leftPos + 273, topPos + 26, 39, 18)
               .build(AeButton::new));
     }
-    if (menu.machine instanceof SeedStorage)
-      addRenderableWidget(
-          Button.builder(
-                  Component.translatable("gui.appliedagristics.collect"), b -> send(0, "", 0))
-              .bounds(leftPos + 48, topPos + 26, 48, 18)
-              .build(AeButton::new));
-    for (int i = 0; i < (menu.machine instanceof SeedStorage ? 12 : 4); i++) {
+    for (int i = 0; i < 4; i++) {
       final int index = i;
       int y = topPos + rowY(i);
-      checks.add(
-          addRenderableWidget(
-              Button.builder(
-                      Component.literal("-"),
-                      b -> {
-                        var row = row(index);
-                        if (row == null) return;
-                        if (menu.machine instanceof SeedStorage)
-                          send(3, row.getString("id"), index);
-                        else
-                          send(
-                              row.getBoolean("enabled") ? 2 : 1,
-                              row.getString("id"),
-                              target(index, row));
-                      })
-                  .bounds(
-                      leftPos + (menu.machine instanceof SeedStorage ? 86 + i % 3 * 100 : 8),
-                      y,
-                      menu.machine instanceof SeedStorage ? 16 : 20,
-                      18)
-                  .build(AeButton::new)));
+      var check = addRenderableWidget(new appeng.client.gui.widgets.AECheckbox(
+          leftPos + 8, y + 2, 22, 16, style, Component.empty()));
+      check.setChangeListener(() -> {
+        var row = row(index);
+        if (row != null) send(row.getBoolean("enabled") ? 2 : 1,
+            row.getString("id"), target(index, row));
+      });
+      checks.add(check);
       if (menu.machine instanceof NetworkPlanter) {
         var target =
             addRenderableWidget(
@@ -126,7 +117,7 @@ public final class MachineScreen extends AbstractContainerScreen<MachineMenu> {
   }
 
   private int rowY(int index) {
-    return 60 + (menu.machine instanceof SeedStorage ? index / 3 : index) * 22;
+    return 60 + index * 22;
   }
 
   private CompoundTag row(int index) {
@@ -143,16 +134,12 @@ public final class MachineScreen extends AbstractContainerScreen<MachineMenu> {
   }
 
   @Override
-  protected void containerTick() {
+  public void containerTick() {
     super.containerTick();
     if (menu.machine.networkMachine())
       menu.page = Math.clamp(menu.page, 0, Math.max(0, menu.state.getInt("pages") - 1));
-    if (cropFilter != null)
-      cropFilter.setMessage(
-          Component.translatable(
-              menu.state.getBoolean("hideOrdinary")
-                  ? "gui.appliedagristics.show_ordinary"
-                  : "gui.appliedagristics.hide_ordinary"));
+    if (cropFilter != null) cropFilter.setSelected(menu.state.getBoolean("hideOrdinary"));
+    if (autoNewSeeds != null) autoNewSeeds.setSelected(menu.state.getBoolean("autoEnableNewSeeds"));
     var signature = new StringBuilder();
     for (int i = 0; i < checks.size(); i++) {
       var row = row(i);
@@ -163,14 +150,7 @@ public final class MachineScreen extends AbstractContainerScreen<MachineMenu> {
     for (int i = 0; i < checks.size(); i++) {
       var row = row(i);
       checks.get(i).visible = row != null;
-      if (row != null)
-        checks
-            .get(i)
-            .setMessage(
-                Component.literal(
-                    menu.machine instanceof SeedStorage
-                        ? "↓"
-                        : row.getBoolean("enabled") ? "✓" : "□"));
+      if (row != null) checks.get(i).setSelected(row.getBoolean("enabled"));
       if (i < targets.size()) {
         var box = targets.get(i);
         box.visible = row != null;
@@ -182,18 +162,19 @@ public final class MachineScreen extends AbstractContainerScreen<MachineMenu> {
   }
 
   @Override
-  protected void renderBg(GuiGraphics g, float partialTick, int mouseX, int mouseY) {
-    panel(g, leftPos, topPos, imageWidth, imageHeight);
+  public void drawBG(GuiGraphics g, int offsetX, int offsetY, int mouseX, int mouseY, float partialTick) {
+    if (menu.machine instanceof EarlyPlanter) {
+      g.fill(leftPos, topPos, leftPos + imageWidth, topPos + imageHeight, 0xFF181818);
+      g.fill(leftPos + 1, topPos + 1, leftPos + imageWidth - 1, topPos + imageHeight - 1, 0xFFF0F0F0);
+      g.fill(leftPos + 4, topPos + 4, leftPos + imageWidth - 4, topPos + imageHeight - 4, 0xFFC6C6C6);
+    } else super.drawBG(g, offsetX, offsetY, mouseX, mouseY, partialTick);
     for (var slot : menu.slots) {
       int x = leftPos + slot.x - 1, y = topPos + slot.y - 1;
-      if (menu.machine.networkMachine()) {
-        appeng.client.gui.Icon.SLOT_BACKGROUND.getBlitter().dest(x, y).blit(g);
-        continue;
-      }
-      boolean basic = true;
-      g.fill(x, y, x + 18, y + 18, basic ? 0xFF373737 : 0xFF88899E);
-      g.fill(x + 1, y + 1, x + 18, y + 18, 0xFFF1F1F5);
-      g.fill(x + 1, y + 1, x + 17, y + 17, basic ? 0xFF8B8B8B : 0xFFA8A9BE);
+      if (menu.machine instanceof EarlyPlanter) {
+        g.fill(x, y, x + 18, y + 18, 0xFF373737);
+        g.fill(x + 1, y + 1, x + 18, y + 18, 0xFFF1F1F5);
+        g.fill(x + 1, y + 1, x + 17, y + 17, 0xFF8B8B8B);
+      } else appeng.client.gui.Icon.SLOT_BACKGROUND.getBlitter().dest(x, y).blit(g);
     }
     if (menu.machine instanceof EarlyPlanter) {
       drawWaterTank(g, leftPos + 7, topPos + 26, 16, 60);
@@ -233,9 +214,8 @@ public final class MachineScreen extends AbstractContainerScreen<MachineMenu> {
         var row = row(i);
         if (row == null) continue;
         int y = topPos + rowY(i);
-        boolean storage = menu.machine instanceof SeedStorage;
-        int x = leftPos + (storage ? 8 + i % 3 * 100 : 32);
-        g.fill(x, y - 1, storage ? x + 96 : leftPos + 310, y + 21, 0xFFBFC0CE);
+        int x = leftPos + 32;
+        g.fill(x, y - 1, leftPos + 310, y + 21, 0xFFBFC0CE);
         var seed =
             ItemStack.parseOptional(minecraft.level.registryAccess(), row.getCompound("seed"));
         g.renderItem(seed, x + 2, y);
@@ -253,13 +233,13 @@ public final class MachineScreen extends AbstractContainerScreen<MachineMenu> {
                     ? seed.getHoverName().getString()
                     : crop.getDisplayName().getString();
         boolean hover = mouseX >= x && mouseX < x + 96 && mouseY >= y && mouseY < y + 22;
-        rowText(g, name, x + 22, y + 1, storage ? 52 : 70, 0x404054, storage && hover);
+        rowText(g, name, x + 22, y + 1, 70, 0x404054, false);
         rowText(
             g,
             row.getLong("used") + "/" + row.getLong("count"),
             x + 22,
             y + 11,
-            storage ? 52 : 70,
+            70,
             0x66667A,
             hover);
         if (menu.machine instanceof NetworkPlanter) {
@@ -340,19 +320,6 @@ public final class MachineScreen extends AbstractContainerScreen<MachineMenu> {
     }
   }
 
-  private void panel(GuiGraphics g, int x, int y, int width, int height) {
-    if (menu.machine instanceof EarlyPlanter) {
-      g.fill(x, y, x + width, y + height, 0xFF181818);
-      g.fill(x + 1, y + 1, x + width - 1, y + height - 1, 0xFFF0F0F0);
-      g.fill(x + 4, y + 4, x + width - 4, y + height - 4, 0xFFC6C6C6);
-      return;
-    }
-    g.fill(x, y, x + width, y + height, 0xFF3D3E52);
-    g.fill(x + 1, y + 1, x + width - 1, y + height - 1, 0xFFDCDDE5);
-    g.fill(x + 3, y + 3, x + width - 3, y + height - 3, 0xFF8D8EA5);
-    g.fill(x + 4, y + 4, x + width - 4, y + height - 4, 0xFFCDCED8);
-  }
-
   private void label(GuiGraphics g, String key, int x, int y) {
     g.drawString(
         font,
@@ -386,20 +353,25 @@ public final class MachineScreen extends AbstractContainerScreen<MachineMenu> {
   }
 
   @Override
-  protected void renderLabels(GuiGraphics g, int mouseX, int mouseY) {
-    super.renderLabels(g, mouseX, mouseY);
+  public void drawFG(GuiGraphics g, int offsetX, int offsetY, int mouseX, int mouseY) {
+    super.drawFG(g, offsetX, offsetY, mouseX, mouseY);
     var status =
         Component.translatable("status.appliedagristics." + menu.state.getString("status"));
     int x = menu.machine instanceof EarlyPlanter ? 30 : 8;
-    int y = menu.machine instanceof EarlyPlanter ? 78 : 146;
-    int width = menu.machine instanceof EarlyPlanter ? 90 : 65;
+    int y = menu.machine instanceof EarlyPlanter ? 78 : 150;
+    int width = menu.machine instanceof EarlyPlanter ? 70 : 65;
     g.drawString(font, font.plainSubstrByWidth(status.getString(), width), x, y, 0x404054, false);
+  }
+
+  @Override
+  protected void updateBeforeRender() {
+    super.updateBeforeRender();
+    recoveryWarning.setVisibility(menu.state.getInt("unresolved") > 0);
   }
 
   @Override
   public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
     super.render(g, mouseX, mouseY, partialTick);
-    renderTooltip(g, mouseX, mouseY);
     if (menu.machine instanceof NetworkPlanter && mouseY >= topPos + 26 && mouseY <= topPos + 46) {
       if (mouseX >= leftPos + 16 && mouseX < leftPos + 236)
         g.renderComponentTooltip(
@@ -450,20 +422,7 @@ public final class MachineScreen extends AbstractContainerScreen<MachineMenu> {
       if (row == null) continue;
       int y = topPos + rowY(i);
       if (mouseY >= y && mouseY < y + 20) {
-        if (menu.machine instanceof SeedStorage) {
-          int x = leftPos + 8 + i % 3 * 100;
-          if (mouseX >= x && mouseX < x + 76)
-            g.renderComponentTooltip(
-                font,
-                List.of(
-                    ItemStack.parseOptional(
-                            minecraft.level.registryAccess(), row.getCompound("seed"))
-                        .getHoverName(),
-                    Component.literal(row.getLong("used") + " / " + row.getLong("count"))),
-                mouseX,
-                mouseY);
-          continue;
-        }
+
         if (menu.machine instanceof NetworkPlanter
             && mouseX >= leftPos + 196
             && mouseX < leftPos + 260)
@@ -475,6 +434,8 @@ public final class MachineScreen extends AbstractContainerScreen<MachineMenu> {
               ItemStack.parseOptional(minecraft.level.registryAccess(), row.getCompound("seed")),
               mouseX,
               mouseY);
+        else if (menu.machine instanceof NetworkPlanter && mouseX >= leftPos + 126 && mouseX < leftPos + 142)
+          g.renderTooltip(font, ItemStack.parseOptional(minecraft.level.registryAccess(), row.getCompound("output")), mouseX, mouseY);
         else if (menu.machine instanceof NetworkPlanter
             && mouseX >= leftPos + 145
             && mouseX < leftPos + 192)

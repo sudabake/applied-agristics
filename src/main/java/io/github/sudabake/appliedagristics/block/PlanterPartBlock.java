@@ -27,6 +27,9 @@ public final class PlanterPartBlock extends Block {
         registerDefaultState(stateDefinition.any().setValue(FORMED, false).setValue(FACING, Direction.NORTH).setValue(CELL,0));
     }
     public PlanterLayout.Role role() { return role; }
+    @Override protected boolean skipRendering(BlockState state, BlockState adjacent, Direction side) {
+        return role == PlanterLayout.Role.CHAMBER && adjacent.is(this) || super.skipRendering(state, adjacent, side);
+    }
     @Override protected net.minecraft.world.phys.shapes.VoxelShape getShape(BlockState state,net.minecraft.world.level.BlockGetter level,BlockPos pos,net.minecraft.world.phys.shapes.CollisionContext context) {
         return MachineShapes.get(net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(this).getPath(),state.getValue(FACING),state.getValue(FORMED));
     }

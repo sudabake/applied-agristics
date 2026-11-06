@@ -1,0 +1,131 @@
+{
+  "includes": [
+    "common/common.json",
+    "common/player_inventory.json"
+  ],
+  "generatedBackground": {
+    "width": 320,
+    "height": 240
+  },
+  "slots": {
+    "MACHINE_INPUT": {
+      "left": 24,
+      "top": 27
+    },
+    "PLAYER_INVENTORY": {
+      "left": 79,
+      "top": 160,
+      "grid": "BREAK_AFTER_9COLS"
+    },
+    "PLAYER_HOTBAR": {
+      "left": 79,
+      "top": 218,
+      "grid": "HORIZONTAL"
+    }
+  },
+  "text": {
+    "dialog_title": {
+      "text": "",
+      "position": {
+        "left": 8,
+        "top": 6
+      }
+    },
+    "state": {
+      "text": "",
+      "position": {
+        "left": 140,
+        "top": 31
+      }
+    },
+    "player_inventory_title": {
+      "text": {
+        "translate": "container.inventory"
+      },
+      "position": {
+        "left": 79,
+        "top": 150
+      }
+    }
+  },
+  "widgets": {
+    "collect": {
+      "left": 48,
+      "top": 26,
+      "width": 80,
+      "height": 18
+    },
+    "withdraw0": {
+      "left": 86,
+      "top": 61,
+      "width": 16,
+      "height": 18
+    },
+    "withdraw1": {
+      "left": 186,
+      "top": 61,
+      "width": 16,
+      "height": 18
+    },
+    "withdraw2": {
+      "left": 286,
+      "top": 61,
+      "width": 16,
+      "height": 18
+    },
+    "withdraw3": {
+      "left": 86,
+      "top": 83,
+      "width": 16,
+      "height": 18
+    },
+    "withdraw4": {
+      "left": 186,
+      "top": 83,
+      "width": 16,
+      "height": 18
+    },
+    "withdraw5": {
+      "left": 286,
+      "top": 83,
+      "width": 16,
+      "height": 18
+    },
+    "withdraw6": {
+      "left": 86,
+      "top": 105,
+      "width": 16,
+      "height": 18
+    },
+    "withdraw7": {
+      "left": 186,
+      "top": 105,
+      "width": 16,
+      "height": 18
+    },
+    "withdraw8": {
+      "left": 286,
+      "top": 105,
+      "width": 16,
+      "height": 18
+    },
+    "withdraw9": {
+      "left": 86,
+      "top": 127,
+      "width": 16,
+      "height": 18
+    },
+    "withdraw10": {
+      "left": 186,
+      "top": 127,
+      "width": 16,
+      "height": 18
+    },
+    "withdraw11": {
+      "left": 286,
+      "top": 127,
+      "width": 16,
+      "height": 18
+    }
+  }
+}

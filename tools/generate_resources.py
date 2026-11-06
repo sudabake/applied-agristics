@@ -38,8 +38,8 @@ def png(path, accent, item=False):
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_bytes(data)
 
-blocks = {'early_planter': (115, 204, 97), 'seed_storage': (233, 199, 92), 'network_planter': (97, 216, 198), 'cell_cultivator': (80, 170, 220)}
-items = {'bio_sampler': (225, 225, 220), 'mature_culture': (115, 210, 155), 'bio_extract': (210, 105, 185), 'culture_capsule': (170, 215, 230), 'culture_nutrient': (220, 180, 90), 'bio_seed': (180, 180, 180), 'bio_essence': (200, 200, 200)}
+blocks = {'early_planter': (115, 204, 97), 'seed_storage': (233, 199, 92), 'network_planter': (97, 216, 198)}
+items = {'bio_sampler': (225, 225, 220), 'culture_nutrient': (220, 180, 90), 'bio_seed': (180, 180, 180), 'bio_essence': (200, 200, 200)}
 # Machine geometry, textures and directional states belong to the approved art installer.
 for name, color in items.items():
     if name not in ('bio_seed','bio_essence'):
@@ -49,7 +49,7 @@ for name, color in items.items():
 names = {
     'early_planter': ('基础种植机', 'Basic Planter'), 'seed_storage': ('种子存储驱动器', 'Seed Storage Drive'),
     'network_planter': ('ME 种植机', 'ME Planter'),
-    'cell_cultivator': ('细胞培养器', 'Cell Cultivator'), 'bio_sampler': ('生物棉签', 'Biological Swab'), 'mature_culture': ('成熟培养物', 'Mature Culture'), 'bio_extract': ('生物萃取物', 'Biological Extract'), 'culture_capsule': ('空培养胶囊', 'Empty Culture Capsule'), 'culture_nutrient': ('营养剂', 'Culture Nutrient'), 'bio_seed': ('生物种子', 'Biological Seed'), 'bio_essence': ('生物精华', 'Biological Essence')}
+    'bio_sampler': ('生物棉签', 'Biological Swab'), 'culture_nutrient': ('营养剂', 'Culture Nutrient'), 'bio_seed': ('生物种子', 'Biological Seed'), 'bio_essence': ('生物精华', 'Biological Essence')}
 labels = {
     'search_hint': ('英文作物 ID，如 iron', 'Crop ID, e.g. iron'), 'seed_count': ('种子（占用 / 总数）', 'Seeds (used / total)'),
     'stock': ('现有库存', 'Stock'), 'state': ('状态', 'State'),
@@ -69,26 +69,26 @@ labels.update({'required_power': ('运行所需：%s AE/t', 'Required while runn
                'next_speed_power': ('再加一个速度升级：%s AE/t', 'One more speed upgrade: %s AE/t'),
                'next_parallel_power': ('再加一个并行升级：%s AE/t（按已有种子）', 'One more parallel upgrade: %s AE/t (available seeds)')})
 labels.update({'enable_all': ('全开', 'All on'), 'disable_all': ('全关', 'All off'),
+               'direction_config': ('方向设置', 'Sides'),
+               'no_neighbor': ('没有相邻方块', 'No adjacent block'),
+               'relative_front': ('前', 'Front'), 'relative_back': ('后', 'Back'),
+               'relative_left': ('左', 'Left'), 'relative_right': ('右', 'Right'),
+               'relative_top': ('上', 'Top'), 'relative_bottom': ('下', 'Bottom'),
+               'inventory_unresolved': ('%s 条库存记录待恢复。原始数据已保留，恢复对应模组后重新加载存档', '%s inventory entries need recovery. Data retained. Restore the missing mod and reload the world'),
                'io_config': ('输入／输出配置', 'Input / Output Configuration'),
                'target_help': ('-1：无限种植；0：停止补货。整批收获可能超过目标。', '-1: unlimited; 0: no restocking. Complete batches may exceed the target.'),
                'auto_output_on': ('自动输出：开', 'Auto output: on'), 'auto_output_off': ('自动输出：关', 'Auto output: off'),
-               'altar_acceleration': ('AE 加速卡：四个独立槽，每槽一张；每张速度翻倍。', 'AE acceleration cards: four slots, one per slot; each doubles speed.')})
-labels.update({'bio_name': ('%s（%s）', '%s (%s)'), 'bio_identity': ('生物：%s', 'Entity: %s'), 'bio_exchange': ('%s → %s', '%s → %s'), 'bio_more_drops': ('另有 %s 种战利品', '%s more loot types'), 'bio_open_guide': ('手持右键查看全部兑换图案', 'Use to view all exchange patterns'), 'bio_guide_help': ('滚动查看；每个有图标的格子放一份精华', 'Scroll; use one essence per marked slot'), 'bio_no_drops': ('此生物尚无可兑换的物品掉落', 'No item loot exchanges for this entity'),
-    'culture_toggle_on': ('萃取✓', 'Auto✓'), 'culture_toggle_off': ('萃取×', 'Auto×'),
-    'culture_toggle_help': ('开启：培养后自动萃取；关闭：积攒成熟培养物。当前批次会完成。', 'On: automatically extract mature cultures; off: keep cultures. Active batches finish.'),
-    'culture_sample': ('样本', 'Sample'), 'culture_nutrient': ('营养', 'Food'), 'culture_capsule': ('胶囊', 'Shell'), 'culture_cells': ('培养物', 'Culture'),
-    'culture_progress': ('%s / %s 秒；%s FE/t', '%s / %s seconds; %s FE/t')})
-for removed in ('bio_exchange','bio_more_drops','bio_open_guide','bio_guide_help','bio_no_drops'):
-    labels.pop(removed,None)
+})
+labels.update({'bio_name': ('%s（%s）', '%s (%s)'), 'bio_identity': ('生物：%s', 'Entity: %s')})
 for i, pair in enumerate([('下', 'Down'), ('上', 'Up'), ('北', 'North'), ('南', 'South'), ('西', 'West'), ('东', 'East')]):
     labels[f'side_{i}'] = pair
 for i, pair in enumerate([('禁用', 'Disabled'), ('输入', 'Input'), ('输出', 'Output'), ('双向', 'Both')]):
     labels[f'io_{i}'] = pair
 statuses = {
-    'idle': ('待机', 'Idle'), 'disabled': ('未启用', 'Disabled'), 'missing_inputs': ('缺少材料', 'Missing input'),
+    'inventory_recovery': ('库存待恢复', 'Inventory recovery'), 'idle': ('待机', 'Idle'), 'disabled': ('未启用', 'Disabled'), 'missing_inputs': ('缺少材料', 'Missing input'),
     'wrong_farmland': ('耕地或生长条件不符', 'Invalid soil or growing conditions'), 'missing_seed': ('无可用种子', 'No free seed'), 'output_full': ('输出阻塞', 'Blocked'), 'watered': ('水加速', 'Watered'),
     'growing': ('种植中', 'Growing'), 'online': ('已联网', 'Online'), 'offline': ('网络离线', 'Offline'),
-    'target_reached': ('已达目标', 'Stocked'), 'no_power': ('电量不足', 'No power'), 'no_recipe': ('无匹配配方', 'No recipe'), 'crafting': ('制作中', 'Crafting'), 'culturing': ('培养中', 'Culturing'), 'extracting': ('萃取中', 'Extracting'), 'no_water': ('缺水', 'No water')}
+    'target_reached': ('已达目标', 'Stocked'), 'no_power': ('电量不足', 'No power'), 'no_recipe': ('无匹配配方', 'No recipe'), 'crafting': ('制作中', 'Crafting'), 'culturing': ('培养中', 'Culturing'), 'no_water': ('缺水', 'No water')}
 for locale, index in [('zh_cn', 0), ('en_us', 1)]:
     lang = {'itemGroup.appliedagristics': 'Applied Agristics'}
     for name, pair in names.items():
@@ -97,12 +97,11 @@ for locale, index in [('zh_cn', 0), ('en_us', 1)]:
     lang.update({f'status.{NS}.{name}': pair[index] for name, pair in statuses.items()})
     jei = {
         'sampling': ('生物采样', 'Biological Sampling'), 'culture': ('细胞培养', 'Cell Cultivation'),
-        'extraction': ('生物萃取', 'Biological Extraction'), 'bio_planting': ('生物精华种植', 'Biological Essence Farming'),
+        'bio_planting': ('生物精华种植', 'Biological Essence Farming'),
         'mob_reference': ('生物示意；右键活体采样，不消耗刷怪蛋', 'Entity reference; sample a living mob, no egg consumed'),
-        'process_cost': ('%s 秒 · %s FE/t', '%s seconds · %s FE/t'),
         'single_use': ('每份输入消耗一次，保留生物标签', 'Input consumed once; entity identity retained'),
         'sampling_help': ('右键活体采样，不伤害生物', 'Use on a living mob; no damage'),
-        'planting_help': ('机器种植，保留种子；不能种在地上', 'Machine farming; seed kept; no field planting')}
+        'planting_help': ('可种在耕地上，也可使用种植机', 'Plant on farmland or grow in a planter')}
     lang.update({f'jei.{NS}.{name}': pair[index] for name, pair in jei.items()})
     write(f'assets/{NS}/lang/{locale}.json', lang)
 
@@ -115,15 +114,13 @@ write('pack.mcmeta', {'pack': {'pack_format': 34, 'description': 'Applied Agrist
 
 # AE's own screen loader, generated background, toolbar, slots and upgrade panel.
 write('assets/ae2/screens/appliedagristics_machine_io.json', {
-    'includes': ['common/common.json'], 'generatedBackground': {'width': 176, 'height': 134},
-    'text': {
-        'dialog_title': {'text': {'translate': 'gui.appliedagristics.io_config'}, 'position': {'left': 8, 'top': 6}},
-        'autoOutputLabel': {'text': {'translate': 'gui.appliedagristics.auto_output_label'}, 'position': {'left': 8, 'top': 111}}},
+    'includes': ['common/common.json'], 'generatedBackground': {'width': 110, 'height': 112},
+    'text': {'dialog_title': {'text': {'translate': 'gui.appliedagristics.direction_config'},
+        'position': {'left': 8, 'top': 6}}},
     'widgets': {'back': {'right': 23, 'top': -5},
-        'side0': {'left': 68, 'top': 72}, 'side1': {'left': 68, 'top': 24},
-        'side2': {'left': 68, 'top': 48}, 'side3': {'left': 92, 'top': 72},
-        'side4': {'left': 44, 'top': 48}, 'side5': {'left': 92, 'top': 48},
-        'autoOutput': {'left': 142, 'top': 104}}})
+        'top': {'left': 46, 'top': 23}, 'left': {'left': 24, 'top': 45},
+        'front': {'left': 46, 'top': 45}, 'right': {'left': 68, 'top': 45},
+        'bottom': {'left': 46, 'top': 67}, 'backSide': {'left': 68, 'top': 67}}})
 
 # Empty 8x6x8 GameTest structure; no third-party template assets.
 def nbt_name(name):

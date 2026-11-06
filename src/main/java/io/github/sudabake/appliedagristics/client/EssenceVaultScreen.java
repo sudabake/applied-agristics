@@ -13,8 +13,15 @@ import net.neoforged.neoforge.network.PacketDistributor;
 
 /** Read-only list; extraction is available through the connected AE network. */
 public final class EssenceVaultScreen extends AEBaseScreen<MachineMenu> {
+    private final appeng.client.gui.widgets.IconButton recoveryWarning;
     public EssenceVaultScreen(MachineMenu menu,Inventory inventory,Component title) {
         super(menu,inventory,title,StyleManager.loadStyleDoc("/screens/appliedagristics_vault.json"));
+        recoveryWarning=addToLeftToolbar(new appeng.client.gui.widgets.IconButton(button -> {}) {
+            @Override protected appeng.client.gui.Icon getIcon() { return appeng.client.gui.Icon.INVALID; }
+            @Override public java.util.List<Component> getTooltipMessage() {
+                return java.util.List.of(Component.translatable("gui.appliedagristics.inventory_unresolved",menu.state.getInt("unresolved")));
+            }
+        });
         addToLeftToolbar(new appeng.client.gui.widgets.IconButton(b -> switchToScreen(new VaultPriorityScreen(this))) {
             @Override protected appeng.client.gui.Icon getIcon() { return appeng.client.gui.Icon.PRIORITY; }
             @Override public java.util.List<Component> getTooltipMessage() { return java.util.List.of(Component.translatable("gui.ae2.Priority")); }
@@ -41,11 +48,11 @@ public final class EssenceVaultScreen extends AEBaseScreen<MachineMenu> {
             graphics.fill(164,y,167,y+thumb,0xFFBBBBD0);
         }
     }
-    @Override protected void updateBeforeRender() { super.updateBeforeRender(); setTextContent("state",Component.translatable("gui.appliedagristics.vault_readonly",menu.state.getInt("types"))); }
+    @Override protected void updateBeforeRender() { super.updateBeforeRender(); recoveryWarning.setVisibility(menu.state.getInt("unresolved")>0); setTextContent("state",Component.translatable("gui.appliedagristics.vault_readonly",menu.state.getInt("types"))); }
     @Override public boolean mouseScrolled(double x,double y,double horizontal,double vertical) {
         if (x>=leftPos && x<leftPos+176 && y>=topPos+22 && y<topPos+98) {
             menu.page=Math.clamp(menu.page-(int)Math.signum(vertical),0,Math.max(0,menu.state.getInt("pages")-1));
-            PacketDistributor.sendToServer(new Messages.Control(menu.machine.getBlockPos(),4,"",menu.page,ItemStack.EMPTY)); return true;
+            PacketDistributor.sendToServer(new Messages.Control(menu.machine.getBlockPos(), menu.containerId, menu.sessionToken,4,"",menu.page,ItemStack.EMPTY)); return true;
         }
         return super.mouseScrolled(x,y,horizontal,vertical);
     }

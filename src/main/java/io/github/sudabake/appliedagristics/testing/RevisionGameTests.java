@@ -22,7 +22,7 @@ public final class RevisionGameTests {
     public static void survivalRecipesLoadAndCraftAllEquipment(GameTestHelper h) {
         var level=h.getLevel(); var registries=level.registryAccess();
         var recipes=level.getRecipeManager().getAllRecipesFor(net.minecraft.world.item.crafting.RecipeType.CRAFTING);
-        var derived=Set.of(Agristics.BIO_SEED.get(),Agristics.BIO_ESSENCE.get(),Agristics.CULTURE.get(),Agristics.EXTRACT.get(),Agristics.LEGACY_SEEDS_FIRST.get().asItem(),Agristics.LEGACY_SEEDS_SECOND.get().asItem());
+        var derived=Set.of(Agristics.BIO_SEED.get(),Agristics.BIO_ESSENCE.get());
         int checked=0;
         for(var entry:Agristics.ITEMS.getEntries()) {
             var item=entry.get(); if(derived.contains(item)) continue;
@@ -46,8 +46,8 @@ public final class RevisionGameTests {
             h.assertTrue(result.is(item)&&result.getCount()==expected,"Survival result and batch count: "+id);
             checked++;
         }
-        h.assertTrue(checked==20,"All fifteen current blocks and five tools/consumables are craftable");
-        org.slf4j.LoggerFactory.getLogger("AppliedAgristicsTests").info("SURVIVAL_RECIPES_PASSED equipment=20 actualWorkbench=true ingredientTags=true batchCounts=true");
+        h.assertTrue(checked==17,"All current machines and consumables are craftable");
+        org.slf4j.LoggerFactory.getLogger("AppliedAgristicsTests").info("SURVIVAL_RECIPES_PASSED equipment=17 actualWorkbench=true ingredientTags=true batchCounts=true");
         h.succeed();
     }
     @GameTest(template="empty",templateNamespace=Agristics.ID,timeoutTicks=240)
@@ -75,7 +75,7 @@ public final class RevisionGameTests {
             h.assertTrue(controller.structure.speedModules()==1 && f.access().getMainNode().getNode()==node && task.occupied==1 && task.progress==progress,"Valid module replacement updates its effect without disconnecting");
             h.getLevel().removeBlock(module,false);
             h.assertTrue(!controller.structure.formed() && !f.access().connectedStructure() && task.occupied==0 && f.seeds().used(seed)==0,"A genuinely missing shell stops service and releases seeds");
-            h.assertTrue(!controller.workingVisual(),"Breaking the structure immediately stops the flowing lights");
+            h.assertTrue(!controller.workingVisual(),"Breaking the structure immediately stops the controller animation");
             h.assertTrue(!h.getLevel().getBlockState(controller.getBlockPos()).getValue(PlanterPartBlock.FORMED),"A broken structure clears its formed skin");
             h.getLevel().setBlockAndUpdate(module,Agristics.PLANTER_FRAME.get().defaultBlockState()); controller.structure.refresh(); f.access().ensureNode();
             h.assertTrue(controller.structure.formed() && f.access().connectedStructure(),"Repair restores the formed structure and access binding");

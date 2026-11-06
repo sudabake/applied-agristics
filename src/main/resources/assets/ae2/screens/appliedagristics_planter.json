@@ -1,0 +1,41 @@
+{
+  "includes": [
+    "common/common.json"
+  ],
+  "generatedBackground": {
+    "width": 320,
+    "height": 240
+  },
+  "slots": {
+    "PLAYER_INVENTORY": {
+      "left": 79,
+      "top": 160,
+      "grid": "BREAK_AFTER_9COLS"
+    },
+    "PLAYER_HOTBAR": {
+      "left": 79,
+      "top": 218,
+      "grid": "HORIZONTAL"
+    }
+  },
+  "text": {
+    "dialog_title": {
+      "text": {
+        "translate": "block.appliedagristics.network_planter"
+      },
+      "position": {
+        "left": 8,
+        "top": 6
+      }
+    },
+    "player_inventory_title": {
+      "text": {
+        "translate": "container.inventory"
+      },
+      "position": {
+        "left": 79,
+        "top": 150
+      }
+    }
+  }
+}

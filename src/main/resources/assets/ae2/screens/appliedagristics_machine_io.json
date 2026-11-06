@@ -3,8 +3,8 @@
     "common/common.json"
   ],
   "generatedBackground": {
-    "width": 176,
-    "height": 134
+    "width": 110,
+    "height": 112
   },
   "text": {
     "dialog_title": {
@@ -15,15 +15,6 @@
         "left": 8,
         "top": 6
       }
-    },
-    "autoOutputLabel": {
-      "text": {
-        "translate": "gui.appliedagristics.auto_output_label"
-      },
-      "position": {
-        "left": 8,
-        "top": 111
-      }
     }
   },
   "widgets": {
@@ -31,33 +22,29 @@
       "right": 23,
       "top": -5
     },
-    "side0": {
+    "top": {
+      "left": 46,
+      "top": 23
+    },
+    "left": {
+      "left": 24,
+      "top": 45
+    },
+    "front": {
+      "left": 46,
+      "top": 45
+    },
+    "right": {
       "left": 68,
-      "top": 72
+      "top": 45
     },
-    "side1": {
+    "bottom": {
+      "left": 46,
+      "top": 67
+    },
+    "backSide": {
       "left": 68,
-      "top": 24
-    },
-    "side2": {
-      "left": 68,
-      "top": 48
-    },
-    "side3": {
-      "left": 92,
-      "top": 72
-    },
-    "side4": {
-      "left": 44,
-      "top": 48
-    },
-    "side5": {
-      "left": 92,
-      "top": 48
-    },
-    "autoOutput": {
-      "left": 142,
-      "top": 104
+      "top": 67
     }
   }
 }

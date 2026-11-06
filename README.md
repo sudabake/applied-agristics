@@ -1,69 +1,34 @@
-# Applied Agristics
+# Applied Agristics 应用农业
 
-Minecraft **1.21.1 / NeoForge 21.1.248 / Java 21** 的 AE2 × Mystical Agriculture 农业附属。
+Minecraft **1.21.1 / NeoForge / Java 21**，AE2 × Mystical Agriculture 农业附属。
 
-**Beta 1.1** 是公开测试版，仍处于测试和平衡阶段。下载见 [Releases](https://github.com/sudabake/applied-agristics/releases)。当前不支持 1.20.1 Forge。
+当前版本为 **1.3.0**。
 
-An AE2 × Mystical Agriculture addon bridging early farming and mid-game resource automation.
+## 主要内容
 
-An AE2 × Mystical Agriculture addon bridging early farming and mid-game resource automation.
+- 基础种植机使用种子和合适的土壤生产，水提供加速。特殊作物按要求在机器下方放置基座。
+- 生物棉签右键采样，不伤害生物。ME 生物培养器消耗已采样棉签、营养试剂和空白生物种子，直接生成对应种子。基础 10 秒、4 AE/t，无耗水，支持四张独立加速卡及 AE 加工样板。
+- ME 农业阵列为 3×3×4，多方块成型后通过唯一的 ME 接入模块联网，自身不占频道。普通种子仓和输出口支持前期使用，ME 种子仓与作物仓提供后期仓储。
+- 速度、并行模块各最多四块，默认满配分别为 256 倍速度与 256 并行容量。实际产量取决于占用种子数、作物周期和输出能力。
+- 新生种子优先进入同阵列 ME 种子仓，其余收获物优先作物仓、随后输出口。普通种子仓不自动回填。作物仓接受本阵列全部收获，AE 仅可提取。
+- ME 种子仓支持手动收容、自动收容、分类过滤和二次确认推出。控制器可设置新发现作物默认启用，默认关闭。
+- 转换模块只作用于神秘农业与本 Mod 生物精华作物，先补并行，再将新生余量按 1∶1 转为精华。普通作物的种子收存保持正常。
+- ME 注魔祭坛替换原注魔中心，使用八个真实神秘农业基座，支持 AE 下单、四张独立加速卡和按面自动输出。
+- 扳手可旋转和 Shift＋右键拆卸。仅 ME 种子仓与作物仓随方块保留库存，其他机器内部物品单独掉落。
+- JEI 提供配方、种植产物和可拖动结构页，GuideME 提供说明。Jade、JDTE 与 Botany Pots 适配均为可选。
 
-## 内容
+阵列使用独立完整面，五面共用机壳、功能正面单独绘制，三种模块六面复用各自贴图。培养舱透明，控制器保留屏幕状态动画。
 
-- 独立免电基础种植站：耕地、可选用水加速、静态作物展示与管道接口。
-- 3×3×4 ME 农业阵列：外壳各层可替换，连续外框，速度与并行模块各最多四块。
-- 种子仓、ME 种子仓、输出口与只读作物仓；通过独立 ME 接入模块联网。
-- 按全网库存目标自动补货，目标 -1 持续生产；新增种子优先补并行，转换只处理新增的多余种子。
-- 新生种子优先直接进入同阵列 ME 种子仓；其他收获物优先进入作物仓，再进入输出口。普通种子仓不自动回填。
-- 新生种子优先直接进入同阵列 ME 种子仓；其他收获物优先进入作物仓，再进入输出口。普通种子仓不自动回填。
-- 生物棉签采样、一次性培养、萃取、生物种子与精华兑换；支持耕地种植、JEI 与 GuideME。
-- 背包／JEI 悬停显示用途，Shift 展开详情；G 接入 AE2 共享指南，U／G 结构页支持拖动旋转。
-- 背包／JEI 悬停显示用途，Shift 展开详情；G 接入 AE2 共享指南，U／G 结构页支持拖动旋转。
-- ME 注魔祭坛保留八个真实基座，支持 AE 处理样板、四张独立加速卡与自动输出。
-- 仅 ME 种子仓和作物仓拆卸后保留库存数据，其余设备单独掉出内部物品。
+## 构建
 
-## 安装
+安装 JDK 21，在项目根目录运行 `gradlew.bat build`（Windows）或 `bash gradlew build`。成品位于 `build/libs/`。运行 `gradlew.bat runGameTestServer` 执行游戏测试。
 
-将 `applied-agristics-beta1.1.jar` 放入 Minecraft 1.21.1 NeoForge 实例的 `mods` 目录，并安装以下前置。不要同时加载多个本 Mod 版本。
+开发依赖为 NeoForge 21.1.248、AE2 19.2.18、Mystical Agriculture 8.0.28、GuideME 21.1.19 和 Cucumber 8.0.16。此前验证过最低核心组合 NeoForge 21.1.241、AE2 19.2.17、Mystical Agriculture 8.0.27、GuideME 21.1.17 和 Cucumber 8.0.16，完整整合包兼容范围见验证记录。
 
-| 前置 | 最低要求 | 开发版本 |
-| --- | --- | --- |
-| NeoForge | 21.1.248 | 21.1.248 |
-| Applied Energistics 2 | 19.2.17 | 19.2.18 |
-| Mystical Agriculture | 8.0.27 | 8.0.28 |
-| Cucumber | 8.0.16 | 8.0.16 |
-| GuideME | 21.1.18 | 21.1.19 |
+## 项目资料
 
-JEI 为推荐的可选模组，Botany Pots 为可选兼容。依赖 JAR 不随本 Mod 打包。
+- [机器与多方块规则](docs/ME_MULTIBLOCK.md)
+- [作物数据与公式](docs/CROP_DATA.md)
+- [下一版更新日志](docs/CHANGELOG_NEXT.md)
 
-## 从源码构建
-
-安装 64 位 **JDK 21**，让 `JAVA_HOME` 指向该 JDK。无需另外安装 Gradle，首次构建需要联网下载工具与依赖。
-
-```powershell
-git clone https://github.com/sudabake/applied-agristics.git
-cd applied-agristics
-.\gradlew.bat build
-```
-
-Linux / macOS 使用 `bash gradlew build`。产物为 `build/libs/applied-agristics-beta1.1.jar`。
-
-内部版本号为 `1.0.0-beta.2`；下载名称与 Git 标签采用 `beta1.1`。
-
-## 开发
-
-```powershell
-.\gradlew.bat test
-.\gradlew.bat runGameTestServer
-.\gradlew.bat runClient -PjeiTests=true
-python tools/check_resource_rebuild.py
-python tools/resource_audit.py
-```
-
-资源重建检查需要 Python 3.10+，使用隔离副本，不改工作资源。普通构建直接使用已提交资源，不需要 Aseprite、Blender 或 Python。
-
-`run/`、存档和日志属于本地开发数据，不纳入源码与安装包。`-PclientSmoke=true` 只适用于专用测试存档，会修改该存档并自动退出。测试类和测试空结构不会进入安装包。
-
-搭建规则见 [多方块说明](docs/ME_MULTIBLOCK.md)，种植扩展见 [种植兼容](docs/CROP_DATA.md)。问题反馈请使用 [Issues](https://github.com/sudabake/applied-agristics/issues)。
-
-许可证：**LGPL-3.0-only**，见 [LICENSE](LICENSE)、[COPYING](COPYING)。第三方声明见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+许可证为 LGPL-3.0-only。第三方声明见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。

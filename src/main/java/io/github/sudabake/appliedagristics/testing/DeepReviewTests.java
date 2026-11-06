@@ -74,6 +74,7 @@ public class DeepReviewTests {
             for(var i:r.getIngredients())inputs.merge(AEItemKey.of(i.getItems()[0]),1L,Long::sum);
             var p=pattern(h,r.getResultItem(h.getLevel().registryAccess()),inputs);h.assertTrue(a.pushPattern(p,counters(p),Direction.NORTH),"AE push works");
             for(int i=0;i<7;i++)a.step();
+            a.configureSide(Direction.DOWN.ordinal(),3);
             var extracted=a.automation(Direction.DOWN).extractItem(1,64,false);h.assertTrue(!extracted.isEmpty(),"External hopper retrieves the AE order result before export tick");a.step();
             boolean sticky=a.saveWithFullMetadata(h.getLevel().registryAccess()).getBoolean("craftingDelivery");
             a.items.setStackInSlot(0,r.getAltarIngredient().getItems()[0].copyWithCount(1));

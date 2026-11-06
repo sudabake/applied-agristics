@@ -12,7 +12,7 @@ description='''Compact agriculture and automatic essence stocking for AE2 and My
 [[dependencies.appliedagristics]]
 modId="neoforge"
 type="required"
-versionRange="[21.1.248,21.2)"
+versionRange="[${neo_min_version},21.2)"
 ordering="NONE"
 side="BOTH"
 [[dependencies.appliedagristics]]
@@ -36,7 +36,7 @@ side="BOTH"
 [[dependencies.appliedagristics]]
 modId="guideme"
 type="required"
-versionRange="[21.1.18,21.2)"
+versionRange="[${guideme_min_version},21.2)"
 ordering="AFTER"
 side="BOTH"
 [[dependencies.appliedagristics]]
@@ -48,3 +48,5 @@ side="BOTH"
 
 [[mixins]]
 config="appliedagristics.mixins.json"
+[[mixins]]
+config="appliedagristics.optional.mixins.json"

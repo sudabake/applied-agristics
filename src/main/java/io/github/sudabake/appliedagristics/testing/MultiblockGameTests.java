@@ -19,6 +19,83 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 @PrefixGameTestTemplate(false)
 public final class MultiblockGameTests {
     @GameTest(template="empty",templateNamespace=Agristics.ID,timeoutTicks=240)
+    public static void formedArrayIgnoresCropGrowthConditions(GameTestHelper h) {
+        var f=PlanterFixture.install(h.getLevel(),h.absolutePos(new BlockPos(2,1,1)),true);
+        h.runAtTickTime(100,()-> {
+            var level=h.getLevel(); var pos=f.controller().getBlockPos();
+            var crop=Crops.all().getFirst(); var crux=crop.getCruxBlock();
+            var biomes=new java.util.HashSet<>(crop.getRequiredBiomes());
+            var manager=level.getRecipeManager(); var original=new java.util.ArrayList<>(manager.getRecipes());
+            var recipes=new java.util.ArrayList<net.minecraft.world.item.crafting.RecipeHolder<?>>(original);
+            recipes.add(new net.minecraft.world.item.crafting.RecipeHolder<>(net.minecraft.resources.ResourceLocation.parse("appliedagristics:test/no_growth_conditions"),
+                new io.github.sudabake.appliedagristics.logic.PlantingRecipe(net.minecraft.world.item.crafting.Ingredient.of(Items.COOKIE),
+                    net.minecraft.world.item.crafting.Ingredient.of(Blocks.DIRT),java.util.List.of(new ItemStack(Items.WHEAT)),
+                    Blocks.WHEAT.defaultBlockState().setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.AGE_7,7),true,200,true)));
+            try {
+                crop.setCruxBlock(()->Blocks.BEDROCK); crop.getRequiredBiomes().clear();
+                crop.addRequiredBiome(net.minecraft.resources.ResourceLocation.parse("appliedagristics:unavailable_biome"));
+                manager.replaceRecipes(recipes); io.github.sudabake.appliedagristics.logic.CropSources.invalidate();
+                h.assertTrue(level.getRawBrightness(pos.above(),0)<8,"Opaque shell leaves the native crop check position dark");
+                var cookie=new ItemStack(Items.COOKIE);
+                h.assertTrue(!io.github.sudabake.appliedagristics.logic.CropSources.find(level,cookie).canGrow(level,pos,new ItemStack(Blocks.DIRT)),
+                    "Declared loot crop fails native soil and light checks outside the array production path");
+                var seeds=java.util.List.of(new ItemStack(Items.WHEAT_SEEDS),new ItemStack(Items.CARROT),new ItemStack(Items.POTATO),
+                    new ItemStack(crop.getSeedsItem()),
+                    io.github.sudabake.appliedagristics.biology.BioData.withIdentity(Agristics.BIO_SEED.get(),net.minecraft.resources.ResourceLocation.parse("minecraft:cow")),cookie);
+                for(var seed:seeds) {
+                    var key=AEItemKey.of(seed);f.seeds().add(key,1);
+                    var entry=Cultivations.seed(seed,level,pos); var output=AEItemKey.of(entry.essenceStack());
+                    long before=f.producedCount(output); var controller=f.controller();
+                    controller.configure(entry.getId(),true,-1);controller.tasks.get(entry.getId()).progress=200;controller.step();
+                    h.assertTrue(f.producedCount(output)>before && controller.tasks.get(entry.getId()).status.equals("growing"),
+                        "Formed array produces without soil, light, biome or physical crux requirements: "+seed);
+                    controller.configure(entry.getId(),false,-1);
+                }
+                h.succeed();
+            } finally {
+                crop.setCruxBlock(crux==null?null:()->crux);crop.getRequiredBiomes().clear();crop.getRequiredBiomes().addAll(biomes);
+                manager.replaceRecipes(original);io.github.sudabake.appliedagristics.logic.CropSources.invalidate();
+            }
+        });
+    }
+    @GameTest(template="empty",templateNamespace=Agristics.ID)
+    public static void fullCasingsCullSharedFaces(GameTestHelper h) {
+        var blocks = java.util.List.of(Agristics.PLANTER_FRAME.get(), Agristics.SPEED_MODULE.get(),
+            Agristics.PARALLEL_MODULE.get(), Agristics.CONVERSION_MODULE.get(), Agristics.NETWORK.get(),
+            Agristics.SEEDS.get(), Agristics.NETWORK_ACCESS.get(), Agristics.INPUT_PORT.get(),
+            Agristics.OUTPUT_PORT.get(), Agristics.ESSENCE_VAULT.get());
+        var level = h.getLevel();
+        var pos = h.absolutePos(new BlockPos(3, 2, 3));
+        for (boolean formed : new boolean[]{false, true}) for (var block : blocks) {
+            var state = block.defaultBlockState().setValue(PlanterPartBlock.FORMED, formed);
+            h.assertTrue(state.canOcclude(), "Full casing participates in native face occlusion");
+            level.setBlock(pos, state, net.minecraft.world.level.block.Block.UPDATE_CLIENTS);
+            for (var side : Direction.values()) {
+                var adjacent = pos.relative(side);
+                for (var neighbor : blocks) {
+                    level.setBlock(adjacent, neighbor.defaultBlockState().setValue(PlanterPartBlock.FORMED, formed), net.minecraft.world.level.block.Block.UPDATE_CLIENTS);
+                    h.assertTrue(!net.minecraft.world.level.block.Block.shouldRenderFace(state, level, pos, side, adjacent),
+                        "Shared faces between full casings are culled in all six directions");
+                }
+                level.setBlock(adjacent, Blocks.AIR.defaultBlockState(), net.minecraft.world.level.block.Block.UPDATE_CLIENTS);
+                h.assertTrue(net.minecraft.world.level.block.Block.shouldRenderFace(state, level, pos, side, adjacent),
+                    "An exposed casing face remains visible");
+                level.setBlock(adjacent, Agristics.CULTIVATION_CHAMBER.get().defaultBlockState(), net.minecraft.world.level.block.Block.UPDATE_CLIENTS);
+                h.assertTrue(net.minecraft.world.level.block.Block.shouldRenderFace(state, level, pos, side, adjacent),
+                    "Transparent chamber cannot hide the casing behind it");
+                var glass = Agristics.CULTIVATION_CHAMBER.get().defaultBlockState();
+                h.assertTrue(!net.minecraft.world.level.block.Block.shouldRenderFace(glass, level, pos, side, adjacent),
+                    "Adjacent cultivation glass omits its shared internal face");
+                level.setBlock(adjacent, Blocks.AIR.defaultBlockState(), net.minecraft.world.level.block.Block.UPDATE_CLIENTS);
+            }
+        }
+        h.assertTrue(!Agristics.CULTIVATION_CHAMBER.get().defaultBlockState().canOcclude()
+            && !Agristics.EARLY.get().defaultBlockState().canOcclude()
+            && !Agristics.ME_INFUSION.get().defaultBlockState().canOcclude()
+            && !Agristics.ME_BIO.get().defaultBlockState().canOcclude(), "Glass and non-cube machines retain non-occluding geometry");
+        h.succeed();
+    }
+    @GameTest(template="empty",templateNamespace=Agristics.ID,timeoutTicks=240)
     public static void earlyPortsWithoutBulkStorage(GameTestHelper h) {
         var f=PlanterFixture.install(h.getLevel(),h.absolutePos(new BlockPos(2,1,1)),false);
         f.input().items.setStackInSlot(0,new ItemStack(Items.WHEAT_SEEDS));
@@ -113,7 +190,7 @@ public final class MultiblockGameTests {
             }
             for (int i=0;i<positions.size();i++) {
                 var state=level.getBlockState(positions.get(i));
-                h.assertTrue(state.getValue(PlanterPartBlock.FORMED) && state.getValue(PlanterPartBlock.CELL)==i && state.getValue(PlanterPartBlock.FACING)==facing,"Skin cells match structure orientation "+facing+" index "+i);
+                h.assertTrue(state.getValue(PlanterPartBlock.FORMED) && state.getValue(PlanterPartBlock.CELL)==i && PlanterOrientation.facing(state)==facing,"Skin cells match structure orientation "+facing+" index "+i);
             }
             for (var pos:positions) level.setBlockAndUpdate(pos,Blocks.AIR.defaultBlockState());
         }

@@ -18,7 +18,7 @@ public abstract class MachineEntity extends BlockEntity implements MenuProvider 
     private boolean workingVisual;
     public boolean workingVisual() { return workingVisual; }
     public void updateWorkVisual() {
-        boolean next=status.equals("growing") || status.equals("culturing") || status.equals("extracting");
+        boolean next=status.equals("growing") || status.equals("culturing");
         if (workingVisual==next) return;
         workingVisual=next;
         if (level!=null && !level.isClientSide) level.sendBlockUpdated(worldPosition,getBlockState(),getBlockState(),net.minecraft.world.level.block.Block.UPDATE_CLIENTS);
@@ -52,14 +52,21 @@ public abstract class MachineEntity extends BlockEntity implements MenuProvider 
     public boolean networkMachine() { return false; }
     @Override public Component getDisplayName() { return getBlockState().getBlock().getName(); }
     public void open(net.minecraft.server.level.ServerPlayer player) {
-        player.openMenu(this, buffer -> { buffer.writeBlockPos(worldPosition); buffer.writeVarInt(((MachineBlock) getBlockState().getBlock()).kind().menuId); });
+        long token=java.util.concurrent.ThreadLocalRandom.current().nextLong();
+        var provider=new net.minecraft.world.SimpleMenuProvider(
+            (id, inventory, owner) -> new MachineMenu(id, inventory, this, token), getDisplayName());
+        player.openMenu(provider, buffer -> {
+            buffer.writeBlockPos(worldPosition);
+            buffer.writeVarInt(((MachineBlock) getBlockState().getBlock()).kind().menuId);
+            buffer.writeLong(token);
+        });
     }
     @Override public AbstractContainerMenu createMenu(int id, Inventory inventory, Player player) { return new MachineMenu(id, inventory, this); }
     @Override protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries); tag.put("inventory", items.serializeNBT(registries));
     }
     @Override protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.loadAdditional(tag, registries); var inventory = tag.getCompound("inventory").copy(); inventory.putInt("Size", Math.max(inventorySize, inventory.getInt("Size"))); items.deserializeNBT(registries, inventory);
+        super.loadAdditional(tag, registries); var inventory = tag.getCompound("inventory").copy(); inventory.putInt("Size", inventorySize); items.deserializeNBT(registries, inventory);
     }
     public CompoundTag snapshot(int page, String search) {
         var tag = new CompoundTag(); tag.putString("status", status); return tag;

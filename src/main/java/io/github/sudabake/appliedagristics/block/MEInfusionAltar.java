@@ -17,18 +17,15 @@ import net.neoforged.neoforge.items.IItemHandler;
 import java.util.*;
 
 /** Replacement center for the ordinary MA infusion altar: eight real external pedestals. */
-public final class MEInfusionAltar extends GridMachine implements AltarControls,appeng.api.implementations.blockentities.ICraftingMachine {
+public final class MEInfusionAltar extends AEProcessingMachine {
     // The public MA altar layout: cardinal distance 3; diagonals distance 2.
     private static final int[][] OFFSETS={{3,0},{0,3},{-3,0},{0,-3},{2,2},{2,-2},{-2,2},{-2,-2}};
-    private final int[] sides={2,1,1,1,1,1};
-    private boolean autoOutput;
-    private boolean craftingDelivery;
     private int progress;
     private ResourceLocation recipeId;
     private List<ItemStack> workInput=List.of();
     private com.blakebr0.mysticalagriculture.tileentity.InfusionAltarTileEntity visualView;
 
-    public MEInfusionAltar(BlockPos pos,BlockState state) { super(Agristics.INFUSION_BE.get(),pos,state,6); }
+    public MEInfusionAltar(BlockPos pos,BlockState state) { super(Agristics.INFUSION_BE.get(),pos,state,6,1,2); }
     @Override protected boolean valid(int slot,ItemStack stack) { return slot==0 || slot>=2 && stack.is(appeng.core.definitions.AEItems.SPEED_CARD.asItem()); }
     @Override protected int slotLimit(int slot) { return slot==0 || slot>=2 ? 1 : 64; }
     @Override protected void inventoryChanged(int slot) {
@@ -49,36 +46,10 @@ public final class MEInfusionAltar extends GridMachine implements AltarControls,
     @Override public void handleUpdateTag(CompoundTag tag,HolderLookup.Provider registries) { items.setStackInSlot(0,ItemStack.parseOptional(registries,tag.getCompound("center"))); items.setStackInSlot(1,ItemStack.parseOptional(registries,tag.getCompound("result"))); }
     @Override public net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket getUpdatePacket() { return net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket.create(this); }
     @Override public void onDataPacket(net.minecraft.network.Connection connection,net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket packet,HolderLookup.Provider registries) { handleUpdateTag(packet.getTag(),registries); }
-    @Override public int accelerationCards() { int count=0; for (int i=2;i<6;i++) if (items.getStackInSlot(i).is(appeng.core.definitions.AEItems.SPEED_CARD.asItem())) count++; return count; }
-    public boolean insertAcceleration(ItemStack held, boolean simulate) {
-        if (!held.is(appeng.core.definitions.AEItems.SPEED_CARD.asItem())) return false;
-        for (int i=2;i<6;i++) if (items.getStackInSlot(i).isEmpty()) {
-            if (!simulate) items.setStackInSlot(i,held.copyWithCount(1));
-            return true;
-        }
-        return false;
-    }
-    public int speed() { return 1 << accelerationCards(); }
-    @Override public void configureSide(int side,int mode) { if (side>=0 && side<6 && mode>=0 && mode<=3) { sides[side]=mode; setChanged(); } }
-    @Override public int sideMode(int side) { return sides[side]; }
-    @Override public void toggleAutoOutput() { autoOutput=!autoOutput; setChanged(); }
-    public IItemHandler automation(Direction side) {
-        return new IItemHandler() {
-            private int mode() { return side==null ? 3 : sides[side.ordinal()]; }
-            @Override public int getSlots() { return 2; }
-            @Override public ItemStack getStackInSlot(int slot) { return items.getStackInSlot(slot); }
-            @Override public int getSlotLimit(int slot) { return slot==0 ? 1 : 64; }
-            @Override public boolean isItemValid(int slot,ItemStack stack) { return slot==0 && (mode()==1 || mode()==3) && items.getStackInSlot(1).isEmpty(); }
-            @Override public ItemStack insertItem(int slot,ItemStack stack,boolean simulate) { return isItemValid(slot,stack) ? items.insertItem(slot,stack,simulate) : stack; }
-            @Override public ItemStack extractItem(int slot,int amount,boolean simulate) { return slot==1 && (mode()==2 || mode()==3) ? items.extractItem(slot,amount,simulate) : ItemStack.EMPTY; }
-        };
-    }
     private void reset() { progress=0; recipeId=null; workInput=List.of(); }
     public List<BlockPos> pedestalPositions() { return Arrays.stream(OFFSETS).map(o -> worldPosition.offset(o[0],0,o[1])).toList(); }
     @Override public void step() {
-        if ((autoOutput || craftingDelivery) && !items.getStackInSlot(1).isEmpty()) {
-            exportOutput(); if (items.getStackInSlot(1).isEmpty()) { craftingDelivery=false; setChanged(); }
-        }
+        deliverOutput();
         if (!items.getStackInSlot(1).isEmpty()) { status="output_full"; return; }
         if (!getMainNode().isActive()) { status="offline"; return; }
         if (items.getStackInSlot(0).isEmpty()) { reset(); status="missing_inputs"; return; }
@@ -122,9 +93,6 @@ public final class MEInfusionAltar extends GridMachine implements AltarControls,
         items.setStackInSlot(0,remaining.getFirst().copy()); items.setStackInSlot(1,output.copy()); reset(); setChanged();
         InfusionEffects.finishCenter((net.minecraft.server.level.ServerLevel)level,worldPosition);
     }
-    @Override public appeng.api.implementations.blockentities.PatternContainerGroup getCraftingMachineInfo() {
-        return new appeng.api.implementations.blockentities.PatternContainerGroup(AEItemKey.of(new ItemStack(Agristics.ME_INFUSION.get())),getDisplayName(),List.of());
-    }
     @Override public boolean acceptsPlans() {
         if (level==null || !getMainNode().isActive() || !items.getStackInSlot(0).isEmpty() || !items.getStackInSlot(1).isEmpty()) return false;
         for (var pos:pedestalPositions()) if (!level.hasChunkAt(pos) || !(level.getBlockEntity(pos) instanceof InfusionPedestalTileEntity pedestal) || !pedestal.getInventory().getStackInSlot(0).isEmpty()) return false;
@@ -167,36 +135,17 @@ public final class MEInfusionAltar extends GridMachine implements AltarControls,
         }
         result.set(index,ItemStack.EMPTY); return false;
     }
-    private void exportOutput() {
-        var output=items.getStackInSlot(1); if (output.isEmpty()) return;
-        var grid=getMainNode().getGrid();
-        if (grid!=null && getMainNode().isActive()) {
-            long accepted=grid.getStorageService().getInventory().insert(AEItemKey.of(output),output.getCount(),Actionable.MODULATE,IActionSource.ofMachine(this));
-            items.extractItem(1,(int)accepted,false);
-        }
-        for (var side:Direction.values()) {
-            if (sides[side.ordinal()]!=2 && sides[side.ordinal()]!=3) continue;
-            var pos=worldPosition.relative(side); if (!level.hasChunkAt(pos)) continue;
-            var target=level.getCapability(Capabilities.ItemHandler.BLOCK,pos,side.getOpposite()); if (target==null) continue;
-            for (int slot=0;slot<target.getSlots();slot++) {
-                var stack=items.getStackInSlot(1); if (stack.isEmpty()) return;
-                var rest=target.insertItem(slot,stack.copy(),false); int accepted=stack.getCount()-rest.getCount();
-                if (accepted>0) items.extractItem(1,accepted,false);
-            }
-        }
-    }
     @Override protected void saveAdditional(CompoundTag tag,HolderLookup.Provider registries) {
-        super.saveAdditional(tag,registries); tag.putInt("progress",progress); tag.putBoolean("autoOutput",autoOutput); tag.putBoolean("craftingDelivery",craftingDelivery); tag.putIntArray("sides",sides);
+        super.saveAdditional(tag,registries); tag.putInt("progress",progress);
         if (recipeId!=null) tag.putString("recipe",recipeId.toString());
         var saved=new net.minecraft.nbt.ListTag(); for (var stack:workInput) saved.add(stack.saveOptional(registries)); tag.put("workInput",saved);
     }
     @Override protected void loadAdditional(CompoundTag tag,HolderLookup.Provider registries) {
-        super.loadAdditional(tag,registries); progress=Math.max(0,tag.getInt("progress")); recipeId=ResourceLocation.tryParse(tag.getString("recipe")); autoOutput=tag.getBoolean("autoOutput"); craftingDelivery=tag.getBoolean("craftingDelivery");
-        var modes=tag.getIntArray("sides"); if (modes.length==6) for (int i=0;i<6;i++) sides[i]=Math.clamp(modes[i],0,3);
+        super.loadAdditional(tag,registries); progress=Math.max(0,tag.getInt("progress")); recipeId=ResourceLocation.tryParse(tag.getString("recipe"));
         var saved=new ArrayList<ItemStack>(); for (var raw:tag.getList("workInput",10)) saved.add(ItemStack.parseOptional(registries,(CompoundTag)raw)); workInput=List.copyOf(saved);
     }
     @Override public CompoundTag snapshot(int page,String search) {
         var tag=super.snapshot(page,search); tag.putInt("progress",progress); tag.putInt("duration",Balance.ALTAR_TICKS.get());
-        tag.putBoolean("autoOutput",autoOutput); tag.putIntArray("sides",sides); tag.putInt("acceleration",accelerationCards()); return tag;
+        return tag;
     }
 }

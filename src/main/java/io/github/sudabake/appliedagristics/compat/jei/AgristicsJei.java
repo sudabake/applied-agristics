@@ -2,7 +2,8 @@ package io.github.sudabake.appliedagristics.compat.jei;
 
 import io.github.sudabake.appliedagristics.*;
 import io.github.sudabake.appliedagristics.biology.*;
-import io.github.sudabake.appliedagristics.client.CultureScreen;
+import io.github.sudabake.appliedagristics.logic.PlantingCatalog;
+import io.github.sudabake.appliedagristics.client.*;
 import mezz.jei.api.*;
 import mezz.jei.api.constants.*;
 import mezz.jei.api.ingredients.subtypes.*;
@@ -25,9 +26,7 @@ public final class AgristicsJei implements IModPlugin {
     public record Process(ResourceLocation entity, int generation) {}
     public static final mezz.jei.api.recipe.RecipeType<Process> SAMPLING = mezz.jei.api.recipe.RecipeType.create(Agristics.ID, "sampling", Process.class);
     public static final mezz.jei.api.recipe.RecipeType<Process> CULTURE = mezz.jei.api.recipe.RecipeType.create(Agristics.ID, "culture", Process.class);
-    public static final mezz.jei.api.recipe.RecipeType<Process> EXTRACTION = mezz.jei.api.recipe.RecipeType.create(Agristics.ID, "extraction", Process.class);
-    public static final mezz.jei.api.recipe.RecipeType<Process> PLANTING = mezz.jei.api.recipe.RecipeType.create(Agristics.ID, "bio_planting", Process.class);
-    public static final mezz.jei.api.recipe.RecipeType<Process> RITUAL = mezz.jei.api.recipe.RecipeType.create(Agristics.ID,"bio_infusion",Process.class);
+    public static final mezz.jei.api.recipe.RecipeType<PlantingCatalog.Entry> PLANTING = mezz.jei.api.recipe.RecipeType.create(Agristics.ID, "planting_products", PlantingCatalog.Entry.class);
     private static AgristicsJei instance;
     private IJeiRuntime runtime;
     private Map<ResourceLocation, List<Item>> loaded = Map.of();
@@ -35,6 +34,8 @@ public final class AgristicsJei implements IModPlugin {
     private List<RecipeHolder<CraftingRecipe>> crafting = List.of();
     private List<Process> processes = List.of();
     private int generation;
+    private int plantingVersion=-1;
+    private List<PlantingCatalog.Entry> planting=List.of();
 
     public AgristicsJei() {
         instance = this;
@@ -57,15 +58,12 @@ public final class AgristicsJei implements IModPlugin {
     @Override public void registerCategories(IRecipeCategoryRegistration registration) {
         var gui = registration.getJeiHelpers().getGuiHelper();
         registration.addRecipeCategories(new ArrayStructureCategory(gui),new BioProcessCategory(gui, SAMPLING), new BioProcessCategory(gui, CULTURE),
-            new BioProcessCategory(gui,RITUAL), new BioProcessCategory(gui, EXTRACTION), new BioProcessCategory(gui, PLANTING));
+            new PlantingProductsCategory(gui));
     }
     @Override public void registerRecipeCatalysts(IRecipeCatalystRegistration registration) {
         for(var block:List.of(Agristics.NETWORK,Agristics.NETWORK_ACCESS,Agristics.INPUT_PORT,Agristics.OUTPUT_PORT,Agristics.SEEDS,Agristics.ESSENCE_VAULT,Agristics.PLANTER_FRAME,Agristics.CULTIVATION_CHAMBER,Agristics.SPEED_MODULE,Agristics.PARALLEL_MODULE,Agristics.CONVERSION_MODULE))
             registration.addRecipeCatalyst(new ItemStack(block.get()),STRUCTURE);
-        registration.addRecipeCatalyst(new ItemStack(Agristics.CULTIVATOR.get()), CULTURE);
-        registration.addRecipeCatalyst(new ItemStack(Agristics.CULTURE.get()), EXTRACTION);
-        registration.addRecipeCatalyst(new ItemStack(Items.DISPENSER), EXTRACTION);
-        registration.addRecipeCatalyst(new ItemStack(Agristics.BIO_ALTAR.get()), RITUAL);
+        registration.addRecipeCatalyst(new ItemStack(Agristics.ME_BIO.get()), CULTURE);
         registration.addRecipeCatalyst(new ItemStack(Agristics.EARLY.get()), PLANTING);
         registration.addRecipeCatalyst(new ItemStack(Agristics.NETWORK.get()), PLANTING);
         registration.addRecipeCatalyst(new ItemStack(Items.FARMLAND), PLANTING);
@@ -75,23 +73,36 @@ public final class AgristicsJei implements IModPlugin {
     }
     @Override public void registerRecipes(IRecipeRegistration registration) { registration.addRecipes(STRUCTURE,List.of("agricultural_array")); }
     @Override public void registerGuiHandlers(IGuiHandlerRegistration registration) {
-        registration.addRecipeClickArea(CultureScreen.class, 43, 89, 122, 6, CULTURE);
+        var areas = new mezz.jei.api.gui.handlers.IGuiContainerHandler<appeng.client.gui.AEBaseScreen<?>>() {
+            @Override public List<net.minecraft.client.renderer.Rect2i> getGuiExtraAreas(appeng.client.gui.AEBaseScreen<?> screen) {
+                return screen.getExclusionZones();
+            }
+        };
+        registration.addGuiContainerHandler(AltarScreen.class, areas);
+        registration.addGuiContainerHandler(SeedStorageScreen.class, areas);
+        registration.addGuiContainerHandler(MachineScreen.class, areas);
+        registration.addGuiContainerHandler(PortScreen.class, areas);
+        registration.addGuiContainerHandler(EssenceVaultScreen.class, areas);
+        registration.addRecipeClickArea(BioCultivatorScreen.class,76,40,34,18,CULTURE);
+    }
+    @Override public void registerRecipeTransferHandlers(IRecipeTransferRegistration registration) {
+        registration.addRecipeTransferHandler(new BioPatternTransfer(),CULTURE);
     }
     @Override public void onRuntimeAvailable(IJeiRuntime runtime) {
         this.runtime = runtime;
-        runtime.getIngredientManager().removeIngredientsAtRuntime(VanillaTypes.ITEM_STACK,List.of(new ItemStack(Agristics.LEGACY_SEEDS_FIRST.get()),new ItemStack(Agristics.LEGACY_SEEDS_SECOND.get())));
         refresh();
     }
     @Override public void onRuntimeUnavailable() {
-        runtime = null; loaded = Map.of(); variants = List.of(); crafting = List.of(); processes = List.of();
+        runtime = null; loaded = Map.of(); variants = List.of(); crafting = List.of(); processes = List.of(); planting=List.of();plantingVersion=-1;
     }
     private void catalogUpdated(BioLootCatalog.ClientCatalogUpdated event) { refresh(); }
     private void refresh() {
         if (runtime == null) return;
-        var catalog = BioLootCatalog.clientCatalog(); if (catalog.equals(loaded)) return;
+        var catalog = BioLootCatalog.clientCatalog(); if (catalog.equals(loaded) && plantingVersion==PlantingCatalog.clientVersion()) return;
         var manager = runtime.getRecipeManager();
         manager.hideRecipes(RecipeTypes.CRAFTING, crafting);
-        for (var type : List.of(SAMPLING, CULTURE, EXTRACTION, PLANTING,RITUAL)) manager.hideRecipes(type, processes);
+        manager.hideRecipes(PLANTING,planting);
+        for (var type : List.of(SAMPLING, CULTURE)) manager.hideRecipes(type, processes);
         if (!variants.isEmpty()) runtime.getIngredientManager().removeIngredientsAtRuntime(VanillaTypes.ITEM_STACK, variants);
         var newVariants = new ArrayList<ItemStack>();
         var newCrafting = new ArrayList<RecipeHolder<CraftingRecipe>>();
@@ -114,10 +125,20 @@ public final class AgristicsJei implements IModPlugin {
                     new ShapedRecipe("", CraftingBookCategory.MISC, pattern, new ItemStack(drops.get(i)))));
             }
         });
+        var plantEntries=new ArrayList<PlantingCatalog.Entry>();
+        var level=net.minecraft.client.Minecraft.getInstance().level;
+        if(level!=null) for(var entry:PlantingCatalog.clientEntries(level.registryAccess()))
+            for(int start=0;start<entry.outputs().size();start+=12)
+                plantEntries.add(new PlantingCatalog.Entry(entry.seed(),entry.outputs().subList(start,Math.min(start+12,entry.outputs().size()))));
+        for(var entity:catalog.keySet()) {
+            var seed=BioData.withIdentity(Agristics.BIO_SEED.get(),entity);
+            plantEntries.add(new PlantingCatalog.Entry(seed,List.of(seed.copy(),BioData.withIdentity(Agristics.BIO_ESSENCE.get(),entity))));
+        }
+        planting=List.copyOf(plantEntries);plantingVersion=PlantingCatalog.clientVersion();manager.addRecipes(PLANTING,planting);
         variants = List.copyOf(newVariants); crafting = List.copyOf(newCrafting); processes = List.copyOf(newProcesses); loaded = catalog;
         runtime.getIngredientManager().addIngredientsAtRuntime(VanillaTypes.ITEM_STACK, variants);
         manager.addRecipes(RecipeTypes.CRAFTING, crafting);
-        for (var type : List.of(SAMPLING, CULTURE, EXTRACTION, PLANTING,RITUAL)) if(type!=RITUAL || net.minecraft.client.Minecraft.getInstance().level!=null && !net.minecraft.client.Minecraft.getInstance().level.getRecipeManager().getAllRecipesFor(Agristics.BIO_INFUSION_TYPE.get()).isEmpty()) manager.addRecipes(type, processes);
+        for (var type : List.of(SAMPLING, CULTURE)) manager.addRecipes(type, processes);
         org.slf4j.LoggerFactory.getLogger("AppliedAgristics").info("JEI biological catalog: {} species, {} crafting recipes", processes.size(), crafting.size());
     }
     private ResourceLocation recipeId(ResourceLocation entity, String suffix) {

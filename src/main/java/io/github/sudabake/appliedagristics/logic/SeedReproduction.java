@@ -8,6 +8,10 @@ public final class SeedReproduction {
     public static long roll(long cycles,DoubleSupplier uniform,DoubleSupplier gaussian) {
         return binomial(cycles,FALLBACK_CHANCE,uniform,gaussian);
     }
+    public static long roll(long cycles,double chance,DoubleSupplier uniform,DoubleSupplier gaussian) {
+        if (!Double.isFinite(chance) || chance<0 || chance>1) throw new IllegalArgumentException("Seed probability must be between zero and one");
+        return binomial(cycles,chance,uniform,gaussian);
+    }
     private static long binomial(long n,double p,DoubleSupplier u,DoubleSupplier g) {
         long result=0;
         while (n>0 && p>0) {

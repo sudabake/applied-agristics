@@ -83,9 +83,6 @@ public final class WordUpdateTests {
         var sampler=CraftingInput.of(2,2,List.of(ItemStack.EMPTY,new ItemStack(Items.WHITE_WOOL),new ItemStack(Items.STICK),ItemStack.EMPTY));
         var sampleRecipe=manager.getRecipeFor(RecipeType.CRAFTING,sampler,h.getLevel()).orElseThrow().value();
         h.assertTrue(sampleRecipe.assemble(sampler,h.getLevel().registryAccess()).is(Agristics.SAMPLER.get()),"Diagonal wool/stick pattern makes sampler");
-        var capsule=CraftingInput.of(3,3,List.of(ItemStack.EMPTY,new ItemStack(Items.IRON_NUGGET),ItemStack.EMPTY,new ItemStack(Items.GLASS),ItemStack.EMPTY,new ItemStack(Items.GLASS),new ItemStack(Items.IRON_NUGGET),ItemStack.EMPTY,ItemStack.EMPTY));
-        var capsuleRecipe=manager.getRecipeFor(RecipeType.CRAFTING,capsule,h.getLevel()).orElseThrow().value();var output=capsuleRecipe.assemble(capsule,h.getLevel().registryAccess());
-        h.assertTrue(output.is(Agristics.CAPSULE.get()) && output.getCount()==1,"Requested capsule slots produce exactly one");
         var storage=CraftingInput.of(1,3,List.of(new ItemStack(Items.HOPPER),new ItemStack(Agristics.PLANTER_FRAME.get()),new ItemStack(Items.CHEST)));
         h.assertTrue(manager.getRecipeFor(RecipeType.CRAFTING,storage,h.getLevel()).orElseThrow().value().assemble(storage,h.getLevel().registryAccess()).is(Agristics.INPUT_PORT.get().asItem()),"Hopper/frame/chest produces finite seed storage");h.succeed();
     }

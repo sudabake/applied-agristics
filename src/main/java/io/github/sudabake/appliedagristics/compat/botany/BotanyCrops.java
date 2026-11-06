@@ -33,15 +33,17 @@ public final class BotanyCrops {
             if (!(crop instanceof BasicCrop basic)) return null; // Custom soil discovery requires an explicit planting recipe.
             var properties=basic.getBasicProperties();
             ItemStack soil=ItemStack.EMPTY;
+            Soil networkGround=null;
             for (var candidate:properties.soil().getItems()) {
                 var context=new Context(level,BlockPos.ZERO,candidate,seed,crop,null,0);
-                if (Soil.getSoil(level,context,candidate)!=null) { soil=candidate.copyWithCount(1); break; }
+                var match=Soil.getSoil(level,context,candidate);
+                if (match!=null) { soil=candidate.copyWithCount(1); networkGround=match.value(); break; }
             }
             var products=properties.drops().stream().flatMap(p->p.getDisplayItems().stream()).filter(s->!s.isEmpty()).toList();
             var product=products.stream().filter(s->!ItemStack.isSameItemSameComponents(s,seed)).findFirst().orElse(products.isEmpty()?ItemStack.EMPTY:products.getFirst());
             if (product.isEmpty()) product=seed.copyWithCount(1);
             boolean reproduces=products.stream().anyMatch(s->ItemStack.isSameItemSameComponents(s,seed));
-            return new Source(crop,seed.copyWithCount(1),soil,product.copyWithCount(1),reproduces,Math.max(20,properties.growTime()),state(properties.display()));
+            return new Source(crop,seed.copyWithCount(1),soil,networkGround,product.copyWithCount(1),reproduces,Math.max(20,properties.growTime()),state(properties.display()));
         }
         return null;
     }
@@ -53,7 +55,7 @@ public final class BotanyCrops {
         }
         return null;
     }
-    private record Source(Crop crop,ItemStack seed,ItemStack networkSoil,ItemStack product,boolean reproduces,int ticks,BlockState display) implements CropSource {
+    private record Source(Crop crop,ItemStack seed,ItemStack networkSoil,Soil networkGround,ItemStack product,boolean reproduces,int ticks,BlockState display) implements CropSource {
         private Context context(Level level,BlockPos pos,ItemStack soil) {
             var probe=new Context(level,pos,soil,seed,crop,null,ticks);
             var match=Soil.getSoil(level,probe,soil);
@@ -69,6 +71,13 @@ public final class BotanyCrops {
         }
         @Override public List<ItemStack> harvest(ServerLevel level,BlockPos pos,ItemStack soil) {
             var context=context(level,pos,soil); if (context==null || !canGrow(level,pos,soil)) return List.of();
+            return drops(level,context);
+        }
+        @Override public List<ItemStack> harvestNetwork(ServerLevel level,BlockPos pos) {
+            if (networkGround==null) return List.of();
+            return drops(level,new Context(level,pos,networkSoil,seed,crop,networkGround,ticks));
+        }
+        private List<ItemStack> drops(ServerLevel level,Context context) {
             var result=new ArrayList<ItemStack>();
             int rolls=Helpers.getLootRolls(context,level,crop,context.soil);
             for (int i=0;i<rolls;i++) crop.onHarvest(context,level,stack->{ if (!stack.isEmpty()) result.add(stack.copy()); });

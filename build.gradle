@@ -34,6 +34,11 @@ dependencies {
     compileOnly "mezz.jei:jei-1.21.1-neoforge-api:${jei_version}"
     compileOnly "maven.modrinth:botany-pots:21.1.44"
     compileOnly "maven.modrinth:bookshelf-lib:21.1.81"
+    compileOnly "maven.modrinth:jade:15.10.6+neoforge"
+    if (project.hasProperty('jadeTests')) runtimeOnly "maven.modrinth:jade:15.10.6+neoforge"
+    if (project.hasProperty('jdteJar')) runtimeOnly files(project.property('jdteJar'))
+    if (project.hasProperty('justDireThingsJar')) runtimeOnly files(project.property('justDireThingsJar'))
+    if (project.hasProperty('curiosJar')) runtimeOnly files(project.property('curiosJar'))
     if (project.hasProperty('botanyTests')) {
         runtimeOnly "maven.modrinth:botany-pots:21.1.44"
         runtimeOnly "maven.modrinth:bookshelf-lib:21.1.81"
@@ -55,7 +60,11 @@ dependencies {
 }
 tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }
 tasks.named('test') { useJUnitPlatform() }
-processResources { inputs.property 'version', project.version; filesMatching('META-INF/neoforge.mods.toml') { expand version: project.version } }
+processResources {
+    def metadata = [version: project.version, neo_min_version: project.findProperty('neo_min_version') ?: '21.1.241', guideme_min_version: project.findProperty('guideme_min_version') ?: '21.1.17']
+    inputs.properties(metadata)
+    filesMatching('META-INF/neoforge.mods.toml') { expand metadata }
+}
 tasks.named('processResources') {
     // Copy tasks can retain deleted input files; rebuild only this derived output directory.
     doFirst {
@@ -77,6 +86,7 @@ jar {
     from('third_party/jdte/LICENSE.txt') { into 'licenses/jdte' }
     from('third_party/mysticalagriculture/LICENSE.txt') { into 'licenses/mysticalagriculture' }
     from('third_party/ae2/LICENSE.txt') { into 'licenses/ae2' }
+    from('third_party/appliedgenerators/LICENSE.txt') { into 'licenses/appliedgenerators' }
 }
 tasks.named('runGameTestServer').configure {
     doLast {
@@ -89,7 +99,8 @@ tasks.named('runGameTestServer').configure {
 tasks.named('runClient').configure {
     doLast {
         def log = file((project.findProperty('clientDirectory') ?: 'run') + '/logs/latest.log')
-        if (project.hasProperty('clientSmoke') && (!log.exists() || !log.getText('UTF-8').contains('CLIENT_SMOKE_PASSED')))
+        def text = log.exists() ? log.getText('UTF-8') : ''
+        if (project.hasProperty('clientSmoke') && (!text.contains('CLIENT_SMOKE_PASSED') || text.contains('CLIENT_SMOKE_BIOLOGY_FAILED') || text.contains('CULTIVATOR_MODEL_FAILED') || text.contains('JEI_SMOKE_FAILED')))
             throw new GradleException('Client smoke test did not pass. Inspect ' + log);
     }
 }

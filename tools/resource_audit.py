@@ -13,11 +13,26 @@ RETIRED_TEXTURES=tuple('block/'+name for name in (
     'cultivation_chamber','early_planter','essence_vault','me_array_palette',
     'me_infusion_altar','me_network_access','network_planter',
     'planter_input_port','planter_output_port','seed_storage'))
+RETIRED_TEXTURES += tuple('block/' + name + '_' + face
+    for name in ('network_planter','seed_storage','me_network_access','planter_input_port','planter_output_port','essence_vault')
+    for face in ('side','top','back','joined_icon'))
+RETIRED_TEXTURES += tuple('block/joined_' + face for face in ('front','side','top'))
 
 def usage(assets):
     models=set();textures=set();missing=[]
     def model(name):
         if name in models:return
+        if name.endswith('.obj'):
+            models.add(name)
+            path=assets/name
+            if not path.is_file():missing.append(name);return
+            for material in re.findall(r'^mtllib\s+(.+)$',path.read_text(encoding='utf-8'),re.M):
+                library=path.parent/material.strip()
+                if not library.resolve().is_relative_to(assets.resolve()) or not library.is_file():
+                    missing.append(str(library.relative_to(assets)));continue
+                textures.update(value.split(':',1)[1] for value in re.findall(
+                    r'^map_Kd\s+(appliedagristics:\S+)',library.read_text(encoding='utf-8'),re.M))
+            return
         models.add(name);path=assets/'models'/(name+'.json')
         if not path.exists():missing.append('models/'+name+'.json');return
         visit(json.loads(path.read_text(encoding='utf-8')))
@@ -32,10 +47,9 @@ def usage(assets):
             for item in value:visit(item)
     for path in (assets/'blockstates').glob('*.json'):visit(json.loads(path.read_text(encoding='utf-8')))
     for path in (assets/'models/item').glob('*.json'):model('item/'+path.stem)
-    # Explicit runtime roots outside the model graph, including hidden compatibility IDs.
+    # Explicit runtime roots outside the block and item model graph.
     model('block/bio_plant')
-    textures.update('block/network_planter_'+state for state in ('off','idle','working'))
-    textures.add('mob_effect/nourishment')
+    textures.add('block/network_planter_screen')
     alltex={path.relative_to(assets/'textures').with_suffix('').as_posix() for path in (assets/'textures').rglob('*.png')}
     allmodels={path.relative_to(assets/'models').with_suffix('').as_posix() for path in (assets/'models').rglob('*.json')}
     return {'missing_models':sorted(missing),'missing_textures':sorted(textures-alltex),
@@ -63,6 +77,7 @@ def png_chunks(data):
     return result
 
 def audit_jar(path,assets):
+    from remove_retired_content import RETIRED, RETIRED_LABELS
     result={'sha256':hashlib.sha256(path.read_bytes()).hexdigest(),'problems':[], 'png_metadata':{}}
     with zipfile.ZipFile(path)as jar:
         names=jar.namelist();base='assets/'+NS+'/'
@@ -72,10 +87,26 @@ def audit_jar(path,assets):
         for name in sorted(set(expected)|set(actual)):
             if expected.get(name)!=actual.get(name):result['problems'].append('Source/JAR resource mismatch: '+name)
         for name in names:
+            filename=name.rsplit('/',1)[-1]
+            if name.startswith('assets/appliedagristics/') and any(
+                    filename in (retired+'.json',retired+'.png',retired+'.png.mcmeta')
+                    for retired in (*RETIRED,'nourishment')):
+                result['problems'].append('Retired gameplay resource: '+name)
+            if name.startswith('data/appliedagristics/recipe/legacy_'):
+                result['problems'].append('Retired migration recipe: '+name)
+            implementation = filename.split('$',1)[0].removesuffix('.class')
+            if filename.endswith('.class') and implementation in (
+                    'CultureItem','ThrownCulture','NourishmentEffect','BioSeedRecipe','BioInfusionRecipe',
+                    'BiologicalAltar','CellCultivator','CultureScreen','BiologicalAltarRenderer',
+                    'NetworkIOScreen','LegacyBiology','LegacyBiologyMachine','ConnectedCasingModel','CasingConnections'):
+                result['problems'].append('Retired implementation: '+name)
             if name.rsplit('/',1)[-1]=='.gitkeep':result['problems'].append('Development placeholder: '+name)
             if '/testing/' in name or '/JeiSmoke' in name or name=='data/appliedagristics/structure/empty.nbt' or name.startswith(('art/','docs/','run/','build/')):
                 result['problems'].append('Development-only JAR entry: '+name)
             data=jar.read(name)
+            if name in (base+'lang/zh_cn.json',base+'lang/en_us.json'):
+                for key in RETIRED_LABELS.intersection(json.loads(data)):
+                    result['problems'].append('Retired translation: '+key)
             if name.startswith('io/github/sudabake/appliedagristics/') and name.endswith('.class'):
                 compiled=ROOT/'build/classes/java/main'/name
                 if not compiled.exists() or compiled.read_bytes()!=data:
@@ -85,9 +116,11 @@ def audit_jar(path,assets):
             if name.endswith('.png'):
                 metadata=[kind for kind in png_chunks(data) if kind in ('tEXt','zTXt','iTXt','eXIf')]
                 if metadata:result['png_metadata'][name]=metadata
-        for state in ('off','idle','working'):
-            dims=struct.unpack('>II',actual[base+f'textures/block/network_planter_{state}.png'][16:24])
-            if dims!=((16,384) if state=='working' else (16,16)):result['problems'].append('Wrong controller dimensions: '+state)
+        dims=struct.unpack('>II',actual[base+'textures/block/network_planter_screen.png'][16:24])
+        if dims!=(10,260):result['problems'].append('Wrong controller screen atlas dimensions')
+        for retired in ('network_planter_idle','network_planter_off','network_planter_working','me_infusion_pedestal_top'):
+            if base+'textures/block/'+retired+'.png' in names:
+                result['problems'].append('Retired machine artwork: '+retired)
     return result
 
 def main():

@@ -21,11 +21,7 @@ public final class ItemTooltips {
   public static void describe(ItemTooltipEvent event) {
     var id = BuiltInRegistries.ITEM.getKey(event.getItemStack().getItem());
     if (!id.getNamespace().equals(Agristics.ID)) return;
-    String name =
-        switch (id.getPath()) {
-          case "seed_storage_tier1", "seed_storage_tier2" -> "seed_storage";
-          default -> id.getPath();
-        };
+    String name = id.getPath();
     String prefix = "tooltip.appliedagristics." + name;
     if (!I18n.exists(prefix + ".summary")) return;
     var lines = new ArrayList<Component>();

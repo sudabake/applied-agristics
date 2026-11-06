@@ -79,6 +79,25 @@ public final class RemainingWorkGameTests {
         var drops=Harvests.networkBatch(h.getLevel(),pos,seed,64,new HashMap<>());
         h.assertTrue(drops.getOrDefault(AEItemKey.of(new ItemStack(Items.CACTUS)),0L)>0,"Actual callback yields the supported cactus harvest");
         h.assertTrue(Harvests.maximumBatch(h.getLevel(),seed)==64,"Opaque callbacks are bounded and are never sampled then multiplied");
+        var manager=h.getLevel().getRecipeManager();var original=new ArrayList<>(manager.getRecipes());
+        var cactus=manager.getAllRecipesFor(net.darkhax.botanypots.common.api.data.recipes.crop.Crop.TYPE.get()).stream()
+            .filter(holder->holder.value() instanceof net.darkhax.botanypots.common.impl.data.recipe.crop.BasicCrop basic
+                && basic.getBasicProperties().input().test(seed)).findFirst().orElseThrow();
+        var properties=((net.darkhax.botanypots.common.impl.data.recipe.crop.BasicCrop)cactus.value()).getBasicProperties();
+        var restricted=new net.darkhax.botanypots.common.impl.data.recipe.crop.BasicCrop(properties) {
+            @Override public boolean isGrowthSustained(net.darkhax.botanypots.common.api.context.BotanyPotContext context,net.minecraft.world.level.Level level) { return false; }
+        };
+        var replacements=new ArrayList<net.minecraft.world.item.crafting.RecipeHolder<?>>(original);
+        replacements.removeIf(holder->holder.id().equals(cactus.id()));
+        replacements.add(new net.minecraft.world.item.crafting.RecipeHolder<>(cactus.id(),restricted));
+        try {
+            manager.replaceRecipes(replacements);CropSources.invalidate();
+            var restrictedSource=CropSources.find(h.getLevel(),seed);
+            h.assertTrue(!restrictedSource.canGrow(h.getLevel(),pos,new ItemStack(Blocks.SAND)),"Basic provider still enforces its growth condition");
+            var networkDrops=Harvests.networkBatch(h.getLevel(),pos,seed,64,new HashMap<>());
+            h.assertTrue(networkDrops.getOrDefault(AEItemKey.of(new ItemStack(Items.CACTUS)),0L)>0,
+                "ME array executes real Botany harvest callbacks without enforcing external growth conditions");
+        } finally { manager.replaceRecipes(original);CropSources.invalidate(); }
         h.assertTrue(CropSources.find(h.getLevel(),new ItemStack(Crops.all().getFirst().getSeedsItem()))==null,"MA native provider precedes broad Botany packs");
         org.slf4j.LoggerFactory.getLogger("AppliedAgristicsTests").info("BOTANY_POTS_COMPAT_PASSED cactus=true actualHarvest=true nativePriority=true"); h.succeed();
     }

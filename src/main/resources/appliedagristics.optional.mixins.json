@@ -1,0 +1,14 @@
+{
+  "required": false,
+  "minVersion": "0.8",
+  "package": "io.github.sudabake.appliedagristics.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "JdteCropResolverMixin",
+    "JdteCropDefinitionMixin",
+    "JdteGreenhouseHarvestMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 0
+  }
+}

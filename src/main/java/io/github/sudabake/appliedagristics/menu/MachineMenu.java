@@ -15,6 +15,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
 public final class MachineMenu extends appeng.menu.AEBaseMenu
     implements appeng.menu.interfaces.IProgressProvider {
   public final MachineEntity machine;
+  public long sessionToken;
   private final Player player;
   private final int machineSlots;
   public CompoundTag state = new CompoundTag();
@@ -35,6 +36,7 @@ public final class MachineMenu extends appeng.menu.AEBaseMenu
 
   public MachineMenu(int id, Inventory inventory, RegistryFriendlyByteBuf buffer) {
     this(id, inventory, clientMachine(inventory, buffer));
+    sessionToken = buffer.readLong();
   }
 
   private static MachineEntity clientMachine(Inventory inventory, RegistryFriendlyByteBuf buffer) {
@@ -45,7 +47,7 @@ public final class MachineMenu extends appeng.menu.AEBaseMenu
           case 0 -> Agristics.EARLY.get();
           case 1 -> Agristics.SEEDS.get();
           case 2 -> Agristics.NETWORK.get();
-          case 4 -> Agristics.CULTIVATOR.get();
+          case 11 -> Agristics.ME_BIO.get();
           case 6 -> Agristics.ME_INFUSION.get();
           case 7 -> Agristics.INPUT_PORT.get();
           case 8 -> Agristics.OUTPUT_PORT.get();
@@ -60,7 +62,12 @@ public final class MachineMenu extends appeng.menu.AEBaseMenu
   }
 
   public MachineMenu(int id, Inventory inventory, MachineEntity machine) {
+    this(id, inventory, machine, java.util.concurrent.ThreadLocalRandom.current().nextLong());
+  }
+
+  public MachineMenu(int id, Inventory inventory, MachineEntity machine, long sessionToken) {
     super(Agristics.MENU.get(), id, inventory, machine);
+    this.sessionToken = sessionToken;
     this.machine = machine;
     this.player = inventory.player;
     if (machine instanceof NetworkPlanter
@@ -84,7 +91,7 @@ public final class MachineMenu extends appeng.menu.AEBaseMenu
 
   private void addMachineSlot(int index, int x, int y, boolean output) {
     if (machine instanceof AltarControls) {
-      boolean upgrade = index >= 2;
+      boolean upgrade = index >= (machine instanceof MEBioCultivator ? 4 : 2);
       var inventory =
           new appeng.api.inventories.InternalInventory() {
             @Override
@@ -125,15 +132,9 @@ public final class MachineMenu extends appeng.menu.AEBaseMenu
             }
           };
       if (upgrade) slot.setIcon(appeng.client.gui.Icon.BACKGROUND_UPGRADE);
-      slot.setEmptyTooltip(
-          () ->
-              java.util.List.of(
-                  net.minecraft.network.chat.Component.translatable(
-                      upgrade
-                          ? "gui.appliedagristics.altar_acceleration"
-                          : output
-                              ? "gui.appliedagristics.output"
-                              : "gui.appliedagristics.altar_inputs")));
+      if (!upgrade) slot.setEmptyTooltip(() -> java.util.List.of(
+          net.minecraft.network.chat.Component.translatable(output
+              ? "gui.appliedagristics.output" : "gui.appliedagristics.altar_inputs")));
       addSlot(
           slot,
           upgrade
@@ -148,11 +149,6 @@ public final class MachineMenu extends appeng.menu.AEBaseMenu
           @Override
           public boolean mayPlace(ItemStack stack) {
             return !output && super.mayPlace(stack);
-          }
-
-          @Override
-          public boolean isActive() {
-            return !(machine instanceof CellCultivator && index >= 4) || hasItem();
           }
 
           @Override
@@ -198,9 +194,24 @@ public final class MachineMenu extends appeng.menu.AEBaseMenu
   }
 
   public void sync(ServerPlayer server) {
+    boolean first=lastSync<0;
     lastSync = server.level().getGameTime();
     state = machine.snapshot(page, search);
-    PacketDistributor.sendToPlayer(server, new Messages.Snapshot(machine.getBlockPos(), state));
+    state.putString("facing", PlanterOrientation.front(machine.getBlockState()).getName());
+    var payload=new Messages.Snapshot(machine.getBlockPos(), containerId, sessionToken, state);
+    if (first && Boolean.getBoolean("appliedagristics.clientSmoke")) {
+      var buffer=new RegistryFriendlyByteBuf(io.netty.buffer.Unpooled.buffer(),server.registryAccess());
+      try {
+        Messages.Snapshot.CODEC.encode(buffer,payload);
+        com.mojang.logging.LogUtils.getLogger().info("MENU_PAYLOAD_PROFILE machine={} bytes={}",machine.getClass().getSimpleName(),buffer.readableBytes());
+      } finally {buffer.release();}
+    }
+    PacketDistributor.sendToPlayer(server,payload);
+  }
+
+  public boolean matches(net.minecraft.core.BlockPos pos, int containerId, long sessionToken) {
+    return this.containerId == containerId && this.sessionToken == sessionToken
+        && machine.getBlockPos().equals(pos);
   }
 
   @Override

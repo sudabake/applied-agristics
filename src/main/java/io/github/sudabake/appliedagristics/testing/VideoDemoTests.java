@@ -28,11 +28,11 @@ import java.util.List;
 public final class VideoDemoTests {
     @GameTest(template="empty",templateNamespace=Agristics.ID)
     public static void machineMenusKeepSlotOrderAndPlayerInventory(GameTestHelper h) {
-        var blocks=java.util.List.of(Agristics.EARLY.get(),Agristics.CULTIVATOR.get(),Agristics.ME_INFUSION.get(),
+        var blocks=java.util.List.of(Agristics.EARLY.get(),Agristics.ME_BIO.get(),Agristics.ME_INFUSION.get(),
             Agristics.INPUT_PORT.get(),Agristics.OUTPUT_PORT.get(),Agristics.SEEDS.get(),Agristics.NETWORK.get(),Agristics.ESSENCE_VAULT.get());
-        int[] counts={11,6,6,16,16,1,0,0};
+        int[] counts={11,8,6,16,16,1,0,0};
         int[] inventoryX={8,8,8,8,8,79,79,8};
-        int[] inventoryY={136,112,100,116,116,160,160,116};
+        int[] inventoryY={136,100,100,116,116,160,160,116};
         var player=h.makeMockPlayer(GameType.SURVIVAL);
         var pos=new BlockPos(1,1,1);
         for(int i=0;i<blocks.size();i++) {

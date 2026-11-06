@@ -30,9 +30,9 @@ public final class Alpha18Tests {
             h.assertTrue(new ItemStack(Items.IRON_PICKAXE).getDestroySpeed(state)>1,"Pickaxe must work for "+holder.getId());
         }
         for(var facing:Direction.Plane.HORIZONTAL) {
-            var shape=MachineShapes.get("cell_cultivator",facing,false);
+            var shape=MachineShapes.get("me_bio_cultivator",facing,false);
             int boxes=shape.toAabbs().size();
-            h.assertTrue(boxes<=24 && shape.max(Direction.Axis.Y)>1.28,"Simple outline preserves the protruding tank");
+            h.assertTrue(boxes<=24 && shape.max(Direction.Axis.Y)>1 && shape.max(Direction.Axis.Y)<1.5,"ME cultivator outline follows its raised tank without internal cell geometry");
             long begin=System.nanoTime();
             for(int i=0;i<10000;i++) shape.clip(new Vec3(-1,.8,.5),new Vec3(2,.8,.5),BlockPos.ZERO);
             org.slf4j.LoggerFactory.getLogger("Alpha18Tests").info("CULTIVATOR_PICK_BENCH facing={} boxes={} rays=10000 ms={}",facing,boxes,(System.nanoTime()-begin)/1e6);

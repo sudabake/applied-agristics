@@ -17,7 +17,7 @@ public abstract class GridMachine extends MachineEntity implements IGridConnecte
     private IManagedGridNode makeNode() {
         var result = GridHelper.createManagedNode(this, new IGridNodeListener<GridMachine>() {
             @Override public void onSaveChanges(GridMachine owner, IGridNode node) { owner.setChanged(); }
-        }).setInWorldNode(true).setFlags(this instanceof MEInfusionAltar ? new GridFlags[0] : new GridFlags[]{GridFlags.REQUIRE_CHANNEL}).setIdlePowerUsage(0).setVisualRepresentation(getBlockState().getBlock());
+        }).setInWorldNode(true).setFlags(new GridFlags[0]).setIdlePowerUsage(0).setVisualRepresentation(getBlockState().getBlock());
         if (this instanceof appeng.api.storage.IStorageProvider storage) result.addService(appeng.api.storage.IStorageProvider.class, storage);
         return result;
     }
@@ -30,6 +30,15 @@ public abstract class GridMachine extends MachineEntity implements IGridConnecte
     @Override public IManagedGridNode getMainNode() {
         var access = ownsNode() ? null : accessModule();
         return access == null ? node : access.getMainNode();
+    }
+    protected final void storedItemsChanged(appeng.api.stacks.AEKey key,long delta) {
+        setChanged();
+        var access=accessModule();
+        if (access!=null) access.storageChanged(key,delta);
+        else {
+            var grid=getMainNode().getGrid();
+            if (grid!=null) grid.getStorageService().invalidateCache();
+        }
     }
     @Override public void saveChanges() { setChanged(); }
     @Override public boolean networkMachine() { return true; }

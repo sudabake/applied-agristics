@@ -25,8 +25,7 @@ public abstract class BiologicalTransferMixin {
         var ingredients = callback.getReturnValue();
         for (int slot = 0; slot < Math.min(ingredients.size(), ingredientTemplates.size()); slot++) {
             var stack = ingredientTemplates.get(slot);
-            if (BioData.identified(stack) && (stack.is(Agristics.BIO_ESSENCE.get()) || stack.is(Agristics.BIO_SEED.get()) || stack.is(Agristics.EXTRACT.get())
-                    || stack.is(Agristics.CULTURE.get()) || stack.is(Agristics.SAMPLER.get())))
+            if (BioData.identified(stack) && (stack.is(Agristics.BIO_ESSENCE.get()) || stack.is(Agristics.BIO_SEED.get()) || stack.is(Agristics.SAMPLER.get())))
                 ingredients.set(slot, DataComponentIngredient.of(true, stack));
         }
     }

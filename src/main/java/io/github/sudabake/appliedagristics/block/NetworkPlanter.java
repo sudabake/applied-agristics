@@ -47,24 +47,36 @@ public final class NetworkPlanter extends GridMachine {
         final Map<SeedLocation, Long> allocations = new LinkedHashMap<>();
         final Map<AEItemKey, Long> pending = new LinkedHashMap<>();
         final Map<AEItemKey, Double> fractions = new LinkedHashMap<>();
+        ListTag unresolvedBatch = new ListTag();
+        ListTag unresolvedFractions = new ListTag();
     }
     public final Map<ResourceLocation, Task> tasks = new LinkedHashMap<>();
     private int fairnessCursor;
-    public NetworkPlanter(BlockPos pos, BlockState state) { super(Agristics.NETWORK_BE.get(), pos, state, 4); }
+    private boolean autoEnableNewSeeds;
+    private final Set<ResourceLocation> seenSeeds=new HashSet<>();
+    public void toggleAutoEnableNewSeeds() {
+        for(var bank:seedStores()) for(var key:bank.keys()) seenSeeds.add(Cultivations.id(key.toStack(1),level));
+        autoEnableNewSeeds=!autoEnableNewSeeds;setChanged();
+    }
+    private void observeNewSeeds() {
+        for(var bank:seedStores()) for(var key:bank.keys()) {
+            if(bank.count(key)<=0) continue;
+            var id=Cultivations.id(key.toStack(1),level);
+            if(!seenSeeds.add(id)) continue;
+            if(autoEnableNewSeeds && !tasks.containsKey(id) && Cultivations.seed(key.toStack(1),(ServerLevel)level,worldPosition)!=null) {
+                var task=new Task();task.enabled=true;task.status="waiting";tasks.put(id,task);
+            }
+            setChanged();
+        }
+    }
+    private ListTag unresolvedTasks = new ListTag();
+    public NetworkPlanter(BlockPos pos, BlockState state) { super(Agristics.NETWORK_BE.get(), pos, state, 0); }
     @Override protected boolean valid(int slot, ItemStack stack) {
         return false;
     }
     public int parallel() { return ProductionMath.moduleParallel(structure.parallelModules(), Balance.PARALLEL_MAX.get()); }
     public double speed() { return ProductionMath.moduleSpeed(structure.speedModules(), Balance.SPEED_MAX.get()); }
     public boolean conversion() { return structure.conversion(); }
-    @Override public void open(net.minecraft.server.level.ServerPlayer player) {
-        // Old saves keep their inventory. Return legacy cards/soil on opening instead of hiding or deleting them.
-        for (int i=0; i<items.getSlots(); i++) {
-            var stack=items.extractItem(i,items.getStackInSlot(i).getCount(),false);
-            if (!stack.isEmpty()) { player.getInventory().add(stack); if (!stack.isEmpty()) player.drop(stack,false); }
-        }
-        super.open(player);
-    }
     public void configure(ResourceLocation id, boolean enabled, long target) {
         boolean owned=seedStores().stream().anyMatch(bank->bank.keys().stream().anyMatch(key->bank.count(key)>0 && Cultivations.id(key.toStack(1),level).equals(id) && Cultivations.seed(key.toStack(1),(ServerLevel)level,worldPosition)!=null));
         if (!owned) return;
@@ -104,6 +116,24 @@ public final class NetworkPlanter extends GridMachine {
             DeferredDrops.get(server).enqueue(server,worldPosition,task.pending);
             task.pending.clear();
         }
+        for (var task : tasks.values()) {
+            task.unresolvedBatch=DeferredDrops.get(server).enqueueSerialized(server,worldPosition,task.unresolvedBatch);
+        }
+        // Fractions and unparseable task metadata cannot become item entities. Keep a world-owned recovery copy.
+        if (unresolvedCount()>0) {
+            var recovery=new CompoundTag();
+            var entries=unresolvedTasks.copy();
+            tasks.forEach((id,task) -> {
+                if (task.unresolvedBatch.isEmpty() && task.unresolvedFractions.isEmpty()) return;
+                var entry=new CompoundTag();
+                entry.putString("id",id.toString());
+                entry.put("batch",task.unresolvedBatch.copy());
+                entry.put("fractions",task.unresolvedFractions.copy());
+                entries.add(entry);
+            });
+            recovery.put("tasks",entries);
+            DeferredDrops.get(server).preserveMachine(worldPosition,recovery);
+        }
         setChanged();
     }
     private void reserve(Task task, List<SeedLocation> locations) {
@@ -122,10 +152,20 @@ public final class NetworkPlanter extends GridMachine {
         if (!structure.formed()) { stopForStructure(); status=structure.status(); return; }
         var grid = getMainNode().getGrid();
         if (grid == null || !getMainNode().isActive()) { status = "offline"; tasks.values().forEach(t -> { releaseTask(t); t.status = "offline"; }); return; }
-        var storage = grid.getStorageService().getInventory(); var source = IActionSource.ofMachine(this);
-        var destination=structure.outputs();
-        var available = storage.getAvailableStacks(); var energy = grid.getEnergyService();
+        observeNewSeeds();
         var enabled = tasks.entrySet().stream().filter(e -> e.getValue().enabled || !e.getValue().pending.isEmpty()).toList();
+        if (enabled.isEmpty()) { status="idle"; return; }
+        var available=grid.getStorageService().getInventory().getAvailableStacks();
+        var access=structure.access();
+        access.beginProduction(available);
+        try { produce(grid,available,enabled); }
+        finally { access.endProduction(); }
+    }
+    private void produce(appeng.api.networking.IGrid grid,appeng.api.stacks.KeyCounter available,
+            List<Map.Entry<ResourceLocation,Task>> enabled) {
+        var source=IActionSource.ofMachine(this);
+        var destination=structure.outputs();
+        var energy=grid.getEnergyService();
         Map<ResourceLocation, List<SeedLocation>> locations = new HashMap<>();
         for (var drive : seedStores()) for (var key : drive.keys()) {
             locations.computeIfAbsent(Cultivations.id(key.toStack(1),level), id -> new ArrayList<>()).add(new SeedLocation(drive, key));
@@ -135,16 +175,15 @@ public final class NetworkPlanter extends GridMachine {
             var entry = enabled.get(Math.floorMod(i + fairnessCursor, enabled.size())); var task = entry.getValue(); task.power = 0;
             if (!task.pending.isEmpty()) {
                 if (!flush(task, destination, source)) { task.status = blockedOutput(); continue; }
-                available = storage.getAvailableStacks();
             }
             if (!task.enabled) { task.status = "disabled"; continue; }
             var inputs=locations.getOrDefault(entry.getKey(),List.of());
             var crop = inputs.isEmpty()?null:Cultivations.seed(inputs.getFirst().key.toStack(1),(ServerLevel)level,worldPosition);
             if (crop == null) { task.status = "missing_inputs"; releaseTask(task); continue; }
             reserve(task, locations.getOrDefault(crop.getId(), List.of()));
+            if (!task.unresolvedBatch.isEmpty()) { task.status="inventory_recovery"; releaseTask(task); continue; }
             if (task.occupied == 0) { task.status = "missing_seed"; continue; }
             var seed=task.allocations.keySet().iterator().next().key.toStack(1);
-            if (!Harvests.canGrowNetwork((ServerLevel)level,worldPosition,seed)) { task.status="wrong_farmland"; continue; }
             int duration=CropSources.ticks(level,worldPosition,seed,Harvests.networkSoil(level,seed),Balance.LATE_TICKS.get());
             long batchLimit=Math.min(Harvests.maximumBatch(level,seed),structure.vaults().isEmpty() ? 64L : Integer.MAX_VALUE);
             var output = AEItemKey.of(crop.essenceStack()); long stock = available.get(output);
@@ -164,10 +203,11 @@ public final class NetworkPlanter extends GridMachine {
                 Harvests.networkBatch((ServerLevel)level, worldPosition, seed, cycles, task.fractions).forEach((key, count) -> task.pending.merge(key, count, Math::addExact));
                 {
                     var key = AEItemKey.of(seed); long extra = task.pending.getOrDefault(key, 0L);
+                    boolean convert=conversion() && Cultivations.essenceCrop(seed);
                     // Only this new batch is eligible for conversion. Stored seeds are never consumed.
                     long needed = Math.max(0, parallel() - task.occupied);
                     // Edible planting materials remain harvests after parallel is filled.
-                    long toStore = conversion() || output.equals(key) ? Math.min(needed, extra) : extra;
+                    long toStore = convert || output.equals(key) ? Math.min(needed, extra) : extra;
                     // Only this array's ME seed banks collect new seeds. Ordinary
                     // input slots never refill, independently of the output storage.
                     for (var location : locations.getOrDefault(crop.getId(), List.of())) {
@@ -177,14 +217,13 @@ public final class NetworkPlanter extends GridMachine {
                     reserve(task, locations.getOrDefault(crop.getId(), List.of()));
                     // Edible seeds can also be the product. Their remaining net harvest
                     // already has the output key and must not be merged into itself then removed.
-                    if (conversion() && task.occupied == parallel() && !output.equals(key)) {
+                    if (convert && task.occupied == parallel() && !output.equals(key)) {
                         if (extra > 0) task.pending.merge(output, extra, Math::addExact);
                         extra = 0;
                     }
                     if (extra == 0) task.pending.remove(key); else task.pending.put(key, extra);
                 }
                 if (!flush(task, destination, source)) task.status = blockedOutput();
-                available = storage.getAvailableStacks();
             }
         }
         if (!enabled.isEmpty()) fairnessCursor = (fairnessCursor + 1) % enabled.size();
@@ -199,30 +238,49 @@ public final class NetworkPlanter extends GridMachine {
     }
     @Override protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries); var list = new ListTag();
+        tag.putBoolean("autoEnableNewSeeds",autoEnableNewSeeds);
+        var seen=new ListTag();for(var id:seenSeeds) seen.add(StringTag.valueOf(id.toString()));tag.put("seenSeeds",seen);
         tasks.forEach((id, t) -> {
             var e = new CompoundTag(); e.putString("id", id.toString()); e.putBoolean("enabled", t.enabled); e.putLong("target", t.target); e.putDouble("work", t.progress);
-            var pending = new ListTag(); t.pending.forEach((key, count) -> { var p = new CompoundTag(); p.put("key", key.toTag(registries)); p.putLong("count", count); pending.add(p); }); e.put("batch", pending);
-            var fractions = new ListTag(); t.fractions.forEach((key, amount) -> { var f = new CompoundTag(); f.put("key", key.toTag(registries)); f.putDouble("fraction", amount); fractions.add(f); }); e.put("fractions", fractions); list.add(e);
-        }); tag.put("tasks", list);
+            e.put("batch",StoredItemCounts.save(t.pending,t.unresolvedBatch,registries));
+            var fractions = new ListTag();
+            t.fractions.forEach((key, amount) -> { var f = new CompoundTag(); f.put("key", key.toTag(registries)); f.putDouble("fraction", amount); fractions.add(f); });
+            fractions.addAll(t.unresolvedFractions.copy());
+            e.put("fractions",fractions); list.add(e);
+        });
+        list.addAll(unresolvedTasks.copy());
+        tag.put("tasks", list);
     }
     @Override protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
-        // Legacy directNetworkOutput is ignored; existing paid batches still load below.
-        if (Crops.farmland(items.getStackInSlot(0)) && items.getStackInSlot(3).isEmpty()) {
-            items.setStackInSlot(3, items.getStackInSlot(0)); items.setStackInSlot(0, ItemStack.EMPTY);
-        }
-        tasks.clear();
+        tasks.clear(); unresolvedTasks=new ListTag();
+        autoEnableNewSeeds=tag.getBoolean("autoEnableNewSeeds");seenSeeds.clear();
+        for(var raw:tag.getList("seenSeeds",Tag.TAG_STRING)) {var id=ResourceLocation.tryParse(raw.getAsString());if(id!=null) seenSeeds.add(id);}
         for (var raw : tag.getList("tasks", Tag.TAG_COMPOUND)) {
-            var e = (CompoundTag)raw; var id = ResourceLocation.tryParse(e.getString("id")); if (id == null) continue;
-            var t = new Task(); t.enabled = e.getBoolean("enabled"); t.target = e.contains("target") ? Math.max(-1, e.getLong("target")) : -1; t.progress = Math.max(0, e.contains("work") ? e.getDouble("work") : e.getInt("progress"));
-            for (var item : e.getList("batch", 10)) { var p = (CompoundTag)item; var key = AEItemKey.fromTag(registries, p.getCompound("key")); if (key != null && p.getLong("count") > 0) t.pending.put(key, p.getLong("count")); }
-            for (var item : e.getList("pending", 10)) { var stack = ItemStack.parseOptional(registries, (CompoundTag)item); if (!stack.isEmpty()) t.pending.merge(AEItemKey.of(stack), (long)stack.getCount(), Math::addExact); }
-            for (var item : e.getList("fractions", 10)) { var f = (CompoundTag)item; var key = AEItemKey.fromTag(registries, f.getCompound("key")); if (key != null) t.fractions.put(key, Math.clamp(f.getDouble("fraction"), 0, Math.nextDown(1.0))); }
-            tasks.put(id, t);
+            var e=(CompoundTag)raw;
+            var id=ResourceLocation.tryParse(e.getString("id"));
+            if (id==null || tasks.containsKey(id)) { unresolvedTasks.add(e.copy()); continue; }
+            var t=new Task();
+            t.enabled=e.getBoolean("enabled");
+            t.target=e.contains("target") ? Math.max(-1,e.getLong("target")) : -1;
+            double work=e.getDouble("work");
+            t.progress=Double.isFinite(work) ? Math.max(0,work) : 0;
+            t.unresolvedBatch=StoredItemCounts.load(e.getList("batch",Tag.TAG_COMPOUND),t.pending,registries);
+            for (var item : e.getList("fractions",Tag.TAG_COMPOUND)) {
+                var f=(CompoundTag)item;
+                var key=AEItemKey.fromTag(registries,f.getCompound("key"));
+                double fraction=f.getDouble("fraction");
+                if (key==null || !Double.isFinite(fraction) || t.fractions.containsKey(key)) t.unresolvedFractions.add(f.copy());
+                else t.fractions.put(key,Math.clamp(fraction,0,Math.nextDown(1.0)));
+            }
+            tasks.put(id,t);
         }
     }
+    private int unresolvedCount() {
+        return unresolvedTasks.size()+tasks.values().stream().mapToInt(t -> t.unresolvedBatch.size()+t.unresolvedFractions.size()).sum();
+    }
     @Override public CompoundTag snapshot(int page, String search) {
-        var tag = super.snapshot(page, ""); var grid = getMainNode().getGrid();
+        var tag = super.snapshot(page, ""); tag.putInt("unresolved",unresolvedCount()); tag.putBoolean("autoEnableNewSeeds",autoEnableNewSeeds); var grid = getMainNode().getGrid();
         var inventory = grid == null ? null : grid.getStorageService().getInventory().getAvailableStacks();
         var owned = new LinkedHashMap<ResourceLocation, Cultivations.Entry>();
         for (var drive : seedStores()) for (var key : drive.keys()) if (drive.count(key) > 0) {
@@ -230,14 +288,15 @@ public final class NetworkPlanter extends GridMachine {
         }
         // The filter belongs to the viewer/menu; it must never disable hidden crops.
         boolean hideOrdinary="hide_ordinary".equals(search);
-        var crops = owned.values().stream().filter(c -> !hideOrdinary || Crops.essence(c.essenceStack())).sorted(Comparator.comparing(c -> c.getId().toString())).toList();
+        var crops = owned.values().stream().filter(c -> !hideOrdinary || !net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(c.seedStack().getItem()).getNamespace().equals("minecraft")).sorted(Comparator.comparing(c -> c.getId().toString())).toList();
         var rows = new ListTag(); int start = Math.min(Math.max(0, crops.size() - 4), Math.max(0, page));
         for (var crop : crops.subList(start, Math.min(start + 4, crops.size()))) {
             var t = tasks.getOrDefault(crop.getId(), new Task()); var row = new CompoundTag();
             row.putString("id", crop.getId().toString()); row.putString("name", crop.getDisplayName().getString());
             row.put("seed", crop.seedStack().save(level.registryAccess())); row.put("output", crop.essenceStack().save(level.registryAccess()));
             row.putLong("stock", inventory == null ? 0 : inventory.get(AEItemKey.of(crop.essenceStack())));
-            row.putLong("target", t.target); row.putBoolean("enabled", t.enabled); row.putString("status", t.status);
+            String rowStatus=!t.enabled?"disabled":!structure.formed()?"unformed":grid==null || !getMainNode().isActive()?"offline":Set.of("offline","unformed","disabled").contains(t.status)?"waiting":t.status;
+            row.putLong("target", t.target); row.putBoolean("enabled", t.enabled); row.putString("status", rowStatus);
             long usable = 0;
             for (var drive : seedStores()) for (var key : drive.keys()) if (Cultivations.id(key.toStack(1),level).equals(crop.getId())) {
                 long freeForThis = drive.count(key) - drive.used(key) + t.allocations.getOrDefault(new SeedLocation(drive, key), 0L);

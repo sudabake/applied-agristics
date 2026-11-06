@@ -17,6 +17,7 @@ public interface CropSource {
     boolean canGrow(ServerLevel level,BlockPos pos,ItemStack soil);
     boolean reproduces();
     List<ItemStack> harvest(ServerLevel level,BlockPos pos,ItemStack soil);
+    default List<ItemStack> harvestNetwork(ServerLevel level,BlockPos pos) { return harvest(level,pos,networkSoil()); }
     default int maximumBatch() { return 64; }
     default boolean fixedOutputs() { return false; }
 }

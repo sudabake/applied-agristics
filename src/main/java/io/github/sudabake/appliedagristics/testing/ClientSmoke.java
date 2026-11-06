@@ -39,6 +39,7 @@ public final class ClientSmoke {
     private static boolean guidePending;
     private static volatile boolean corePassed;
     private static int guideTicks;
+    private static boolean nextPhasePending;
     private static String expectedScrollId = "";
     private static boolean scrollPassed;
     private static boolean withdrawPassed;
@@ -67,13 +68,27 @@ public final class ClientSmoke {
             mc.createWorldOpenFlows().openWorld("agr-smoke", () -> { org.slf4j.LoggerFactory.getLogger("AppliedAgristicsTests").error("CLIENT_SMOKE_WORLD_OPEN_FAILED"); mc.stop(); });
         }
         if (mc.level == null || mc.player == null || mc.getSingleplayerServer() == null) return;
+        if(Boolean.getBoolean("appliedagristics.eaepOnly")) {
+            if(io.github.sudabake.appliedagristics.compat.jei.JeiSmoke.tick()) {
+                org.slf4j.LoggerFactory.getLogger("AppliedAgristicsTests").info("CLIENT_SMOKE_PASSED eaepUpload=true actualNetworkReturn=true");
+                done=true;mc.stop();
+            }
+            return;
+        }
+        if (Boolean.getBoolean("appliedagristics.cultivatorModelSmoke")) {
+            if (CultivatorModelChecks.tick(mc)) { done=true;mc.stop(); }
+            return;
+        }
+        if (nextPhasePending) {
+            if(NextPhaseClientChecks.tick(mc)) { corePassed &= NextPhaseClientChecks.passed;nextPhasePending=false;guidePending=true; }
+            return;
+        }
         if (scenePending) {
             sceneTicks++;
             if (sceneTicks==1) mc.getSingleplayerServer().execute(()->{
                 var crop=Crops.all().getFirst(); var controller=planterFixture.controller();
                 controller.configure(crop.getId(),true,-1); controller.step(); controller.updateWorkVisual();
-                var culture=(CellCultivator)mc.getSingleplayerServer().overworld().getBlockEntity(smokePos(4));
-                culture.items.setStackInSlot(0,io.github.sudabake.appliedagristics.biology.BioData.withIdentity(Agristics.SAMPLER.get(),net.minecraft.resources.ResourceLocation.parse("minecraft:cow")).copyWithCount(2));
+
             });
             if (sceneTicks==20) {
                 Screenshot.grab(mc.gameDirectory,"agr-array-in-world.png",mc.getMainRenderTarget(),message -> {});
@@ -86,10 +101,11 @@ public final class ClientSmoke {
                 corePassed &= models;
                 var controller=(NetworkPlanter)mc.level.getBlockEntity(planterFixture.controller().getBlockPos());
                 boolean activity=controller.workingVisual() && mc.getBlockEntityRenderDispatcher().getRenderer(controller) instanceof io.github.sudabake.appliedagristics.client.MachineActivityRenderer;
-                var sprite=mc.getTextureAtlas(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS).apply(net.minecraft.resources.ResourceLocation.parse("appliedagristics:item/mature_culture"));
-                boolean animated=sprite.contents().getUniqueFrames().count()==24;
-                corePassed &= activity && animated;
-                org.slf4j.LoggerFactory.getLogger("AppliedAgristicsTests").info("CLIENT_ACTIVITY_RESULT running={} cultureFrames={}",activity,animated);
+                var bioModel=mc.getBlockRenderer().getBlockModel(Agristics.ME_BIO.get().defaultBlockState());
+                var layers=bioModel.getRenderTypes(Agristics.ME_BIO.get().defaultBlockState(),net.minecraft.util.RandomSource.create(1),net.neoforged.neoforge.client.model.data.ModelData.EMPTY);
+                boolean layered=layers.contains(net.minecraft.client.renderer.RenderType.solid()) && layers.contains(net.minecraft.client.renderer.RenderType.translucent());
+                corePassed &= activity && layered;
+                org.slf4j.LoggerFactory.getLogger("AppliedAgristicsTests").info("CLIENT_ACTIVITY_RESULT running={} cultivatorLayers={}",activity,layered);
                 org.slf4j.LoggerFactory.getLogger("AppliedAgristicsTests").info("CLIENT_FORMED_MODELS_RESULT {}",models);
                 mc.getSingleplayerServer().execute(()->{
                     var level=mc.getSingleplayerServer().overworld(); ((EarlyPlanter)level.getBlockEntity(origin)).items.setStackInSlot(0,new ItemStack(net.minecraft.world.item.Items.WHEAT_SEEDS));
@@ -117,18 +133,12 @@ public final class ClientSmoke {
                     mc.getSingleplayerServer().execute(()->{
                         var level=mc.getSingleplayerServer().overworld(); ((EarlyPlanter)level.getBlockEntity(origin)).items.setStackInSlot(1,ItemStack.EMPTY);
                         var player=mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
-                        net.minecraft.world.level.ItemLike[] icons={Agristics.SAMPLER.get(),Agristics.CAPSULE.get(),Agristics.CULTURE.get(),Agristics.EXTRACT.get(),Agristics.NUTRIENT.get()};
+                        net.minecraft.world.level.ItemLike[] icons={Agristics.SAMPLER.get(),Agristics.EMPTY_BIO_SEED.get(),Agristics.BIO_SEED.get(),Agristics.BIO_ESSENCE.get(),Agristics.NUTRIENT.get()};
                         for (int i=0;i<icons.length;i++) player.getInventory().setItem(i,new ItemStack(icons[i]));
                         player.getInventory().selected=8; player.getInventory().setItem(8,ItemStack.EMPTY);
                         var pos=smokePos(4); mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID()).teleportTo(level,pos.getX()+1.5,101.5,pos.getZ()-2.5,java.util.Set.of(),20,16);
                     });
                 }
-            }
-            if (sceneTicks==115) {
-                var culture=(CellCultivator)mc.level.getBlockEntity(smokePos(4));
-                boolean passed=culture.workingVisual() && mc.getBlockEntityRenderDispatcher().getRenderer(culture) instanceof io.github.sudabake.appliedagristics.client.MachineActivityRenderer;
-                corePassed &= passed; org.slf4j.LoggerFactory.getLogger("AppliedAgristicsTests").info("CLIENT_CULTURE_BUBBLES_RESULT {}",passed);
-                Screenshot.grab(mc.gameDirectory,"agr-culture-bubbles.png",mc.getMainRenderTarget(),message->{});
             }
             if (sceneTicks==120) mc.getSingleplayerServer().execute(()->{
                 var level=mc.getSingleplayerServer().overworld(); var pos=smokePos(3); var altar=(MEInfusionAltar)level.getBlockEntity(pos);
@@ -151,35 +161,8 @@ public final class ClientSmoke {
                 passed &= sceneTicks==150 ? !altar.items.getStackInSlot(0).isEmpty() : ItemStack.isSameItemSameComponents(altar.items.getStackInSlot(1),infusionExpected);
                 corePassed &= passed; org.slf4j.LoggerFactory.getLogger("AppliedAgristicsTests").info("CLIENT_NATIVE_INFUSION_RESULT stage={} passed={}",sceneTicks,passed);
                 Screenshot.grab(mc.gameDirectory,"agr-native-infusion-"+sceneTicks+".png",mc.getMainRenderTarget(),message->{});
-                if (sceneTicks==300) mc.getSingleplayerServer().execute(()->{
-                    var level=mc.getSingleplayerServer().overworld();var bio=(BiologicalAltar)level.getBlockEntity(smokePos(8));
-                    bio.items.setStackInSlot(0,ItemStack.EMPTY);bio.items.setStackInSlot(1,ItemStack.EMPTY);
-                    for(var item:java.util.List.of(io.github.sudabake.appliedagristics.biology.BioData.withIdentity(Agristics.EXTRACT.get(),net.minecraft.resources.ResourceLocation.parse("minecraft:cow")),new ItemStack(Agristics.CONDENSED_ESSENCE.get())))level.addFreshEntity(new net.minecraft.world.entity.item.ItemEntity(level,bio.getBlockPos().getX()+1.5,bio.getBlockPos().getY()+.2,bio.getBlockPos().getZ()+.5,item));
-                    var clicker=mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());var priorMenu=clicker.containerMenu;
-                    clicker.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND,new ItemStack(Agristics.EMPTY_BIO_SEED.get()));bio.open(clicker);
-                    corePassed &= clicker.containerMenu==priorMenu && (clicker.isCreative() || clicker.getMainHandItem().isEmpty());
-                    org.slf4j.LoggerFactory.getLogger("AppliedAgristicsTests").info("CLIENT_BIO_NO_GUI_RESULT {}",clicker.containerMenu==priorMenu);
-                    var pos=bio.getBlockPos();mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID()).teleportTo(level,pos.getX()+4.5,pos.getY()+3,pos.getZ()-5.5,java.util.Set.of(),38,24);
-                });
             }
-            if(sceneTicks==335 || sceneTicks==365 || sceneTicks==405) {
-                var bio=(BiologicalAltar)mc.level.getBlockEntity(smokePos(8));
-                boolean passed=mc.getBlockEntityRenderDispatcher().getRenderer(bio) instanceof io.github.sudabake.appliedagristics.client.BiologicalAltarRenderer && bio.ritualSpecies()!=null;
-                corePassed &= passed;
-                org.slf4j.LoggerFactory.getLogger("AppliedAgristicsTests").info("CLIENT_BIO_RITUAL stage={} progress={} passed={}",sceneTicks,bio.ritualProgress(0),passed);
-                Screenshot.grab(mc.gameDirectory,"agr-biological-ritual-"+sceneTicks+".png",mc.getMainRenderTarget(),message->{});
-            }
-            if(sceneTicks==440) {
-                var bio=(BiologicalAltar)mc.level.getBlockEntity(smokePos(8));corePassed &= bio.items.getStackInSlot(1).is(Agristics.BIO_SEED.get());
-                mc.getSingleplayerServer().execute(()->{
-                    var player=mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
-                    player.getInventory().selected=8;player.getInventory().setItem(8,new ItemStack(Agristics.ME_INFUSION.get()));
-                });
-            }
-            if(sceneTicks==455) {
-                corePassed &= mc.player.getMainHandItem().is(Agristics.ME_INFUSION.get().asItem());
-                Screenshot.grab(mc.gameDirectory,"agr-altar-held.png",mc.getMainRenderTarget(),message->{});scenePending=false;guidePending=true;
-            }
+            if(sceneTicks==310) {scenePending=false;nextPhasePending=true;}
             return;
         }
         if (guidePending) {
@@ -187,13 +170,17 @@ public final class ClientSmoke {
             var cowId = net.minecraft.resources.ResourceLocation.parse("minecraft:cow");
             if (guideTicks >= 20) {
                 if (net.neoforged.fml.ModList.get().isLoaded("jei") && !io.github.sudabake.appliedagristics.compat.jei.JeiSmoke.tick()) return;
+                if(Boolean.getBoolean("appliedagristics.machineModelChecksAfterSmoke")) {
+                    if(!CultivatorModelChecks.tick(mc)) return;
+                    corePassed &= CultivatorModelChecks.passed();
+                }
                 var cowSeed = io.github.sudabake.appliedagristics.biology.BioData.withIdentity(Agristics.BIO_SEED.get(), cowId);
                 var pigSeed = io.github.sudabake.appliedagristics.biology.BioData.withIdentity(Agristics.BIO_SEED.get(), net.minecraft.resources.ResourceLocation.parse("minecraft:pig"));
                 var egg = net.minecraft.world.item.SpawnEggItem.byId(net.minecraft.world.entity.EntityType.COW);
                 var essence=io.github.sudabake.appliedagristics.biology.BioData.withIdentity(Agristics.BIO_ESSENCE.get(),cowId);
                 var tooltip=new java.util.ArrayList<net.minecraft.network.chat.Component>(); essence.getItem().appendHoverText(essence,net.minecraft.world.item.Item.TooltipContext.of(mc.level),tooltip,net.minecraft.world.item.TooltipFlag.NORMAL);
                 var before=mc.screen; var use=essence.getItem().use(mc.level,mc.player,net.minecraft.world.InteractionHand.MAIN_HAND);
-                corePassed &= !net.minecraft.network.chat.Component.translatable("effect.appliedagristics.nourishment.desc").getString().equals("effect.appliedagristics.nourishment.desc");
+                corePassed &= !net.minecraft.client.resources.language.I18n.exists("effect.appliedagristics.nourishment.desc");
                 corePassed &= tooltip.isEmpty() && use.getResult()==net.minecraft.world.InteractionResult.PASS && mc.screen==before;
                 essence.getItem().appendHoverText(essence,net.minecraft.world.item.Item.TooltipContext.of(mc.level),tooltip,net.minecraft.world.item.TooltipFlag.ADVANCED);
                 corePassed &= tooltip.size()==1 && tooltip.getFirst().getString().contains(cowId.toString());
@@ -210,12 +197,15 @@ public final class ClientSmoke {
             mc.options.pauseOnLostFocus = false;
             mc.getSingleplayerServer().execute(() -> {
                 var player = mc.getSingleplayerServer().getPlayerList().getPlayer(id); var level = player.serverLevel();
+                player.setGameMode(net.minecraft.world.level.GameType.CREATIVE);
+                player.getAbilities().flying = true;
+                player.onUpdateAbilities();
                 level.setDayTime(6000); level.setWeatherParameters(6000,0,false,false);
                 level.setBlockAndUpdate(origin.offset(3,0,-2),Blocks.AIR.defaultBlockState());
                 player.getInventory().clearContent();
-                net.minecraft.world.level.ItemLike[] visibleParts={Agristics.EARLY.get(),Agristics.CULTIVATOR.get(),Agristics.NETWORK.get(),Agristics.SEEDS.get(),Agristics.NETWORK_ACCESS.get(),Agristics.INPUT_PORT.get(),Agristics.OUTPUT_PORT.get(),Agristics.ESSENCE_VAULT.get(),Agristics.PLANTER_FRAME.get(),Agristics.CULTIVATION_CHAMBER.get(),Agristics.SPEED_MODULE.get(),Agristics.PARALLEL_MODULE.get(),Agristics.CONVERSION_MODULE.get(),Agristics.ME_INFUSION.get()};
+                net.minecraft.world.level.ItemLike[] visibleParts={Agristics.EARLY.get(),Agristics.ME_BIO.get(),Agristics.NETWORK.get(),Agristics.SEEDS.get(),Agristics.NETWORK_ACCESS.get(),Agristics.INPUT_PORT.get(),Agristics.OUTPUT_PORT.get(),Agristics.ESSENCE_VAULT.get(),Agristics.PLANTER_FRAME.get(),Agristics.CULTIVATION_CHAMBER.get(),Agristics.SPEED_MODULE.get(),Agristics.PARALLEL_MODULE.get(),Agristics.CONVERSION_MODULE.get(),Agristics.ME_INFUSION.get()};
                 for (int i=0;i<visibleParts.length;i++) player.getInventory().setItem(i+9,new ItemStack(visibleParts[i]));
-                net.minecraft.world.level.ItemLike[] biologyItems={Agristics.SAMPLER.get(),Agristics.CAPSULE.get(),Agristics.CULTURE.get(),Agristics.EXTRACT.get(),Agristics.NUTRIENT.get()};
+                net.minecraft.world.level.ItemLike[] biologyItems={Agristics.SAMPLER.get(),Agristics.EMPTY_BIO_SEED.get(),Agristics.BIO_SEED.get(),Agristics.BIO_ESSENCE.get(),Agristics.NUTRIENT.get()};
                 for (int i=0;i<biologyItems.length;i++) player.getInventory().setItem(i,new ItemStack(biologyItems[i]));
                 for (int x = -1; x <= 5; x++) for (int z = -1; z <= 2; z++) level.setBlockAndUpdate(origin.offset(x, -1, z), Blocks.STONE.defaultBlockState());
                 for (int x = 0; x <= 4; x++) for (int z = 0; z <= 1; z++) level.setBlockAndUpdate(origin.offset(x, 0, z), Blocks.AIR.defaultBlockState());
@@ -227,17 +217,19 @@ public final class ClientSmoke {
                 // Replace their entities as well, so a repeated run never inherits IO toggles.
                 level.setBlockAndUpdate(smokePos(3),Blocks.AIR.defaultBlockState());
                 level.setBlockAndUpdate(smokePos(4),Blocks.AIR.defaultBlockState());
-                level.setBlockAndUpdate(smokePos(3), Agristics.ME_INFUSION.get().defaultBlockState());
-                level.setBlockAndUpdate(smokePos(4), Agristics.CULTIVATOR.get().defaultBlockState());
+                level.setBlockAndUpdate(smokePos(3), io.github.sudabake.appliedagristics.block.PlanterOrientation.withFacing(Agristics.ME_INFUSION.get().defaultBlockState(),net.minecraft.core.Direction.EAST));
+                level.setBlockAndUpdate(smokePos(3).east(),Blocks.CHEST.defaultBlockState());
+                level.setBlockAndUpdate(smokePos(3).north(),Blocks.STONE.defaultBlockState());
+                level.setBlockAndUpdate(smokePos(4), Agristics.ME_BIO.get().defaultBlockState());
                 level.setBlockAndUpdate(smokePos(8),Blocks.AIR.defaultBlockState());
-                level.setBlockAndUpdate(smokePos(8),Agristics.BIO_ALTAR.get().defaultBlockState());
+
                 for(int[] offset:new int[][]{{3,0},{0,3},{-3,0},{0,-3},{2,2},{2,-2},{-2,2},{-2,-2}}) {
                     var old=smokePos(8).offset(offset[0],0,offset[1]);if(level.getBlockState(old).is(com.blakebr0.mysticalagriculture.init.ModBlocks.INFUSION_PEDESTAL.get())){level.removeBlock(old,false);level.removeBlock(old.below(),false);}
                 }
-                var culture = (io.github.sudabake.appliedagristics.block.CellCultivator) level.getBlockEntity(smokePos(4));
+                var culture = (io.github.sudabake.appliedagristics.block.MEBioCultivator) level.getBlockEntity(smokePos(4));
                 culture.items.setStackInSlot(0, io.github.sudabake.appliedagristics.biology.BioData.withIdentity(Agristics.SAMPLER.get(), net.minecraft.resources.ResourceLocation.parse("minecraft:cow")));
-                culture.items.setStackInSlot(1, new ItemStack(Agristics.NUTRIENT.get(), 8)); culture.items.setStackInSlot(2, new ItemStack(Agristics.CAPSULE.get(), 8));
-                culture.water.fill(new FluidStack(Fluids.WATER, 4000), FluidAction.EXECUTE);
+                culture.items.setStackInSlot(1, new ItemStack(Agristics.NUTRIENT.get(), 8)); culture.items.setStackInSlot(2, new ItemStack(Agristics.EMPTY_BIO_SEED.get(), 8));
+                level.setBlockAndUpdate(smokePos(4).west(),appeng.core.definitions.AEBlocks.CREATIVE_ENERGY_CELL.block().defaultBlockState());
                 var early = (EarlyPlanter) level.getBlockEntity(origin); var crop = Crops.all().getFirst();
                 var altar = (MEInfusionAltar) level.getBlockEntity(smokePos(3));
                 for (int i = 2; i < 6; i++) altar.items.setStackInSlot(i, appeng.core.definitions.AEItems.SPEED_CARD.stack());
@@ -249,6 +241,11 @@ public final class ClientSmoke {
         }
         if (!(mc.player.containerMenu instanceof MachineMenu menu) || mc.screen == null || menu.state.isEmpty()) return;
         ticks++;
+        if (stage == 0 && ticks == 15) {
+            nativeScreensPassed &= mc.screen.children().stream().noneMatch(
+                child -> child instanceof appeng.client.gui.widgets.OpenGuideButton button && button.visible);
+            org.slf4j.LoggerFactory.getLogger("AppliedAgristicsTests").info("EARLY_HELP_BUTTON_REMOVED {}", nativeScreensPassed);
+        }
         if (stage == 1 && ticks == 5) {
             mc.getSingleplayerServer().execute(() -> {
                 var drive = (SeedStorage) mc.getSingleplayerServer().overworld().getBlockEntity(origin.offset(1, 0, 0));
@@ -256,8 +253,8 @@ public final class ClientSmoke {
                 drive.getMainNode().getGrid().getStorageService().getInventory().insert(key, 5, appeng.api.config.Actionable.MODULATE, appeng.api.networking.security.IActionSource.ofMachine(drive));
             });
         }
-        if (stage == 1 && ticks == 10) net.neoforged.neoforge.network.PacketDistributor.sendToServer(new io.github.sudabake.appliedagristics.network.Messages.Control(menu.machine.getBlockPos(), 0, "", 0, ItemStack.EMPTY));
-        if (stage == 1 && ticks == 15) net.neoforged.neoforge.network.PacketDistributor.sendToServer(new io.github.sudabake.appliedagristics.network.Messages.Control(menu.machine.getBlockPos(), 3, "", 0, new ItemStack(Crops.all().getFirst().getSeedsItem())));
+        if (stage == 1 && ticks == 10) net.neoforged.neoforge.network.PacketDistributor.sendToServer(new io.github.sudabake.appliedagristics.network.Messages.Control(menu.machine.getBlockPos(), menu.containerId, menu.sessionToken, 0, "", 0, ItemStack.EMPTY));
+        if (stage == 1 && ticks == 15) net.neoforged.neoforge.network.PacketDistributor.sendToServer(new io.github.sudabake.appliedagristics.network.Messages.Control(menu.machine.getBlockPos(), menu.containerId, menu.sessionToken, 3, "", 0, new ItemStack(Crops.all().getFirst().getSeedsItem())));
         if (stage == 1 && ticks == 20) {
             mc.getSingleplayerServer().execute(() -> {
                 var drive = (SeedStorage) mc.getSingleplayerServer().overworld().getBlockEntity(origin.offset(1, 0, 0));
@@ -274,8 +271,33 @@ public final class ClientSmoke {
                 drive.items.setStackInSlot(0, new ItemStack(net.minecraft.world.item.Items.WHEAT_SEEDS)); drive.step();
             });
         }
-        if(stage==1 && ticks==45) nativeScreensPassed &= mc.screen instanceof io.github.sudabake.appliedagristics.client.MachineScreen && menu.state.getList("rows",10).size()==12;
-        if (stage == 2 && ticks == 5) net.neoforged.neoforge.network.PacketDistributor.sendToServer(new io.github.sudabake.appliedagristics.network.Messages.Control(menu.machine.getBlockPos(), 1, Crops.all().getFirst().getId().toString(), 12, ItemStack.EMPTY));
+        if(stage==1 && ticks==45) nativeScreensPassed &= mc.screen instanceof io.github.sudabake.appliedagristics.client.SeedStorageScreen && menu.state.getList("rows",10).size()==12;
+        if(stage==1 && ticks==46) clickToolbar(mc.screen,"gui.appliedagristics.seed_settings");
+        if(stage==1 && ticks==50 && mc.screen instanceof io.github.sudabake.appliedagristics.client.SeedStorageSettingsScreen screen) {
+            screen.mouseClicked(screen.getGuiLeft()+18,screen.getGuiTop()+32,0);
+            screen.mouseClicked(screen.getGuiLeft()+128,screen.getGuiTop()+69,0);
+            screen.mouseClicked(screen.getGuiLeft()+88,screen.getGuiTop()+125,0);
+        }
+        if(stage==1 && ticks==57) {
+            nativeScreensPassed &= mc.screen instanceof io.github.sudabake.appliedagristics.client.SeedStorageSettingsScreen
+                && menu.state.getInt("collectFilter")==1 && menu.state.getBoolean("autoCollect")
+                && mc.screen.children().stream().anyMatch(child->child instanceof net.minecraft.client.gui.components.Button button && button.getMessage().getString().equals(net.minecraft.network.chat.Component.translatable("gui.appliedagristics.eject_confirm").getString()) && button.getTooltip()!=null);
+            Screenshot.grab(mc.gameDirectory,"agr-seed-settings-confirm.png",mc.getMainRenderTarget(),message->{});
+        }
+        if(stage==1 && ticks==60 && mc.screen instanceof io.github.sudabake.appliedagristics.client.SeedStorageSettingsScreen screen)
+            screen.mouseClicked(screen.getGuiLeft()+88,screen.getGuiTop()+125,0);
+        if(stage==1 && ticks==70 && mc.screen instanceof io.github.sudabake.appliedagristics.client.SeedStorageSettingsScreen screen) {
+            nativeScreensPassed &= !menu.state.getBoolean("autoCollect");
+            screen.mouseClicked(screen.getGuiLeft()+46,screen.getGuiTop()+69,0);
+        }
+        if(stage==1 && ticks==80 && mc.screen instanceof io.github.sudabake.appliedagristics.client.SeedStorageSettingsScreen screen)
+            screen.mouseClicked(screen.getGuiLeft()+162,screen.getGuiTop()+3,0);
+        if(stage==1 && ticks==90) mc.getSingleplayerServer().execute(()-> {
+            var bank=(SeedStorage)mc.getSingleplayerServer().overworld().getBlockEntity(origin.offset(1,0,0));
+            var key=appeng.api.stacks.AEItemKey.of(new ItemStack(Crops.all().getFirst().getSeedsItem()));bank.add(key,Math.max(0,8-bank.count(key)));
+        });
+        if(stage==1 && ticks==90) nativeScreensPassed &= mc.screen instanceof io.github.sudabake.appliedagristics.client.SeedStorageScreen && menu.state.getInt("collectFilter")==0;
+        if (stage == 2 && ticks == 5) net.neoforged.neoforge.network.PacketDistributor.sendToServer(new io.github.sudabake.appliedagristics.network.Messages.Control(menu.machine.getBlockPos(), menu.containerId, menu.sessionToken, 1, Crops.all().getFirst().getId().toString(), 12, ItemStack.EMPTY));
         if (stage == 2 && ticks == 10) {
             var rows = menu.state.getList("rows", 10);
             if (rows.size() == 4) expectedScrollId = rows.getCompound(1).getString("id");
@@ -303,13 +325,12 @@ public final class ClientSmoke {
             arrayControlsPassed &= mc.screen instanceof io.github.sudabake.appliedagristics.client.MachineScreen
                 && !menu.state.contains("directNetworkOutput")
                 && mc.screen.children().stream().noneMatch(w->w instanceof net.minecraft.client.gui.components.Button b && b.getMessage().getString().equals("IO"))
-                && mc.screen.children().stream().anyMatch(w->w instanceof net.minecraft.client.gui.components.Button b && b.getX()==left+240 && b.getWidth()==71);
+                && mc.screen.children().stream().anyMatch(w->w instanceof appeng.client.gui.widgets.AECheckbox b && b.getX()==left+232 && b.getWidth()==80);
             Screenshot.grab(mc.gameDirectory,"agr-network-header.png",mc.getMainRenderTarget(),message->{});
         }
         if(stage==2 && ticks==58) {
             arrayControlsPassed &= mc.screen instanceof io.github.sudabake.appliedagristics.client.MachineScreen && mc.player.containerMenu==menu;
             org.slf4j.LoggerFactory.getLogger("AppliedAgristicsTests").info("CLIENT_ARRAY_FILTER_LAYOUT_RESULT {}",arrayControlsPassed);
-            net.neoforged.neoforge.network.PacketDistributor.sendToServer(new io.github.sudabake.appliedagristics.network.Messages.Control(menu.machine.getBlockPos(),11,"",0,ItemStack.EMPTY));
         }
         if (stage == 3 && ticks == 27) mc.getSingleplayerServer().execute(() -> {
             var player = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
@@ -322,29 +343,36 @@ public final class ClientSmoke {
         });
         if (stage == 3 && ticks == 11) org.lwjgl.glfw.GLFW.glfwSetCursorPos(mc.getWindow().getWindow(), 0, 0);
         if (stage == 3 && ticks == 12) Screenshot.grab(mc.gameDirectory, "agr-me-infusion-altar.png", mc.getMainRenderTarget(), message -> {});
+        if (stage == 3 && ticks == 13 && mc.screen instanceof io.github.sudabake.appliedagristics.client.AltarScreen screen) clickToolbar(screen, "gui.tooltips.ae2.AutoExport");
         if (stage == 3 && ticks == 15 && mc.screen instanceof io.github.sudabake.appliedagristics.client.AltarScreen screen) clickToolbar(screen, "gui.appliedagristics.io_config");
         if (stage == 3 && ticks == 18 && mc.screen instanceof io.github.sudabake.appliedagristics.client.AltarIOScreen screen) {
-            mc.screen.mouseClicked(screen.getGuiLeft() + 101, screen.getGuiTop() + 57, 0);
-            mc.screen.mouseClicked(screen.getGuiLeft() + 151, screen.getGuiTop() + 113, 0);
+            // Front is EAST, despite the client's placeholder entity defaulting to NORTH.
+            mc.screen.mouseClicked(screen.getGuiLeft() + 54, screen.getGuiTop() + 53, 0);
         }
         if (stage == 3 && ticks == 25) {
             var sides = menu.state.getIntArray("sides");
-            altarPassed = mc.screen instanceof io.github.sudabake.appliedagristics.client.AltarIOScreen && sides.length == 6 && sides[net.minecraft.core.Direction.EAST.ordinal()] == 2 && menu.state.getBoolean("autoOutput") && menu.state.getInt("acceleration") == 4;
+            altarPassed = mc.screen instanceof io.github.sudabake.appliedagristics.client.AltarIOScreen && sides.length == 6 && sides[net.minecraft.core.Direction.EAST.ordinal()] == 3 && menu.state.getString("facing").equals("east") && menu.state.getBoolean("autoOutput") && menu.state.getInt("acceleration") == 4;
         }
-        if (stage == 4 && ticks == 5 && mc.screen instanceof io.github.sudabake.appliedagristics.client.CultureScreen) {
-            mc.screen.mouseClicked((mc.screen.width - 176) / 2.0 + 150, (mc.screen.height - 193) / 2.0 + 32, 0);
+        if (stage==4 && ticks==13) {
+            nativeScreensPassed &= menu.getSlots(appeng.menu.SlotSemantics.UPGRADE).stream().allMatch(
+                slot -> slot instanceof appeng.menu.slot.AppEngSlot ae && ae.getCustomTooltip(ItemStack.EMPTY)==null);
+            org.slf4j.LoggerFactory.getLogger("AppliedAgristicsTests").info("SINGLE_UPGRADE_TOOLTIP_PASSED {}",nativeScreensPassed);
         }
-        if (stage == 4 && ticks == 26) {
-            if (!(mc.screen instanceof io.github.sudabake.appliedagristics.client.CultureScreen) || menu.state.getBoolean("autoExtract") || menu.state.getInt("duration") != Balance.CULTURE_TICKS.get() || menu.state.getInt("cost") != 0)
-                altarPassed = false;
-            org.lwjgl.glfw.GLFW.glfwSetCursorPos(mc.getWindow().getWindow(), 0, 0);
+        if (stage==3 && ticks==26) {
+            var buttons = mc.screen.children().stream().filter(appeng.client.gui.widgets.IconButton.class::isInstance)
+                .map(appeng.client.gui.widgets.IconButton.class::cast).toList();
+            nativeScreensPassed &= buttons.stream().filter(button -> button.getTooltipMessage().size()==1
+                && (button.getTooltipMessage().getFirst().getString().equals(net.minecraft.network.chat.Component.translatable("gui.appliedagristics.output_side_on").getString())
+                || button.getTooltipMessage().getFirst().getString().equals(net.minecraft.network.chat.Component.translatable("gui.appliedagristics.output_side_off").getString()))).count()==6;
+            org.slf4j.LoggerFactory.getLogger("AppliedAgristicsTests").info("OUTPUT_SIDE_SIMPLE_TOOLTIP_PASSED {}",nativeScreensPassed);
         }
+        if(stage==4 && ticks==12) altarPassed &= mc.screen instanceof io.github.sudabake.appliedagristics.client.AltarScreen && menu.machine.items.getSlots()==8 && menu.state.getInt("duration")==Balance.ME_BIO_TICKS.get();
         if ((stage==5 || stage==6) && ticks==12) nativeScreensPassed &= mc.screen instanceof io.github.sudabake.appliedagristics.client.PortScreen && menu.machine.items.getSlots()==16;
         if (stage==5 && ticks==25) nativeScreensPassed &= mc.screen instanceof io.github.sudabake.appliedagristics.client.PortScreen
             && mc.screen.children().stream().noneMatch(child -> child instanceof appeng.client.gui.widgets.IconButton button
                 && button.getTooltipMessage().stream().anyMatch(text -> text.getString().equals(net.minecraft.network.chat.Component.translatable("gui.appliedagristics.io_config").getString())));
         if (stage==7 && ticks==12) nativeScreensPassed &= mc.screen instanceof io.github.sudabake.appliedagristics.client.EssenceVaultScreen && menu.state.getInt("types")==5;
-        if (ticks < (stage==2 ? 60 : stage==1 ? 50 : 30)) return;
+        if (ticks < (stage==2 ? 60 : stage==1 ? 100 : 30)) return;
         ticks = 0;
         String[] names = {"early-planter", "seed-storage", "network-planter", "me-infusion-altar-io", "cell-cultivator", "input-port", "output-port", "essence-vault", "biological-altar"};
         Screenshot.grab(mc.gameDirectory, "agr-" + names[stage] + ".png", mc.getMainRenderTarget(), message -> org.slf4j.LoggerFactory.getLogger("AppliedAgristicsTests").info("CLIENT_SMOKE_SCREENSHOT {}", message.getString()));
@@ -355,7 +383,7 @@ public final class ClientSmoke {
                 var task = planter.tasks.get(crop.getId());
                 if (drive.count(appeng.api.stacks.AEItemKey.of(new ItemStack(crop.getSeedsItem()))) >= 8 && task != null && task.enabled && task.target == 12 && planter.parallel() == 64 && Math.abs(planter.speed()-io.github.sudabake.appliedagristics.logic.ProductionMath.moduleSpeed(2,Balance.SPEED_MAX.get()))<1e-8 && scrollPassed && withdrawPassed && dragPassed && altarPassed && nativeScreensPassed && arrayControlsPassed)
                     { corePassed = true; org.slf4j.LoggerFactory.getLogger("AppliedAgristicsTests").info("CLIENT_SMOKE_MENUS_PASSED menus=8 collectAndTaskPackets=true"); }
-                else org.slf4j.LoggerFactory.getLogger("AppliedAgristicsTests").error("CLIENT_SMOKE_CONTROL_FAILED scroll={} withdraw={} drag={} altar={} nativeScreens={} parallel={} speed={}",scrollPassed,withdrawPassed,dragPassed,altarPassed,nativeScreensPassed,planter.parallel(),planter.speed());
+                else org.slf4j.LoggerFactory.getLogger("AppliedAgristicsTests").error("CLIENT_SMOKE_CONTROL_FAILED scroll={} withdraw={} drag={} altar={} nativeScreens={} parallel={} speed={} seedCount={} taskEnabled={} target={}",scrollPassed,withdrawPassed,dragPassed,altarPassed,nativeScreensPassed,planter.parallel(),planter.speed(),drive.count(appeng.api.stacks.AEItemKey.of(new ItemStack(crop.getSeedsItem()))),task!=null && task.enabled,task==null?0:task.target);
                 mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID()).teleportTo(level,6,102,-6,java.util.Set.of(),25,20);
                 mc.execute(() -> { mc.player.closeContainer(); scenePending = true; });
             }); return;

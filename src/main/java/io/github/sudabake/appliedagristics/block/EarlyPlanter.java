@@ -18,7 +18,7 @@ public final class EarlyPlanter extends MachineEntity {
     public final FluidTank water = new FluidTank(16000, stack -> stack.getFluid() == Fluids.WATER) {
         @Override protected void onContentsChanged() { setChanged(); }
     };
-    public EarlyPlanter(BlockPos pos, BlockState state) { super(Agristics.EARLY_BE.get(), pos, state, 12); }
+    public EarlyPlanter(BlockPos pos, BlockState state) { super(Agristics.EARLY_BE.get(), pos, state, 11); }
     @Override protected boolean valid(int slot, ItemStack stack) { return slot == 0 ? io.github.sudabake.appliedagristics.logic.Harvests.seed(stack,level) : slot == 1 && (stack.getItem() instanceof net.minecraft.world.item.BlockItem || io.github.sudabake.appliedagristics.logic.CropSources.soil(level,items.getStackInSlot(0),stack)); }
     @Override protected void inventoryChanged(int slot) {
         if (slot < 2 && clock != null && pending == null) clock.reset();
@@ -37,17 +37,6 @@ public final class EarlyPlanter extends MachineEntity {
         return new RangedWrapper(items, side == Direction.DOWN ? 2 : 0, side == Direction.DOWN ? 11 : 2);
     }
     @Override public void step() {
-        // Return a crux from an older save through normal output slots, without using it for growth.
-        var legacy = items.getStackInSlot(11).copy();
-        for (int i = 2; i < 11 && !legacy.isEmpty(); i++) {
-            var existing = items.getStackInSlot(i);
-            if (existing.isEmpty() || ItemStack.isSameItemSameComponents(existing, legacy)) {
-                int take = Math.min(legacy.getCount(), legacy.getMaxStackSize() - existing.getCount());
-                if (take > 0) { items.setStackInSlot(i, legacy.copyWithCount(existing.getCount() + take)); legacy.shrink(take); }
-            }
-        }
-        items.setStackInSlot(11, legacy);
-        if (!legacy.isEmpty()) { status = "output_full"; return; }
         var seed = items.getStackInSlot(0); var soil = items.getStackInSlot(1);
         if (!io.github.sudabake.appliedagristics.logic.Harvests.seed(seed,level) || soil.isEmpty()) { status = "missing_inputs"; clock.reset(); return; }
         if (!io.github.sudabake.appliedagristics.logic.CropSources.soil(level,seed,soil)) { status="wrong_farmland"; clock.reset(); return; }

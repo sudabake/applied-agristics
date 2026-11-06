@@ -10,20 +10,17 @@ def install():
     current_install()
 
 
-def collision_shapes(names):
+def collision_shapes(names, selection_boxes=None):
     statements=[]; methods=[]
     for index,name in enumerate(names):
         data=json.loads((ASSETS/f'models/block/{name}.json').read_text(encoding='utf-8'))
         elements=data.get('elements',[{'from':[0,0,0],'to':[16,16,16]}])
-        elements=[e for e in elements if min(b-a for a,b in zip(e['from'],e['to']))>=(.03 if name=='cell_cultivator' else .2)]
-        if name == 'cell_cultivator':
-            # Only the external base, tank and pipe need collision/selection geometry.
-            # Internal cells and thin glass details create a huge voxel coordinate grid.
-            elements = [
-                {'from': [0, 0, 0], 'to': [16, 6, 16.55]},
-                {'from': [1.09, 5.9, 1.09], 'to': [14.91, 20.65, 14.91]},
-                {'from': [14.1, 5.7, 11.5], 'to': [16.6, 8.4, 12.9]},
-            ]
+        if data.get('loader') == 'neoforge:composite':
+            # Selection follows the housing, tank and pipes, excluding the internal cell meshes.
+            elements=[element for child in data['children'].values() for element in child.get('elements',[])]
+        if selection_boxes and name in selection_boxes:
+            elements=[{'from':box[:3],'to':box[3:]} for box in selection_boxes[name]]
+        elements=[e for e in elements if min(b-a for a,b in zip(e['from'],e['to']))>=.2]
         boxes=','.join('{'+','.join(str(v) for v in e['from']+e['to'])+'}' for e in elements)
         statements.append(f'        shape{index}();')
         methods.append(f'    private static void shape{index}() {{ add("'+name+'",new double[][]{'+boxes+'}); }')
@@ -54,7 +51,7 @@ public final class MachineShapes {
         SHAPES.put(name,shapes);
     }
     public static VoxelShape get(String name,Direction facing,boolean formed) {
-        if (formed && !name.equals("early_planter") && !name.equals("cell_cultivator") && !name.equals("me_infusion_altar")) return Shapes.block();
+        if (formed && !name.equals("early_planter") && !name.equals("me_infusion_altar")) return Shapes.block();
         var shapes=SHAPES.get(name); if (shapes==null) return Shapes.block();
         return shapes[switch(facing) { case SOUTH -> 0; case WEST -> 1; case NORTH -> 2; default -> 3; }];
     }

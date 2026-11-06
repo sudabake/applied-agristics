@@ -20,29 +20,19 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 @PrefixGameTestTemplate(false)
 public final class Alpha20Tests {
     @GameTest(template="empty",templateNamespace=Agristics.ID)
-    public static void unboundedStorageAndAlpha20Migration(GameTestHelper h) {
-        var pos=new BlockPos(1,1,1);h.setBlock(pos,Agristics.LEGACY_SEEDS_FIRST.get());SeedStorage bank=h.getBlockEntity(pos);
-        var tag=bank.saveWithFullMetadata(h.getLevel().registryAccess());tag.remove("seeds");tag.putInt("seedStorageVersion",2);var cells=new ListTag();var overflow=new ListTag();
-        for(int i=0;i<20;i++) {var e=new CompoundTag();e.put("key",AEItemKey.of(new ItemStack(Crops.all().get(i).getSeedsItem())).toTag(h.getLevel().registryAccess()));e.putLong("count",1000000000L+i);e.putInt("slot",i);if(i<16)cells.add(e);else overflow.add(e);}
-        tag.put("seedCells",cells);tag.put("overflow",overflow);bank.loadWithComponents(tag,h.getLevel().registryAccess());
-        h.assertTrue(bank.keys().size()==20,"Alpha20 cells and overflow merge into one unbounded map");bank.step();bank=h.getBlockEntity(pos);
-        h.assertTrue(bank.getBlockState().is(Agristics.SEEDS.get()),"A placed retired tier becomes a normal ME seed storage");
-        for(int i=0;i<20;i++)h.assertTrue(bank.count(AEItemKey.of(new ItemStack(Crops.all().get(i).getSeedsItem())))==1000000000L+i,"Every migrated count survives block conversion");
-        var wheat=AEItemKey.of(new ItemStack(Items.WHEAT_SEEDS));h.assertTrue(bank.add(wheat,10000000000L)==10000000000L,"ME storage accepts more than sixteen types with no gameplay slot cap");
-        var save=bank.saveWithFullMetadata(h.getLevel().registryAccess());bank.loadWithComponents(save,h.getLevel().registryAccess());h.assertTrue(bank.count(wheat)==10000000000L,"Merged map survives subsequent restart");h.succeed();
+    public static void unboundedStoragePersistsCounts(GameTestHelper h) {
+        var pos=new BlockPos(1,1,1);h.setBlock(pos,Agristics.SEEDS.get());SeedStorage bank=h.getBlockEntity(pos);
+        for(int i=0;i<20;i++) {
+            var key=AEItemKey.of(new ItemStack(Crops.all().get(i).getSeedsItem()));
+            h.assertTrue(bank.add(key,1000000000L+i)==1000000000L+i,"Seed storage has no sixteen-type cap");
+        }
+        var wheat=AEItemKey.of(new ItemStack(Items.WHEAT_SEEDS));
+        h.assertTrue(bank.add(wheat,10000000000L)==10000000000L,"Seed storage accepts large counts");
+        var save=bank.saveWithFullMetadata(h.getLevel().registryAccess());bank.loadWithComponents(save,h.getLevel().registryAccess());
+        for(int i=0;i<20;i++) h.assertTrue(bank.count(AEItemKey.of(new ItemStack(Crops.all().get(i).getSeedsItem())))==1000000000L+i,"Every current count survives saving");
+        h.assertTrue(bank.count(wheat)==10000000000L,"Large counts survive saving");h.succeed();
     }
-    @GameTest(template="empty",templateNamespace=Agristics.ID)
-    public static void cultureDeferredCommitAndSampleSwap(GameTestHelper h) {
-        var cow=ResourceLocation.parse("minecraft:cow");var pig=ResourceLocation.parse("minecraft:pig");
-        var be=new CellCultivator(h.absolutePos(new BlockPos(1,1,1)),Agristics.CULTIVATOR.get().defaultBlockState());be.setLevel(h.getLevel());
-        be.items.setStackInSlot(0,BioData.withIdentity(Agristics.SAMPLER.get(),cow));be.items.setStackInSlot(1,new ItemStack(Agristics.NUTRIENT.get()));be.items.setStackInSlot(2,new ItemStack(Agristics.CAPSULE.get()));
-        be.water.fill(new FluidStack(Fluids.WATER,100),FluidAction.EXECUTE);
-        for(int i=0;i<30;i++)be.step();h.assertTrue(be.items.getStackInSlot(0).getCount()==1 && be.water.getFluidAmount()==100,"Inputs and water stay visible during cultivation");
-        var drops=be.breakContents();h.assertTrue(drops.stream().mapToInt(ItemStack::getCount).sum()==3,"Breaking cannot duplicate the visible unpaid sample");
-        be.items.setStackInSlot(0,BioData.withIdentity(Agristics.SAMPLER.get(),pig));h.assertTrue(be.snapshot(0,"").getInt("progress")==0,"Swapping species resets paid progress");
-        for(int i=0;i<Balance.CULTURE_TICKS.get()-1;i++)be.step();h.assertTrue(be.items.getStackInSlot(3).isEmpty() && be.items.getStackInSlot(0).getCount()==1,"No early output or material consumption");
-        be.step();h.assertTrue(be.items.getStackInSlot(0).isEmpty() && be.items.getStackInSlot(1).isEmpty() && be.items.getStackInSlot(2).isEmpty() && be.water.getFluidAmount()==0 && pig.equals(BioData.identity(be.items.getStackInSlot(3))),"Completion atomically consumes the pig inputs exactly once");h.succeed();
-    }
+
     @GameTest(template="empty",templateNamespace=Agristics.ID,timeoutTicks=180)
     public static void planterHasNoDiversityBonus(GameTestHelper h) {
         var f=PlanterFixture.install(h.getLevel(),h.absolutePos(new BlockPos(2,1,1)),true);

@@ -1,0 +1,71 @@
+{
+  "includes": [
+    "common/common.json"
+  ],
+  "generatedBackground": {
+    "width": 176,
+    "height": 146
+  },
+  "text": {
+    "dialog_title": {
+      "text": {
+        "translate": "gui.appliedagristics.seed_settings"
+      },
+      "position": {
+        "left": 8,
+        "top": 6
+      }
+    },
+    "filterLabel": {
+      "text": {
+        "translate": "gui.appliedagristics.collect_filter_label"
+      },
+      "position": {
+        "left": 8,
+        "top": 47
+      }
+    }
+  },
+  "widgets": {
+    "back": {
+      "right": 23,
+      "top": -5
+    },
+    "autoCollect": {
+      "left": 8,
+      "top": 24,
+      "width": 160,
+      "height": 16
+    },
+    "filter0": {
+      "left": 8,
+      "top": 60,
+      "width": 76,
+      "height": 18
+    },
+    "filter1": {
+      "left": 90,
+      "top": 60,
+      "width": 76,
+      "height": 18
+    },
+    "filter2": {
+      "left": 8,
+      "top": 82,
+      "width": 76,
+      "height": 18
+    },
+    "filter3": {
+      "left": 90,
+      "top": 82,
+      "width": 76,
+      "height": 18
+    },
+    "eject": {
+      "left": 8,
+      "top": 116,
+      "width": 158,
+      "height": 18
+    }
+  }
+}

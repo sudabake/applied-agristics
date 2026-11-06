@@ -10,6 +10,9 @@ import net.minecraft.world.level.block.Blocks;
 import java.util.*;
 /** Common crop identity used by seed storage and stock targets. */
 public final class Cultivations {
+    public static boolean essenceCrop(ItemStack seed) {
+        return io.github.sudabake.appliedagristics.biology.BioData.seed(seed) || Crops.seed(seed)!=null;
+    }
     public record Entry(ResourceLocation getId, Item getSeedsItem, Item getEssenceItem, Component getDisplayName, ResourceLocation biology,ItemStack seedTemplate,ItemStack outputTemplate) {
         public Entry(ResourceLocation id, Item seed, Item essence, Component name) { this(id, seed, essence, name,null,null,null); }
         public Entry(ResourceLocation id, Item seed, Item essence, Component name,ResourceLocation biology) { this(id, seed, essence, name,biology,null,null); }

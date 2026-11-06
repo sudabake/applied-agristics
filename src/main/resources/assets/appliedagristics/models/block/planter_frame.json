@@ -1,1 +1,6 @@
-{"parent":"minecraft:block/cube_all","textures":{"all":"appliedagristics:block/planter_frame"}}
+{
+  "parent": "minecraft:block/cube_all",
+  "textures": {
+    "all": "appliedagristics:block/planter_frame"
+  }
+}

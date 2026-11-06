@@ -27,7 +27,7 @@ public final class BioCropBlock extends CropBlock implements EntityBlock {
         drops.add(BioData.withIdentity(Agristics.BIO_SEED.get(),crop.identity()));
         if (isMaxAge(state)) {
             drops.add(BioData.withIdentity(Agristics.BIO_ESSENCE.get(),crop.identity()));
-            if (builder.getLevel().random.nextFloat()<.1f) drops.add(BioData.withIdentity(Agristics.BIO_SEED.get(),crop.identity()));
+            if (builder.getLevel().random.nextDouble()<io.github.sudabake.appliedagristics.Balance.FALLBACK_SEED_CHANCE.get()) drops.add(BioData.withIdentity(Agristics.BIO_SEED.get(),crop.identity()));
         }
         return drops;
     }

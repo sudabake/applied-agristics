@@ -18,7 +18,7 @@ import java.util.*;
 @EventBusSubscriber(modid=Agristics.ID)
 public final class CropSources {
     private static final Map<RecipeManager,Map<AEItemKey,Optional<CropSource>>> CACHE=new WeakHashMap<>();
-    public static void invalidate() { synchronized(CACHE) { CACHE.clear(); } NativeSeedYield.invalidate(); Cultivations.invalidate(); }
+    public static void invalidate() { PlantingCatalog.invalidate(); synchronized(CACHE) { CACHE.clear(); } NativeSeedYield.invalidate(); Cultivations.invalidate(); }
     @SubscribeEvent public static void reload(net.neoforged.neoforge.event.OnDatapackSyncEvent event) { invalidate(); }
     @SubscribeEvent public static void stop(net.neoforged.neoforge.event.server.ServerStoppedEvent event) { invalidate(); }
     public static CropSource find(Level level,ItemStack seed) {

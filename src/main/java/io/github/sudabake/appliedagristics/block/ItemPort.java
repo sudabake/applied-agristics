@@ -42,7 +42,7 @@ public final class ItemPort extends GridMachine implements SeedBank, IStoragePro
     @Override public boolean belongsTo(NetworkPlanter owner) { return input && structure!=null && structure.controller()==owner && structure.formed(); }
     @Override protected boolean valid(int slot,ItemStack stack) { return !input || Harvests.seed(stack,level); }
     @Override protected void inventoryChanged(int slot) { changed(); }
-    private void changed() { setChanged(); var grid=getMainNode().getGrid(); if (grid!=null) grid.getStorageService().invalidateCache(); }
+    private void changed() { storedItemsChanged(null,0); }
     @Override public void mountInventories(IStorageMounts mounts) { if (!input) mounts.mount(networkInventory,0); }
     @Override public Set<AEItemKey> keys() {
         var result=new LinkedHashSet<AEItemKey>();
@@ -75,6 +75,7 @@ public final class ItemPort extends GridMachine implements SeedBank, IStoragePro
             int offered=(int)Math.min(left,key.getMaxStackSize());
             var remainder=items.insertItem(i,key.toStack(offered),simulate); left-=offered-remainder.getCount();
         }
+        if (!simulate && !input && requested>left) storedItemsChanged(key,requested-left);
         return requested-left;
     }
     @Override protected int extractable(int slot,int requested) {
@@ -93,7 +94,7 @@ public final class ItemPort extends GridMachine implements SeedBank, IStoragePro
         return requested-left;
     }
     public void toggleAutoOutput() { if (!input) { autoOutput=!autoOutput; setChanged(); } }
-    public Direction outputFace() { return getBlockState().getValue(PlanterPartBlock.FACING); }
+    public Direction outputFace() { return PlanterOrientation.front(getBlockState()); }
     public IItemHandler automation(Direction side) {
         return new IItemHandler() {
             @Override public int getSlots() { return items.getSlots(); }

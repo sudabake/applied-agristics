@@ -8,4 +8,6 @@ Applied Energistics 2: the storage-priority page adapts AE2's priority layout, c
 
 JDTE: the optional Botany Pots integration was developed with reference to JDTE's greenhouse integration. Attribution and its MIT license are retained in licenses/jdte/LICENSE.txt; JDTE essence images are not distributed.
 
+Applied Generators: the ME altar side selector follows its relative-side layout, neighboring cable-part selection and selected-button presentation, copyright (c) 2025 sapporo1101, under the MIT License. See licenses/appliedgenerators/LICENSE.txt.
+
 Minecraft, NeoForge, AE2, Mystical Agriculture, Cucumber, GuideME, Botany Pots and Bookshelf are separate dependencies. Their JAR files are not bundled.

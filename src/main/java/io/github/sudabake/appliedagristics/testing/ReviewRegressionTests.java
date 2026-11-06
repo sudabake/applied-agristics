@@ -4,6 +4,7 @@ import appeng.api.stacks.AEItemKey;
 import io.github.sudabake.appliedagristics.Agristics;
 import io.github.sudabake.appliedagristics.Balance;
 import io.github.sudabake.appliedagristics.Cultivations;
+import io.github.sudabake.appliedagristics.Crops;
 import io.github.sudabake.appliedagristics.logic.CropSources;
 import io.github.sudabake.appliedagristics.logic.PlantingRecipe;
 import io.github.sudabake.appliedagristics.network.Messages;
@@ -92,11 +93,12 @@ public final class ReviewRegressionTests {
     public static void conversionOnlyConsumesNewDifferentKeySeeds(GameTestHelper h) {
         var fixture = PlanterFixture.install(h.getLevel(), h.absolutePos(new BlockPos(2, 1, 1)), true);
         fixture.modules(0, 1, true);
-        var seed = AEItemKey.of(new ItemStack(Items.COOKIE));
-        var product = AEItemKey.of(new ItemStack(Items.DIAMOND));
+        var mystical = Crops.all().getFirst();
+        var seed = AEItemKey.of(new ItemStack(mystical.getSeedsItem()));
+        var product = AEItemKey.of(new ItemStack(mystical.getEssenceItem()));
         fixture.seeds().add(seed, 1);
-        h.runAtTickTime(100, () -> withRecipe(h, Items.COOKIE,
-                List.of(new ItemStack(Items.DIAMOND, 2), new ItemStack(Items.COOKIE, 3)), () -> {
+        h.runAtTickTime(100, () -> withRecipe(h, mystical.getSeedsItem(),
+                List.of(new ItemStack(mystical.getEssenceItem(), 2), new ItemStack(mystical.getSeedsItem(), 3)), () -> {
             var controller = fixture.controller();
             var id = Cultivations.id(seed.toStack(1), h.getLevel());
             h.assertTrue(controller.getMainNode().isActive(), "Conversion array is powered");
@@ -145,9 +147,9 @@ public final class ReviewRegressionTests {
         h.runAtTickTime(100, () -> {
             var controller = fixture.controller();
             for (int action : new int[]{1, 2}) {
-                var packet = new Messages.Control(controller.getBlockPos(), action, id.toString(), 123456, seed);
+                var packet = new Messages.Control(controller.getBlockPos(), 7, 123L, action, id.toString(), 123456, seed);
                 var decoded = roundTrip(h, packet);
-                h.assertTrue(decoded.pos().equals(packet.pos()) && decoded.action() == action
+                h.assertTrue(decoded.pos().equals(packet.pos()) && decoded.containerId()==packet.containerId() && decoded.sessionToken()==packet.sessionToken() && decoded.action() == action
                                 && decoded.id().equals(id.toString()) && decoded.value() == packet.value()
                                 && ItemStack.isSameItemSameComponents(decoded.seed(), seed),
                         "Actual control codec preserves long identity, action, target and components");
@@ -178,7 +180,7 @@ public final class ReviewRegressionTests {
     @GameTest(template = "empty", templateNamespace = Agristics.ID)
     public static void controlIdBoundsAreSymmetric(GameTestHelper h) {
         for (var id : List.of("", "minecraft:wheat", "test:" + "a".repeat(Messages.Control.MAX_ID_LENGTH - 5))) {
-            var packet = new Messages.Control(BlockPos.ZERO, 4, id, -1, ItemStack.EMPTY);
+            var packet = new Messages.Control(BlockPos.ZERO, 7, 123L, 4, id, -1, ItemStack.EMPTY);
             h.assertTrue(roundTrip(h, packet).id().equals(id), "Empty, ordinary and maximum-length IDs round-trip");
         }
         var oversized = "a".repeat(Messages.Control.MAX_ID_LENGTH + 1);
@@ -186,13 +188,15 @@ public final class ReviewRegressionTests {
         try {
             boolean rejected = false;
             try {
-                Messages.Control.CODEC.encode(buffer, new Messages.Control(BlockPos.ZERO, 1, oversized, -1, ItemStack.EMPTY));
+                Messages.Control.CODEC.encode(buffer, new Messages.Control(BlockPos.ZERO, 7, 123L, 1, oversized, -1, ItemStack.EMPTY));
             } catch (EncoderException expected) {
                 rejected = true;
             }
             h.assertTrue(rejected, "Encoder rejects IDs exceeding the documented bound");
             buffer.clear();
             buffer.writeBlockPos(BlockPos.ZERO);
+            buffer.writeVarInt(7);
+            buffer.writeLong(123L);
             buffer.writeVarInt(1);
             buffer.writeUtf(oversized, Messages.Control.MAX_ID_LENGTH + 1);
             rejected = false;

@@ -32,17 +32,17 @@ public final class MachineWrench {
             if (NeoForge.EVENT_BUS.post(new BlockEvent.BreakEvent(level,pos,state,player)).isCanceled()) return;
             var drops=Block.getDrops(state,server,pos,level.getBlockEntity(pos),player,stack);
             if (!level.removeBlock(pos,false)) return;
-            server.playSound(null,pos,SoundEvents.ITEM_FRAME_REMOVE_ITEM,SoundSource.BLOCKS,.7f,1f);
+            server.playSound(null,pos,state.is(Agristics.CULTIVATION_CHAMBER.get()) ? SoundEvents.GLASS_BREAK : SoundEvents.ITEM_FRAME_REMOVE_ITEM,SoundSource.BLOCKS,.7f,1f);
             for (var drop:drops) { player.getInventory().add(drop); if (!drop.isEmpty()) player.drop(drop,false); }
         } else if (level.getBlockEntity(pos) instanceof IOControls io) {
-            int side=event.getHitVec().getDirection().ordinal(); int next=(io.sideMode(side)+1)%4;
+            int side=event.getHitVec().getDirection().ordinal(); int next=(io.sideMode(side)&2)==0 ? 3 : 1;
             io.configureSide(side,next);
             if (io.sideMode(side)!=next) return;
             server.playSound(null,pos,SoundEvents.ITEM_FRAME_ROTATE_ITEM,SoundSource.BLOCKS,.7f,1f);
-            player.displayClientMessage(Component.translatable("gui.appliedagristics.side_"+side).append(": ").append(Component.translatable("gui.appliedagristics.io_"+next)),true);
-        } else if (state.hasProperty(PlanterPartBlock.FACING) && !state.getValue(PlanterPartBlock.FORMED)) {
+            player.displayClientMessage(Component.translatable("gui.appliedagristics.side_"+side).append(": ").append(Component.translatable("gui.appliedagristics.output_"+(next==3?"enabled":"disabled"))),true);
+        } else if ((state.hasProperty(PlanterPartBlock.FACING) || state.hasProperty(net.minecraft.world.level.block.state.properties.BlockStateProperties.FACING)) && !state.getValue(PlanterPartBlock.FORMED)) {
             PlanterStructure.changed(level,pos);
-            if (level.setBlockAndUpdate(pos,state.setValue(PlanterPartBlock.FACING,state.getValue(PlanterPartBlock.FACING).getClockWise())))
+            if (level.setBlockAndUpdate(pos,PlanterOrientation.withFacing(state,PlanterOrientation.next(state))))
                 server.playSound(null,pos,SoundEvents.ITEM_FRAME_ROTATE_ITEM,SoundSource.BLOCKS,.7f,1f);
         }
     }

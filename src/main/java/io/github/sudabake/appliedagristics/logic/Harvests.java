@@ -71,10 +71,6 @@ public final class Harvests {
             .max(Comparator.comparingInt(f -> f.getTier().getValue())).orElseThrow());
     }
     public static ItemStack networkSoil(Level level,ItemStack seed) { var source=CropSources.find(level,seed); return source==null?networkSoil():source.networkSoil(); }
-    public static boolean canGrowNetwork(ServerLevel level,BlockPos pos,ItemStack seed) {
-        var source=CropSources.find(level,seed); if (source!=null) return source.canGrow(level,pos,source.networkSoil());
-        var crop=Crops.seed(seed); return canGrow(level,pos,seed,networkSoil(),crop!=null && crop.getCruxBlock()!=null ? new ItemStack(crop.getCruxBlock()) : ItemStack.EMPTY);
-    }
     public static long maximumBatch(Level level,ItemStack seed) { var source=CropSources.find(level,seed); return source==null ? Integer.MAX_VALUE : source.maximumBatch(); }
     /** Standard MA crops use exact expected yield with saved fractional remainders.
      * Unknown native loot implementations use at most 64 rolls per batch, scaled by cycles. */
@@ -85,11 +81,11 @@ public final class Harvests {
         if (source!=null) {
             var result=new LinkedHashMap<appeng.api.stacks.AEItemKey,Long>();
             if (source.fixedOutputs()) {
-                for (var drop:source.harvest(level,pos,source.networkSoil())) result.merge(appeng.api.stacks.AEItemKey.of(drop),Math.multiplyExact(cycles,drop.getCount()),Math::addExact);
+                for (var drop:source.harvestNetwork(level,pos)) result.merge(appeng.api.stacks.AEItemKey.of(drop),Math.multiplyExact(cycles,drop.getCount()),Math::addExact);
             } else {
                 // Actual callbacks are settled exactly, in bounded batches. Caller keeps unprocessed work.
                 if (cycles>source.maximumBatch()) throw new IllegalArgumentException("Provider batch exceeds exact callback budget");
-                for (long i=0;i<cycles;i++) for (var drop:source.harvest(level,pos,source.networkSoil())) result.merge(appeng.api.stacks.AEItemKey.of(drop),(long)drop.getCount(),Math::addExact);
+                for (long i=0;i<cycles;i++) for (var drop:source.harvestNetwork(level,pos)) result.merge(appeng.api.stacks.AEItemKey.of(drop),(long)drop.getCount(),Math::addExact);
             }
             addFallback(level,seed,source.networkSoil(),cycles,result); return result;
         }
@@ -125,12 +121,12 @@ public final class Harvests {
     }
     public static List<ItemStack> harvest(ServerLevel level, BlockPos machine, ItemStack seed, ItemStack soil) {
         var drops=new ArrayList<>(nativeHarvest(level,machine,seed,soil));
-        if (!NativeSeedYield.reproduces(level,seed,soil) && level.random.nextDouble()<SeedReproduction.FALLBACK_CHANCE) drops.add(seed.copyWithCount(1));
+        if (!NativeSeedYield.reproduces(level,seed,soil) && level.random.nextDouble()<io.github.sudabake.appliedagristics.Balance.FALLBACK_SEED_CHANCE.get()) drops.add(seed.copyWithCount(1));
         return drops;
     }
     private static void addFallback(ServerLevel level,ItemStack seed,ItemStack soil,long cycles,Map<appeng.api.stacks.AEItemKey,Long> result) {
         if (!NativeSeedYield.reproduces(level,seed,soil)) {
-            long extra=SeedReproduction.roll(cycles,level.random::nextDouble,level.random::nextGaussian);
+            long extra=SeedReproduction.roll(cycles,io.github.sudabake.appliedagristics.Balance.FALLBACK_SEED_CHANCE.get(),level.random::nextDouble,level.random::nextGaussian);
             if (extra>0) result.merge(appeng.api.stacks.AEItemKey.of(seed.copyWithCount(1)),extra,Math::addExact);
         }
     }

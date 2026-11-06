@@ -15,6 +15,29 @@ import install_art_resources
 
 
 class ResourceExportTests(unittest.TestCase):
+    def test_array_states_reuse_full_face_models(self):
+        assets = TOOLS.parent / 'src/main/resources/assets/appliedagristics'
+        from install_shared_casing import PARTS
+        for name in PARTS:
+            states = json.loads((assets / 'blockstates' / (name + '.json')).read_text(encoding='utf-8'))
+            for variant in states['variants'].values():
+                self.assertEqual(variant['model'], 'appliedagristics:block/' + name)
+        self.assertFalse(list((assets / 'models/block/formed').glob('*.json')))
+        self.assertFalse(list((assets / 'models/block/templates').glob('formed_casing_*.json')))
+
+    def test_controller_state_atlas_uses_current_front(self):
+        from essence_layers import read_rgba
+        textures = TOOLS.parent / 'src/main/resources/assets/appliedagristics/textures/block'
+        width, height, atlas = read_rgba(textures / 'network_planter_screen.png')
+        self.assertEqual((width, height), (10, 260))
+        _, _, front = read_rgba(textures / 'network_planter_front.png')
+        for y in range(10):
+            self.assertEqual(atlas[10+y], front[y+3][3*4:13*4])
+        frames = {b''.join(atlas[frame*10:(frame+1)*10]) for frame in range(2, 26)}
+        self.assertGreater(len(frames), 4)
+        for name in ('network_planter_idle', 'network_planter_off', 'network_planter_working', 'me_infusion_pedestal_top'):
+            self.assertFalse((textures / (name + '.png')).exists())
+
     @staticmethod
     def png(pixels, level, metadata=b''):
         def chunk(kind, payload):

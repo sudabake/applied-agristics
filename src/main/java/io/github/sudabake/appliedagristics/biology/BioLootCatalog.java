@@ -83,6 +83,9 @@ public final class BioLootCatalog {
     private static void add(Map<String, Item> output, ResourceLocation id) {
         var item = BuiltInRegistries.ITEM.getOptional(id).orElse(Items.AIR); if (item != Items.AIR) output.put(id.toString(), item);
     }
+    public static List<Item> possibleTableItems(ServerLevel level,ResourceLocation table) {
+        var items=new TreeMap<String,Item>();collectTable(level,table,items,new HashSet<>());return List.copyOf(items.values());
+    }
     private static void collectTable(ServerLevel level, ResourceLocation id, Map<String, Item> output, Set<ResourceLocation> visited) {
         if (!visited.add(id)) return;
         var table = level.getServer().reloadableRegistries().getLootTable(ResourceKey.create(Registries.LOOT_TABLE, id));
@@ -113,13 +116,21 @@ public final class BioLootCatalog {
         for (var entry : object.entrySet()) if (entry.getValue().isJsonObject() || entry.getValue().isJsonArray()) collect(level, entry.getValue(), output, visited);
     }
     @SubscribeEvent public static void sync(OnDatapackSyncEvent event) {
-        if (event.getPlayer() == null) synchronized (SERVER) { SERVER.clear(); }
+        if (event.getPlayer() == null) {io.github.sudabake.appliedagristics.logic.CropSources.invalidate();synchronized (SERVER) {SERVER.clear();}}
         var data = catalog(event.getPlayerList().getServer().overworld()); var tag = new CompoundTag(); var entities = new ListTag();
         data.forEach((id, items) -> {
             var entry = new CompoundTag(); entry.putString("entity", id.toString()); var list = new ListTag();
             for (var item : items) list.add(StringTag.valueOf(BuiltInRegistries.ITEM.getKey(item).toString())); entry.put("items", list); entities.add(entry);
         }); tag.put("entities", entities);
+        tag.put("planting",io.github.sudabake.appliedagristics.logic.PlantingCatalog.serialize(event.getPlayerList().getServer().overworld()));
         var payload = new Messages.BiologicalCatalog(tag);
+        if (Boolean.getBoolean("appliedagristics.clientSmoke")) {
+            var buffer=new net.minecraft.network.RegistryFriendlyByteBuf(io.netty.buffer.Unpooled.buffer(),event.getPlayerList().getServer().registryAccess());
+            try {
+                Messages.BiologicalCatalog.CODEC.encode(buffer,payload);
+                com.mojang.logging.LogUtils.getLogger().info("CATALOG_PAYLOAD_PROFILE entities={} bytes={}",entities.size(),buffer.readableBytes());
+            } finally {buffer.release();}
+        }
         if (event.getPlayer() != null) PacketDistributor.sendToPlayer(event.getPlayer(), payload);
         else for (var player : event.getPlayerList().getPlayers()) PacketDistributor.sendToPlayer(player, payload);
     }
@@ -134,6 +145,7 @@ public final class BioLootCatalog {
             result.put(id, List.copyOf(items));
         }
         client = Map.copyOf(result);
+        io.github.sudabake.appliedagristics.logic.PlantingCatalog.loadClient(tag.getList("planting",Tag.TAG_COMPOUND));
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(new ClientCatalogUpdated());
     }
 }

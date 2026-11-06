@@ -83,48 +83,12 @@ write(ROOT/'assets/ae2/screens/appliedagristics_vault.json',vault_style)
 from install_art_resources import install
 install()
 write(ROOT/'data/minecraft/tags/block/mineable/pickaxe.json',{'replace':False,'values':[
-    'appliedagristics:'+name for name in ('early_planter','seed_storage','network_planter','cell_cultivator','me_infusion_altar','biological_altar','seed_storage_tier1','seed_storage_tier2',*PARTS)]})
-for index,lang in enumerate(('zh_cn','en_us')):
-    path=ROOT/f'assets/appliedagristics/lang/{lang}.json';values=json.loads(path.read_text(encoding='utf-8'))
-    for key,pair in {
-      'block.appliedagristics.biological_altar':('生物祭坛','Biological Altar'),
-      'item.appliedagristics.empty_bio_seed':('空白生物种子','Empty Biological Seed'),
-      'item.appliedagristics.condensed_bio_essence':('凝聚生物精华','Condensed Biological Essence'),
-      'effect.appliedagristics.nourishment':('生物滋养','Biological Nourishment'),
-      'entity.appliedagristics.thrown_culture':('投掷的培养物','Thrown Culture'),
-      'gui.appliedagristics.show_ordinary':('显示普通作物','Show ordinary crops'),
-      'gui.appliedagristics.hide_ordinary':('隐藏普通作物','Hide ordinary crops'),
-      'gui.appliedagristics.bio_altar_pedestals':('周围需要八个注魔基座','Requires eight infusion pedestals'),
-      'status.appliedagristics.missing_pedestals':('缺少八个注魔基座','Eight infusion pedestals required'),
-      'status.appliedagristics.bio_ritual':('生物凝聚中','Biological infusion'),
-      'jei.appliedagristics.bio_infusion':('生物祭坛','Biological Infusion'),
-      'jei.appliedagristics.extraction':('投掷培养物','Culture Splash'),
-      'jei.appliedagristics.throw_help':('右键投掷，或使用发射器','Throw or use a dispenser'),
-      'jei.appliedagristics.nourishment_help':('碰撞后掉落萃取物，附近玩家获得滋养','Impact: extract + nearby nourishment'),
-      'jei.appliedagristics.ritual_help':('八个基座；四份同种萃取物','8 pedestals; 4 matching extracts'),
-    }.items():values[key]=pair[index]
-    for key in ('culture_toggle_on','culture_toggle_off','culture_toggle_help'):
-        values.pop('gui.appliedagristics.'+key,None)
-    write(path,values)
+    'appliedagristics:'+name for name in ('early_planter','seed_storage','network_planter','me_infusion_altar',*PARTS)]})
 for index,lang in enumerate(('zh_cn','en_us')):
     path=ASSETS/f'lang/{lang}.json';values=json.loads(path.read_text(encoding='utf-8'))
-    for key,pair in {
-      'block.appliedagristics.seed_storage':('ME 种子仓','ME Seed Storage'),
-      'block.appliedagristics.seed_storage_tier1':('ME 种子仓','ME Seed Storage'),
-      'block.appliedagristics.seed_storage_tier2':('ME 种子仓','ME Seed Storage'),
-      'effect.appliedagristics.nourishment.desc':('缓慢恢复饥饿值，不恢复饱和度','Slowly restores hunger without saturation'),
-      'gui.appliedagristics.seed_cell_capacity':('16 格；每格 %s 颗','16 cells; %s seeds per cell'),
-      'gui.appliedagristics.seed_cell_usage':('占用 %s / 共 %s 颗','In use %s / total %s seeds'),
-      'gui.appliedagristics.seed_overflow':('旧库存超额，请从 ME 取出','Overflow: withdraw through ME'),
-      'gui.appliedagristics.bio_altar_ground':('先投材料，再右键放空白种子','Drop materials, then use a blank seed'),
-      'status.appliedagristics.missing_ground_materials':('缺少附近的萃取物或凝聚精华，或祭坛忙碌','Missing nearby extract or condensed essence, or altar busy'),
-      'status.appliedagristics.add_seed':('投入材料后放入空白种子','Drop ingredients, then insert a blank seed'),
-      'jei.appliedagristics.ritual_help':('先投萃取物和精华，再放空白种子','Drop extract + essence; use a blank seed'),
-    }.items():values[key]=pair[index]
-    for key in ('seed_cell_capacity','seed_cell_usage','seed_overflow','bio_altar_ground'):values.pop('gui.appliedagristics.'+key,None)
-    values.pop('gui.appliedagristics.bio_altar_pedestals',None);values.pop('status.appliedagristics.missing_pedestals',None)
+    values['item.appliedagristics.empty_bio_seed']=('空白生物种子','Empty Biological Seed')[index]
+    values['block.appliedagristics.seed_storage']=('ME 种子仓','ME Seed Storage')[index]
     write(path,values)
-for name in ('seed_storage_tier1','seed_storage_tier2'):(ROOT/f'data/appliedagristics/recipe/{name}.json').unlink(missing_ok=True)
 print('Multiblock resources and native AE screens generated.')
 
 from install_word_update import install as install_word_update

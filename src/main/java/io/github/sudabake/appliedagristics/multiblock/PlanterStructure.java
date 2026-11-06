@@ -184,7 +184,7 @@ public final class PlanterStructure {
                 var pos=positions.get(cell);
                 var state = level.getBlockState(pos);
                 if (state.hasProperty(PlanterPartBlock.FORMED)) {
-                    var formed=state.setValue(PlanterPartBlock.FORMED,true).setValue(PlanterPartBlock.CELL,cell).setValue(PlanterPartBlock.FACING,facing);
+                    var formed=io.github.sudabake.appliedagristics.block.PlanterOrientation.withFacing(state.setValue(PlanterPartBlock.FORMED,true).setValue(PlanterPartBlock.CELL,cell),facing);
                     if (state!=formed) level.setBlock(pos,formed,Block.UPDATE_CLIENTS);
                 }
             }

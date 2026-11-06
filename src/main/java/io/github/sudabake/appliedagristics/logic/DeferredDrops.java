@@ -21,12 +21,19 @@ public final class DeferredDrops extends SavedData {
     private static final Factory<DeferredDrops> FACTORY=new Factory<>(DeferredDrops::new,DeferredDrops::load);
     private static final class Pending {
         final CompoundTag key;
+        final CompoundTag original;
         long count;
-        Pending(CompoundTag key,long count) { this.key=key.copy();this.count=count; }
+        Pending(CompoundTag key,long count) {
+            this.key=key.copy(); this.count=count; original=new CompoundTag();
+        }
+        Pending(CompoundTag entry) {
+            original=entry.copy(); key=entry.getCompound("key").copy(); count=entry.getLong("count");
+        }
     }
     private record Site(BlockPos pos,List<Pending> stacks) {}
     private final List<Site> sites=new ArrayList<>();
     private int cursor;
+    private ListTag recoveries=new ListTag();
 
     public static DeferredDrops get(ServerLevel level) { return level.getDataStorage().computeIfAbsent(FACTORY,NAME); }
     public void enqueue(ServerLevel level,BlockPos pos,Map<AEItemKey,Long> amounts) {
@@ -35,6 +42,25 @@ public final class DeferredDrops extends SavedData {
         if(stacks.isEmpty()) return;
         sites.add(new Site(pos.immutable(),stacks));setDirty();
         drain(level);
+    }
+    /** Unknown item keys stay in the normal queue and can resolve when their mod returns. */
+    public ListTag enqueueSerialized(ServerLevel level,BlockPos pos,ListTag entries) {
+        var stacks=new ArrayList<Pending>();
+        var invalid=new ListTag();
+        for (var raw:entries) {
+            var entry=(CompoundTag)raw;
+            if (entry.getLong("count")>0 && entry.contains("key",Tag.TAG_COMPOUND))
+                stacks.add(new Pending(entry));
+            else invalid.add(entry.copy());
+        }
+        if (!stacks.isEmpty()) { sites.add(new Site(pos.immutable(),stacks)); setDirty(); }
+        return invalid;
+    }
+    public void preserveMachine(BlockPos pos,CompoundTag machine) {
+        var entry=new CompoundTag();
+        entry.putLong("pos",pos.asLong());
+        entry.put("machine",machine.copy());
+        recoveries.add(entry); setDirty();
     }
     public void drain(ServerLevel level) {
         int budget=STACK_BUDGET,visited=0,limit=Math.min(32,sites.size());
@@ -74,11 +100,12 @@ public final class DeferredDrops extends SavedData {
     }
     public static DeferredDrops load(CompoundTag tag,HolderLookup.Provider registries) {
         var data=new DeferredDrops();
+        data.recoveries=tag.getList("recoveries",Tag.TAG_COMPOUND).copy();
         for(var raw:tag.getList("sites",Tag.TAG_COMPOUND)) {
             var site=(CompoundTag)raw;var stacks=new ArrayList<Pending>();
             for(var value:site.getList("stacks",Tag.TAG_COMPOUND)) {
                 var entry=(CompoundTag)value;long count=entry.getLong("count");
-                if(count>0) stacks.add(new Pending(entry.getCompound("key"),count));
+                if(count>0) stacks.add(new Pending(entry));
             }
             if(!stacks.isEmpty()) data.sites.add(new Site(BlockPos.of(site.getLong("pos")),stacks));
         }
@@ -88,9 +115,9 @@ public final class DeferredDrops extends SavedData {
         var saved=new ListTag();
         for(var site:sites) {
             var entry=new CompoundTag();entry.putLong("pos",site.pos.asLong());var stacks=new ListTag();
-            for(var pending:site.stacks) {var value=new CompoundTag();value.put("key",pending.key.copy());value.putLong("count",pending.count);stacks.add(value);}
+            for(var pending:site.stacks) {var value=pending.original.copy();value.put("key",pending.key.copy());value.putLong("count",pending.count);stacks.add(value);}
             entry.put("stacks",stacks);saved.add(entry);
         }
-        tag.put("sites",saved);return tag;
+        tag.put("sites",saved);if (!recoveries.isEmpty()) tag.put("recoveries",recoveries.copy());return tag;
     }
 }
