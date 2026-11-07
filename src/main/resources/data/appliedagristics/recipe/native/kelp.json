@@ -1,0 +1,17 @@
+{
+  "type": "appliedagristics:planting",
+  "seed": {
+    "item": "minecraft:kelp"
+  },
+  "outputs": [
+    {
+      "id": "minecraft:kelp",
+      "count": 1
+    }
+  ],
+  "display": {
+    "Name": "minecraft:kelp"
+  },
+  "ticks": 200,
+  "reproduces": true
+}

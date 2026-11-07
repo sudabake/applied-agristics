@@ -1,0 +1,17 @@
+{
+  "type": "appliedagristics:planting",
+  "seed": {
+    "item": "minecraft:chorus_flower"
+  },
+  "outputs": [
+    {
+      "id": "minecraft:chorus_fruit",
+      "count": 1
+    }
+  ],
+  "display": {
+    "Name": "minecraft:chorus_flower"
+  },
+  "ticks": 200,
+  "reproduces": false
+}

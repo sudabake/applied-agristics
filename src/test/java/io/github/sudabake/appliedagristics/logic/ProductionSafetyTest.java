@@ -4,6 +4,19 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class ProductionSafetyTest {
+    @Test void treeBatchLimitIsSharedByActualPowerAndUpgradePreviews() {
+        assertEquals(153600,ProductionMath.stepWork(256,256,2400,64),1e-8);
+        assertEquals(2343.75,ProductionMath.limitedPower(256,256,2400,64,4,65536,5000),1e-8);
+        assertEquals(5000,ProductionMath.limitedPower(256,256,2400,Integer.MAX_VALUE,4,65536,5000),1e-8);
+        assertEquals(0,ProductionMath.limitedPower(0,256,2400,64,4,65536,5000));
+        for(int speed=0;speed<=4;speed++) for(int parallel=0;parallel<=4;parallel++) {
+            int occupied=ProductionMath.moduleParallel(parallel,256);
+            double multiplier=ProductionMath.moduleSpeed(speed,256);
+            double full=ProductionMath.power(occupied,multiplier,4,65536,5000);
+            double limited=ProductionMath.limitedPower(occupied,multiplier,2400,64,4,65536,5000);
+            assertTrue(limited<=full+1e-8);
+        }
+    }
     @Test void fourPhysicalModulesRetainConfiguredMaximumAndPower() {
         for(int maximum:new int[]{256,65536}) {
             assertEquals(1,ProductionMath.moduleParallel(0,maximum));

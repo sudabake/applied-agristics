@@ -24,5 +24,14 @@ public final class ProductionMath {
         double logPower = Math.log(base) + exponent * Math.log(rate);
         return Math.exp(Math.min(Math.log(Double.MAX_VALUE / 20), logPower));
     }
+    public static double stepWork(long occupied, double speed, int duration, long batchLimit) {
+        return Math.min(5.0 * occupied * speed, batchLimit * (double)duration);
+    }
+    public static double limitedPower(long occupied, double speed, int duration, long batchLimit,
+                                     double base, double maximumRate, double fullPower) {
+        if (occupied <= 0) return 0;
+        return power(occupied, speed, base, maximumRate, fullPower)
+                * stepWork(occupied, speed, duration, batchLimit) / (5.0 * occupied * speed);
+    }
     private ProductionMath() {}
 }

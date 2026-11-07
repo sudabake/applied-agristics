@@ -1,0 +1,18 @@
+{
+  "type": "appliedagristics:planting",
+  "seed": {
+    "item": "minecraft:spruce_sapling"
+  },
+  "outputs": [
+    {
+      "id": "minecraft:spruce_log",
+      "count": 1
+    }
+  ],
+  "display": {
+    "Name": "minecraft:spruce_sapling"
+  },
+  "ticks": 2400,
+  "reproduces": true,
+  "loot_table": "appliedagristics:planting/spruce_sapling"
+}

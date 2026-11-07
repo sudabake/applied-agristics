@@ -1,0 +1,18 @@
+{
+  "type": "appliedagristics:planting",
+  "seed": {
+    "item": "minecraft:mangrove_propagule"
+  },
+  "outputs": [
+    {
+      "id": "minecraft:mangrove_log",
+      "count": 1
+    }
+  ],
+  "display": {
+    "Name": "minecraft:mangrove_propagule"
+  },
+  "ticks": 2400,
+  "reproduces": true,
+  "loot_table": "appliedagristics:planting/mangrove_propagule"
+}

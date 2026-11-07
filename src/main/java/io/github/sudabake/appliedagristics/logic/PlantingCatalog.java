@@ -69,18 +69,20 @@ public final class PlantingCatalog {
     for (var holder : level.getRecipeManager().getAllRecipesFor(Agristics.PLANTING_TYPE.get()))
       for (var stack : holder.value().seed().getItems())
         if (!stack.isEmpty()) candidates.put(AEItemKey.of(stack), stack.copyWithCount(1));
+    if (net.neoforged.fml.ModList.get().isLoaded("botanypots"))
+      for (var stack : io.github.sudabake.appliedagristics.compat.botany.BotanyCrops.seeds(level))
+        candidates.put(AEItemKey.of(stack),stack.copyWithCount(1));
     var entries = new ListTag();
     for (var seed : candidates.values()) {
       var source = CropSources.find(level, seed);
+      if (source == null && !Harvests.seed(seed)) continue;
       var outputs = new LinkedHashMap<AEItemKey, ItemStack>();
       add(outputs, seed);
       if (source != null) {
         add(outputs, source.product());
-        if (source.fixedOutputs())
-          for (var stack : source.harvest(level, BlockPos.ZERO, source.networkSoil()))
-            add(outputs, stack);
+        for (var stack : source.previewOutputs(level)) add(outputs,stack);
       }
-      var mature = source == null ? Harvests.mature(seed) : source.display();
+      var mature = source == null ? Harvests.mature(seed) : null;
       if (mature != null) {
         var block = mature.getBlock();
         if (block instanceof StemBlock stem)

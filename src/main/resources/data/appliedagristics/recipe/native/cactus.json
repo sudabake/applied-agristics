@@ -1,0 +1,17 @@
+{
+  "type": "appliedagristics:planting",
+  "seed": {
+    "item": "minecraft:cactus"
+  },
+  "outputs": [
+    {
+      "id": "minecraft:cactus",
+      "count": 1
+    }
+  ],
+  "display": {
+    "Name": "minecraft:cactus"
+  },
+  "ticks": 200,
+  "reproduces": true
+}

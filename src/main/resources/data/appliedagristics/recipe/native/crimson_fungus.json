@@ -1,0 +1,18 @@
+{
+  "type": "appliedagristics:planting",
+  "seed": {
+    "item": "minecraft:crimson_fungus"
+  },
+  "outputs": [
+    {
+      "id": "minecraft:crimson_stem",
+      "count": 1
+    }
+  ],
+  "display": {
+    "Name": "minecraft:crimson_fungus"
+  },
+  "ticks": 2400,
+  "reproduces": true,
+  "loot_table": "appliedagristics:planting/crimson_fungus"
+}

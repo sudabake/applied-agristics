@@ -38,7 +38,7 @@ public final class Messages {
         @Override public Type<BiologicalCatalog> type() { return TYPE; }
     }
     public static void register(RegisterPayloadHandlersEvent event) {
-        var registrar = event.registrar("8");
+        var registrar = event.registrar("9");
         registrar.playToClient(BiologicalCatalog.TYPE, BiologicalCatalog.CODEC, (p, context) -> context.enqueueWork(() -> { if (p.data != null) io.github.sudabake.appliedagristics.biology.BioLootCatalog.loadClient(p.data); }));
         registrar.playToServer(Control.TYPE, Control.CODEC, (p, context) -> context.enqueueWork(() -> {
             if (!(context.player() instanceof ServerPlayer player) || !(player.containerMenu instanceof MachineMenu menu)

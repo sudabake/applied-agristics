@@ -22,6 +22,8 @@ class ResourceExportTests(unittest.TestCase):
             states = json.loads((assets / 'blockstates' / (name + '.json')).read_text(encoding='utf-8'))
             for variant in states['variants'].values():
                 self.assertEqual(variant['model'], 'appliedagristics:block/' + name)
+            self.assertTrue(all('formed=' not in key and 'cell=' not in key
+                                for key in states['variants']))
         self.assertFalse(list((assets / 'models/block/formed').glob('*.json')))
         self.assertFalse(list((assets / 'models/block/templates').glob('formed_casing_*.json')))
 

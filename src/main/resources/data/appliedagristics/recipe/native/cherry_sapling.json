@@ -1,0 +1,18 @@
+{
+  "type": "appliedagristics:planting",
+  "seed": {
+    "item": "minecraft:cherry_sapling"
+  },
+  "outputs": [
+    {
+      "id": "minecraft:cherry_log",
+      "count": 1
+    }
+  ],
+  "display": {
+    "Name": "minecraft:cherry_sapling"
+  },
+  "ticks": 2400,
+  "reproduces": true,
+  "loot_table": "appliedagristics:planting/cherry_sapling"
+}

@@ -9,6 +9,7 @@ import net.minecraft.core.*;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.gametest.framework.*;
 import net.minecraft.network.chat.Component;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.*;
 import net.minecraft.world.item.crafting.*;
@@ -65,6 +66,9 @@ public final class RemainingWorkGameTests {
             var codec=PlantingRecipe.CODEC.codec(); var ops=h.getLevel().registryAccess().createSerializationContext(com.mojang.serialization.JsonOps.INSTANCE);
             var decoded=codec.parse(ops,codec.encodeStart(ops,recipe).getOrThrow()).getOrThrow();
             h.assertTrue(decoded.ticks()==40 && ItemStack.isSameItemSameComponents(decoded.outputs().getFirst(),result),"Pack recipe codec retains timing and components");
+            var catalog=PlantingCatalog.serialize(h.getLevel());
+            var entry=catalog.stream().map(CompoundTag.class::cast).filter(tag->ItemStack.parseOptional(h.getLevel().registryAccess(),tag.getCompound("seed")).is(Items.APPLE)).findFirst().orElseThrow();
+            h.assertTrue(entry.getList("outputs",10).size()==2,"A decorative wheat display never adds wheat or seeds to an explicit diamond harvest preview");
         } finally { manager.replaceRecipes(originals); CropSources.invalidate(); }
         h.assertTrue(!Harvests.seed(new ItemStack(Items.APPLE),h.getLevel()),"Removing a recipe invalidates cached recognition"); h.succeed();
     }

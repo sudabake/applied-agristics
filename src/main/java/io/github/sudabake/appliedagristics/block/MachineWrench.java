@@ -40,7 +40,8 @@ public final class MachineWrench {
             if (io.sideMode(side)!=next) return;
             server.playSound(null,pos,SoundEvents.ITEM_FRAME_ROTATE_ITEM,SoundSource.BLOCKS,.7f,1f);
             player.displayClientMessage(Component.translatable("gui.appliedagristics.side_"+side).append(": ").append(Component.translatable("gui.appliedagristics.output_"+(next==3?"enabled":"disabled"))),true);
-        } else if ((state.hasProperty(PlanterPartBlock.FACING) || state.hasProperty(net.minecraft.world.level.block.state.properties.BlockStateProperties.FACING)) && !state.getValue(PlanterPartBlock.FORMED)) {
+        } else if ((state.hasProperty(PlanterPartBlock.FACING) || state.hasProperty(net.minecraft.world.level.block.state.properties.BlockStateProperties.FACING))
+                && !(state.is(Agristics.NETWORK.get()) && state.getValue(PlanterPartBlock.FORMED))) {
             PlanterStructure.changed(level,pos);
             if (level.setBlockAndUpdate(pos,PlanterOrientation.withFacing(state,PlanterOrientation.next(state))))
                 server.playSound(null,pos,SoundEvents.ITEM_FRAME_ROTATE_ITEM,SoundSource.BLOCKS,.7f,1f);

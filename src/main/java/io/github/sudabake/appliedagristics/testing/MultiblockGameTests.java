@@ -146,7 +146,7 @@ public final class MultiblockGameTests {
             var hit=new net.minecraft.world.phys.BlockHitResult(net.minecraft.world.phys.Vec3.atCenterOf(pos),Direction.NORTH,pos,false);
             var event=new net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickBlock(player,net.minecraft.world.InteractionHand.MAIN_HAND,pos,hit);
             MachineWrench.wrench(event);
-            h.assertTrue(event.isCanceled() && f.output().outputFace()==facing,"Wrench does not alter the fixed output face of a formed array");
+            h.assertTrue(event.isCanceled() && f.output().outputFace()!=facing && f.controller().structure.formed(),"Wrench rotates a formed output port without breaking the array");
             var essence=AEItemKey.of(new ItemStack(Crops.all().getFirst().getEssenceItem()));
             f.vault().storeProduced(essence,10_000_000_000L,false); var expected=f.vault().saveWithFullMetadata(h.getLevel().registryAccess()).getList("essences",10);
             pos=f.vault().getBlockPos(); player.setShiftKeyDown(true);
@@ -190,7 +190,8 @@ public final class MultiblockGameTests {
             }
             for (int i=0;i<positions.size();i++) {
                 var state=level.getBlockState(positions.get(i));
-                h.assertTrue(state.getValue(PlanterPartBlock.FORMED) && state.getValue(PlanterPartBlock.CELL)==i && PlanterOrientation.facing(state)==facing,"Skin cells match structure orientation "+facing+" index "+i);
+                var expected=positions.get(i).equals(center)?facing:Direction.NORTH;
+                h.assertTrue(state.getValue(PlanterPartBlock.FORMED) && state.getValue(PlanterPartBlock.CELL)==i && PlanterOrientation.facing(state)==expected,"Formation preserves independent part orientation "+facing+" index "+i);
             }
             for (var pos:positions) level.setBlockAndUpdate(pos,Blocks.AIR.defaultBlockState());
         }

@@ -26,6 +26,7 @@ public final class TestingBootstrap {
         event.register(MEBiologyTests.class);
         event.register(UIUnificationTests.class);
         event.register(JdteBatchTests.class);
+        event.register(CultivationRevisionTests.class);
     }
 
     private static void releaseTestStructures(net.neoforged.neoforge.event.server.ServerStoppingEvent event) {

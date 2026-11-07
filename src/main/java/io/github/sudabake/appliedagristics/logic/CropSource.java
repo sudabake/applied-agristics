@@ -9,6 +9,7 @@ import java.util.List;
 /** Only explicit recipes and optional providers implement this; native MA/loot remain in Harvests. */
 public interface CropSource {
     ItemStack product();
+    default List<ItemStack> previewOutputs(ServerLevel level) { return List.of(product()); }
     ItemStack networkSoil();
     BlockState display();
     int ticks();

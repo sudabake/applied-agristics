@@ -1,0 +1,17 @@
+{
+  "type": "appliedagristics:planting",
+  "seed": {
+    "item": "minecraft:red_mushroom"
+  },
+  "outputs": [
+    {
+      "id": "minecraft:red_mushroom",
+      "count": 1
+    }
+  ],
+  "display": {
+    "Name": "minecraft:red_mushroom"
+  },
+  "ticks": 200,
+  "reproduces": true
+}

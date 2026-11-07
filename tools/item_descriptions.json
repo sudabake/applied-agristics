@@ -28,13 +28,13 @@
       "为农业阵列提供种子",
       "16 个槽位，每格最多 64 颗",
       "手动取出占用种子会暂停对应作物",
-      "支持六向放置与扳手旋转；成型后功能面自动朝外"
+      "支持六向放置与扳手旋转，成型与拆结构保留朝向"
     ],
     "en_us": [
       "Supplies seeds to the agricultural array",
       "16 slots, up to 64 seeds per slot",
       "Manually taking reserved seeds pauses that crop",
-      "Six-way placement and wrench rotation; formed faces point outward"
+      "Six-way placement and wrench rotation. Formation preserves facing"
     ]
   },
   "seed_storage": {
@@ -66,13 +66,13 @@
       "缓存并输出阵列产生的收获物",
       "16 个槽位，可向正面容器自动输出",
       "联网时也可由 AE 提取",
-      "支持六向放置与扳手旋转；成型后功能面自动朝外"
+      "支持六向放置与扳手旋转，成型与拆结构保留朝向"
     ],
     "en_us": [
       "Buffers and outputs array harvests",
       "16 slots; can push to the container in front",
       "AE can also extract while the array is online",
-      "Six-way placement and wrench rotation; formed faces point outward"
+      "Six-way placement and wrench rotation. Formation preserves facing"
     ]
   },
   "planter_speed_module": {
@@ -115,12 +115,12 @@
     "zh_cn": [
       "为成型的农业阵列接入 ME 网络",
       "每座阵列需要且只能安装一个",
-      "支持六向放置与扳手旋转；成型后功能面自动朝外"
+      "支持六向放置与扳手旋转，成型与拆结构保留朝向"
     ],
     "en_us": [
       "Connects a formed array to the ME network",
       "Exactly one is required per array",
-      "Six-way placement and wrench rotation; formed faces point outward"
+      "Six-way placement and wrench rotation. Formation preserves facing"
     ]
   },
   "planter_frame": {

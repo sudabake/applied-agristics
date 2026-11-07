@@ -93,3 +93,6 @@ print('Multiblock resources and native AE screens generated.')
 
 from install_word_update import install as install_word_update
 install_word_update()
+
+from install_native_planting import install as install_native_planting
+install_native_planting()

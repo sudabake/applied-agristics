@@ -59,11 +59,15 @@ final class PlantingProductsCategory implements IRecipeCategory<PlantingCatalog.
         .addSlot(RecipeIngredientRole.INPUT, 12, 27)
         .setStandardSlotBackground()
         .addItemStack(recipe.seed().copyWithCount(1));
-    for (int i = 0; i < recipe.outputs().size(); i++)
+    for (int i = 0; i < Math.min(12,recipe.outputs().size()); i++) {
+      int end=i==11?recipe.outputs().size():i+1;
       builder
           .addSlot(RecipeIngredientRole.OUTPUT, 88 + i % 4 * 20, 7 + i / 4 * 20)
           .setStandardSlotBackground()
-          .addItemStack(recipe.outputs().get(i).copyWithCount(1));
+          .addItemStacks(recipe.outputs().subList(i,end))
+          .addRichTooltipCallback((view,tooltip)->tooltip.add(
+              Component.translatable("jei.appliedagristics.possible_product")));
+    }
   }
 
   @Override

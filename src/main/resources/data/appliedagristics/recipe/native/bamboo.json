@@ -1,0 +1,17 @@
+{
+  "type": "appliedagristics:planting",
+  "seed": {
+    "item": "minecraft:bamboo"
+  },
+  "outputs": [
+    {
+      "id": "minecraft:bamboo",
+      "count": 1
+    }
+  ],
+  "display": {
+    "Name": "minecraft:bamboo"
+  },
+  "ticks": 200,
+  "reproduces": true
+}

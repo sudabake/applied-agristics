@@ -189,10 +189,8 @@ public final class NetworkPlanter extends GridMachine {
             var output = AEItemKey.of(crop.essenceStack()); long stock = available.get(output);
             if (Amounts.harvestSize(stock, task.target, 1) == 0) { task.status = "target_reached"; continue; }
             if (destination.insert(output, 1, Actionable.SIMULATE, source) == 0) { task.status = blockedOutput(); continue; }
-            double perTick = ProductionMath.power(task.occupied, speed(), Balance.POWER.get(), (double)Balance.PARALLEL_MAX.get() * Balance.SPEED_MAX.get(), Balance.FULL_POWER.get());
-            double requestedWork=5*task.occupied*speed();
-            double work=Math.min(requestedWork,batchLimit*(double)duration);
-            double cost = perTick * 5 * work/requestedWork;
+            double work=ProductionMath.stepWork(task.occupied,speed(),duration,batchLimit);
+            double cost=expectedPower(task.occupied,speed(),duration,batchLimit)*5;
             if (energy.extractAEPower(cost, Actionable.SIMULATE, PowerMultiplier.CONFIG) + 0.000001 < cost) { task.status = "no_power"; continue; }
             double paid = energy.extractAEPower(cost, Actionable.MODULATE, PowerMultiplier.CONFIG);
             task.progress += work * Math.clamp(paid / cost, 0, 1);
@@ -235,6 +233,10 @@ public final class NetworkPlanter extends GridMachine {
     }
     private String blockedOutput() {
         return "output_full";
+    }
+    private double expectedPower(long occupied,double speed,int duration,long batchLimit) {
+        return ProductionMath.limitedPower(occupied,speed,duration,batchLimit,Balance.POWER.get(),
+                (double)Balance.PARALLEL_MAX.get()*Balance.SPEED_MAX.get(),Balance.FULL_POWER.get());
     }
     @Override protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries); var list = new ListTag();
@@ -303,9 +305,12 @@ public final class NetworkPlanter extends GridMachine {
                 usable += Math.min(Long.MAX_VALUE - usable, Math.max(0, freeForThis));
             }
             long nextUsed = Math.min(usable, ProductionMath.moduleParallel(structure.parallelModules() + 1, Balance.PARALLEL_MAX.get()));
-            row.putDouble("requiredPower", ProductionMath.power(t.occupied, speed(), Balance.POWER.get(), (double)Balance.PARALLEL_MAX.get() * Balance.SPEED_MAX.get(), Balance.FULL_POWER.get()));
-            row.putDouble("nextSpeedPower", ProductionMath.power(t.occupied, ProductionMath.moduleSpeed(structure.speedModules() + 1, Balance.SPEED_MAX.get()), Balance.POWER.get(), (double)Balance.PARALLEL_MAX.get() * Balance.SPEED_MAX.get(), Balance.FULL_POWER.get()));
-            row.putDouble("nextParallelPower", ProductionMath.power(nextUsed, speed(), Balance.POWER.get(), (double)Balance.PARALLEL_MAX.get() * Balance.SPEED_MAX.get(), Balance.FULL_POWER.get()));
+            int duration=CropSources.ticks(level,worldPosition,crop.seedStack(),Harvests.networkSoil(level,crop.seedStack()),Balance.LATE_TICKS.get());
+            long batchLimit=Math.min(Harvests.maximumBatch(level,crop.seedStack()),structure.vaults().isEmpty()?64L:Integer.MAX_VALUE);
+            row.putDouble("requiredPower",expectedPower(t.occupied,speed(),duration,batchLimit));
+            row.putDouble("fullLoadPower",ProductionMath.power(t.occupied,speed(),Balance.POWER.get(),(double)Balance.PARALLEL_MAX.get()*Balance.SPEED_MAX.get(),Balance.FULL_POWER.get()));
+            row.putDouble("nextSpeedPower",expectedPower(t.occupied,ProductionMath.moduleSpeed(structure.speedModules()+1,Balance.SPEED_MAX.get()),duration,batchLimit));
+            row.putDouble("nextParallelPower",expectedPower(nextUsed,speed(),duration,batchLimit));
             row.putLong("count", parallel()); row.putLong("used", t.occupied); row.putDouble("power", t.power); rows.add(row);
         }
         tag.put("rows", rows); tag.putInt("pages", Math.max(1, crops.size() - 3)); tag.putInt("parallel", parallel()); tag.putDouble("speed", speed());

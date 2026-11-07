@@ -22,6 +22,12 @@ import java.util.*;
 
 /** Optional API bridge. Uses actual onHarvest callbacks; never scales a sampled custom callback. */
 public final class BotanyCrops {
+    public static List<ItemStack> seeds(Level level) {
+        return level.getRecipeManager().getAllRecipesFor(Crop.TYPE.get()).stream()
+                .map(holder->holder.value()).filter(BasicCrop.class::isInstance).map(BasicCrop.class::cast)
+                .flatMap(crop->Arrays.stream(crop.getBasicProperties().input().getItems()))
+                .filter(stack->!stack.isEmpty()).map(stack->stack.copyWithCount(1)).toList();
+    }
     public static CropSource find(Level level,ItemStack seed) {
         for (var holder:level.getRecipeManager().getAllRecipesFor(Crop.TYPE.get())) {
             var crop=holder.value();
@@ -51,11 +57,17 @@ public final class BotanyCrops {
         for (int i=displays.size()-1;i>=0;i--) {
             var display=displays.get(i);
             if (display instanceof SimpleDisplayState simple) return simple.getState();
+            if (display instanceof AgingDisplayState aging) return aging.getBlock().defaultBlockState();
             if (display instanceof PhasedDisplayState phased) { var found=state(phased.getDisplayPhases()); if (found!=null) return found; }
         }
         return null;
     }
     private record Source(Crop crop,ItemStack seed,ItemStack networkSoil,Soil networkGround,ItemStack product,boolean reproduces,int ticks,BlockState display) implements CropSource {
+        @Override public List<ItemStack> previewOutputs(ServerLevel level) {
+            return ((BasicCrop)crop).getBasicProperties().drops().stream()
+                    .flatMap(provider->provider.getDisplayItems().stream()).filter(stack->!stack.isEmpty())
+                    .map(stack->stack.copyWithCount(1)).toList();
+        }
         private Context context(Level level,BlockPos pos,ItemStack soil) {
             var probe=new Context(level,pos,soil,seed,crop,null,ticks);
             var match=Soil.getSoil(level,probe,soil);

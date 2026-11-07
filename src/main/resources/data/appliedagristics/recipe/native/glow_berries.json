@@ -1,0 +1,17 @@
+{
+  "type": "appliedagristics:planting",
+  "seed": {
+    "item": "minecraft:glow_berries"
+  },
+  "outputs": [
+    {
+      "id": "minecraft:glow_berries",
+      "count": 1
+    }
+  ],
+  "display": {
+    "Name": "minecraft:cave_vines"
+  },
+  "ticks": 200,
+  "reproduces": true
+}

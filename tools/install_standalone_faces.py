@@ -6,19 +6,6 @@ from install_me_biology import A, ROOT, write
 from install_shared_casing import FACE_ORDER, FUNCTIONAL, MODULES, PARTS, NS
 
 
-def formed_front(facing, cell):
-    if facing in ('up', 'down'):
-        return facing
-    x, y, z = cell % 3, cell // 9, cell // 3 % 3
-    local = ('south' if z == 0 else 'north' if z == 2 else 'east' if x == 0
-             else 'west' if x == 2 else 'down' if y == 0 else 'up' if y == 3 else 'south')
-    if local in ('up', 'down'):
-        return local
-    compass = ('south', 'west', 'north', 'east')
-    turns = {'south': 0, 'west': 1, 'north': 2, 'east': 3}
-    return compass[(compass.index(local) + turns[facing]) % 4]
-
-
 def rotation(facing):
     if facing in ('up', 'down'):
         return {'x': 90 if facing == 'up' else 270}
@@ -53,17 +40,14 @@ def install(assets=None):
                                          'textures': {'all': NS + name}})
     write(models / 'me_bio_cultivator.json', {'parent': NS + 'templates/casing_front_north',
                                            'textures': {'front': NS + 'me_bio_cultivator_front'}})
-    # Formation only changes the direction of functional fronts. Every face keeps its full tile.
+    # Placement and wrench rotation own facing, independently of structure membership.
     for name in PARTS:
         directions = ('north', 'east', 'south', 'west', 'up', 'down') if name in (
             'me_network_access', 'planter_input_port', 'planter_output_port') else ('north', 'east', 'south', 'west')
         variants = {}
         for facing in directions:
             angles = rotation(facing) if name in FUNCTIONAL else {}
-            variants[f'facing={facing},formed=false'] = {'model': NS + name, **angles}
-            for cell in range(36):
-                angles = rotation(formed_front(facing, cell)) if name in FUNCTIONAL else {}
-                variants[f'cell={cell},facing={facing},formed=true'] = {'model': NS + name, **angles}
+            variants[f'facing={facing}'] = {'model': NS + name, **angles}
         write(assets / 'blockstates' / (name + '.json'), {'variants': variants})
     altar = models / 'me_infusion_altar.json'
     data = json.loads(altar.read_text(encoding='utf-8'))

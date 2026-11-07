@@ -462,6 +462,9 @@ public final class MachineScreen extends appeng.client.gui.AEBaseScreen<MachineM
                       "gui.appliedagristics.required_power",
                       compact(row.getDouble("requiredPower"))),
                   Component.translatable(
+                      "gui.appliedagristics.full_load_power",
+                      compact(row.getDouble("fullLoadPower"))),
+                  Component.translatable(
                       "gui.appliedagristics.next_speed_power",
                       compact(row.getDouble("nextSpeedPower"))),
                   Component.translatable(

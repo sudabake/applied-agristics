@@ -11,11 +11,17 @@ import net.minecraft.world.item.crafting.*;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.resources.ResourceLocation;
 import java.util.List;
+import java.util.Optional;
 
 /** Pack-controlled cultivation data, separate from machine crafting costs. Outputs are net harvest. */
 public record PlantingRecipe(Ingredient seed,Ingredient soil,List<ItemStack> outputs,BlockState display,
-        boolean useLoot,int ticks,boolean reproduces) implements Recipe<SingleRecipeInput> {
+        boolean useLoot,int ticks,boolean reproduces,Optional<ResourceLocation> lootTable) implements Recipe<SingleRecipeInput> {
+    public PlantingRecipe(Ingredient seed,Ingredient soil,List<ItemStack> outputs,BlockState display,
+                          boolean useLoot,int ticks,boolean reproduces) {
+        this(seed,soil,outputs,display,useLoot,ticks,reproduces,Optional.empty());
+    }
     public static final MapCodec<PlantingRecipe> CODEC=RecordCodecBuilder.mapCodec(i->i.group(
         Ingredient.CODEC_NONEMPTY.fieldOf("seed").forGetter(PlantingRecipe::seed),
         Ingredient.CODEC.optionalFieldOf("soil",Ingredient.EMPTY).forGetter(PlantingRecipe::soil),
@@ -23,7 +29,8 @@ public record PlantingRecipe(Ingredient seed,Ingredient soil,List<ItemStack> out
         BlockState.CODEC.optionalFieldOf("display",Blocks.WHEAT.defaultBlockState()).forGetter(PlantingRecipe::display),
         Codec.BOOL.optionalFieldOf("use_loot",false).forGetter(PlantingRecipe::useLoot),
         Codec.intRange(20,1200000).optionalFieldOf("ticks",200).forGetter(PlantingRecipe::ticks),
-        Codec.BOOL.optionalFieldOf("reproduces",false).forGetter(PlantingRecipe::reproduces)
+        Codec.BOOL.optionalFieldOf("reproduces",false).forGetter(PlantingRecipe::reproduces),
+        ResourceLocation.CODEC.optionalFieldOf("loot_table").forGetter(PlantingRecipe::lootTable)
     ).apply(i,PlantingRecipe::new));
     @Override public boolean matches(SingleRecipeInput input,Level level) { return seed.test(input.item()); }
     @Override public ItemStack assemble(SingleRecipeInput input,HolderLookup.Provider registries) { return getResultItem(registries).copy(); }

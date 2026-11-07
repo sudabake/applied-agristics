@@ -1,0 +1,18 @@
+{
+  "type": "appliedagristics:planting",
+  "seed": {
+    "item": "minecraft:warped_fungus"
+  },
+  "outputs": [
+    {
+      "id": "minecraft:warped_stem",
+      "count": 1
+    }
+  ],
+  "display": {
+    "Name": "minecraft:warped_fungus"
+  },
+  "ticks": 2400,
+  "reproduces": true,
+  "loot_table": "appliedagristics:planting/warped_fungus"
+}

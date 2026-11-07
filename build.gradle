@@ -45,6 +45,7 @@ dependencies {
         if (project.hasProperty('prickleJar')) runtimeOnly files(project.property('prickleJar'))
         else runtimeOnly "maven.modrinth:prickle:21.1.11"
     }
+    if (project.hasProperty('botanyTreesJar')) runtimeOnly files(project.property('botanyTreesJar'))
     if (project.hasProperty('jeiTests')) {
         if (project.hasProperty('jeiJar')) runtimeOnly files(project.property('jeiJar'))
         else runtimeOnly "mezz.jei:jei-1.21.1-neoforge:${jei_version}"

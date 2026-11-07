@@ -1,0 +1,18 @@
+{
+  "type": "appliedagristics:planting",
+  "seed": {
+    "item": "minecraft:flowering_azalea"
+  },
+  "outputs": [
+    {
+      "id": "minecraft:oak_log",
+      "count": 1
+    }
+  ],
+  "display": {
+    "Name": "minecraft:flowering_azalea"
+  },
+  "ticks": 2400,
+  "reproduces": true,
+  "loot_table": "appliedagristics:planting/flowering_azalea"
+}

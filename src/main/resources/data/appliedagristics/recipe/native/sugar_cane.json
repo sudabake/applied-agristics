@@ -1,0 +1,17 @@
+{
+  "type": "appliedagristics:planting",
+  "seed": {
+    "item": "minecraft:sugar_cane"
+  },
+  "outputs": [
+    {
+      "id": "minecraft:sugar_cane",
+      "count": 1
+    }
+  ],
+  "display": {
+    "Name": "minecraft:sugar_cane"
+  },
+  "ticks": 200,
+  "reproduces": true
+}

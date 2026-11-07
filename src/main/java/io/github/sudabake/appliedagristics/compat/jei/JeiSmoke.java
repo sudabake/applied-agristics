@@ -38,7 +38,7 @@ public final class JeiSmoke {
             if (ticks == 30) runtime.getRecipesGui().show(focus.createFocus(RecipeIngredientRole.INPUT, VanillaTypes.ITEM_STACK, BioData.withIdentity(Agristics.BIO_ESSENCE.get(), COW)));
             if (ticks == 42) Screenshot.grab(Minecraft.getInstance().gameDirectory, "agr-jei-loot.png", Minecraft.getInstance().getMainRenderTarget(), message -> {});
             if(ticks==45) {
-                var wheat=focus.createFocus(RecipeIngredientRole.INPUT,VanillaTypes.ITEM_STACK,new ItemStack(Items.WHEAT_SEEDS));
+                var wheat=focus.createFocus(RecipeIngredientRole.INPUT,VanillaTypes.ITEM_STACK,new ItemStack(Items.OAK_SAPLING));
                 var manager=runtime.getRecipeManager();var recipes=manager.createRecipeLookup(AgristicsJei.PLANTING).limitFocus(List.of(wheat)).get().toList();
                 runtime.getRecipesGui().showRecipes(manager.getRecipeCategory(AgristicsJei.PLANTING),recipes,List.of(wheat));
             }
@@ -128,6 +128,10 @@ public final class JeiSmoke {
     private static void verify() {
         var runtime = AgristicsJei.runtime(); var manager = runtime.getRecipeManager(); var focus = runtime.getJeiHelpers().getFocusFactory();
         require(manager.createRecipeLookup(AgristicsJei.STRUCTURE).get().count()==1,"Array structure recipe missing");
+        var oakFocus=focus.createFocus(RecipeIngredientRole.INPUT,VanillaTypes.ITEM_STACK,new ItemStack(Items.OAK_SAPLING));
+        var oakRecipes=manager.createRecipeLookup(AgristicsJei.PLANTING).limitFocus(List.of(oakFocus)).get().toList();
+        require(oakRecipes.size()==1 && oakRecipes.getFirst().outputs().stream().anyMatch(stack->stack.is(Items.OAK_LOG))
+                && oakRecipes.getFirst().outputs().stream().anyMatch(stack->stack.is(Items.APPLE)),"Tree JEI page must include its complete possible harvest");
         require(manager.createRecipeLayoutDrawable(manager.getRecipeCategory(AgristicsJei.STRUCTURE),"agricultural_array",focus.getEmptyFocusGroup()).isPresent(),"Invalid array structure layout");
         var catalog = BioLootCatalog.clientCatalog(); var ingredientManager = runtime.getIngredientManager();
         int equipment=0;
