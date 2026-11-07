@@ -11,14 +11,27 @@ import tomllib
 import urllib.error
 import urllib.request
 import zipfile
+from urllib.parse import urlparse
 
 ROOT = Path(__file__).resolve().parents[1]
 VERSION = re.compile(r'(\d+\.\d+\.\d+)(?:-(alpha|beta|rc)\.\d+)?\Z')
 PLATFORMS = ('github', 'curseforge', 'modrinth')
+# Verified against the official AE2 and Mystical Agriculture project pages.
+DEPENDENCIES = {
+    'curseforge': 'applied-energistics-2(required)\nmystical-agriculture(required)',
+    'modrinth': 'XxWD5pD3(required)\nC95ReXie(required)',
+}
 
 
 def config(root):
-    return json.loads((root / '.github/release.json').read_text(encoding='utf-8'))
+    settings = json.loads((root / '.github/release.json').read_text(encoding='utf-8'))
+    if (str(settings['curseforge_id']), settings['modrinth_id']) != ('1772431', 'applied-agristics'):
+        raise ValueError('Publication destination differs from the verified Applied Agristics projects')
+    if settings['dependencies'] != DEPENDENCIES:
+        raise ValueError('Dependency IDs differ from the verified AE2 and Mystical Agriculture projects')
+    if (settings['minecraft'], settings['loader'], str(settings['java'])) != ('1.21.1', 'neoforge', '21'):
+        raise ValueError('Publication platform differs from the supported Minecraft, loader or Java version')
+    return settings
 
 
 def validated_version(value, release_type):
@@ -35,15 +48,20 @@ def validated_version(value, release_type):
 def prepare(root, version, release_type, target, dry_run):
     version = validated_version(version, release_type)
     properties = (root / 'gradle.properties').read_text(encoding='utf-8')
-    source = re.search(r'^mod_version=(\d+\.\d+\.\d+)(?:[^\r\n]*)$', properties, re.MULTILINE)
-    if not source or source[1] != VERSION.fullmatch(version)[1]:
-        raise ValueError('The selected source branch has a different mod_version. Upload the intended source first')
+    source = re.search(r'^mod_version=([^\r\n]+)$', properties, re.MULTILINE)
+    if not source or source[1] != version:
+        actual = source[1] if source else 'missing'
+        raise ValueError('The selected source branch has a different mod_version: ' + actual +
+                         '; requested: ' + version + '. Upload the intended source first')
     notes = root / 'docs/RELEASE_NOTES.md'
     if not notes.is_file() or len(notes.read_text(encoding='utf-8').strip()) < 30:
         raise ValueError('Write this version\'s release notes in docs/RELEASE_NOTES.md first')
     heading = notes.read_text(encoding='utf-8').splitlines()[0]
-    if source[1] not in heading:
-        raise ValueError('The release notes heading must contain this source version')
+    if heading != '# Applied Agristics ' + version:
+        raise ValueError('The release notes heading must match the exact requested version')
+    readme = (root / 'README.md').read_text(encoding='utf-8')
+    if '当前版本为 **' + version + '**' not in readme:
+        raise ValueError('Update the README current version before publishing')
     if target not in (*PLATFORMS, 'all'):
         raise ValueError('Unknown publication target')
     platforms = list(PLATFORMS) if target == 'all' else [target]
@@ -84,6 +102,12 @@ def credentials(root, platforms):
             raise ValueError('Add the GitHub Actions secret ' + name)
         if platform == 'modrinth':
             project = api_json('https://api.modrinth.com/v2/project/' + settings['modrinth_id'], token)
+            if project['slug'] != settings['modrinth_id']:
+                raise ValueError('Modrinth destination identity mismatch')
+            for project_id, slug in (('XxWD5pD3', 'ae2'), ('C95ReXie', 'mystical-agriculture')):
+                dependency = api_json('https://api.modrinth.com/v2/project/' + project_id, token)
+                if (dependency['id'], dependency['slug']) != (project_id, slug):
+                    raise ValueError('Modrinth dependency identity mismatch')
             output['modrinth_id'] = project['id']
         else:
             api_json('https://minecraft.curseforge.com/api/game/versions', token, 'X-Api-Token')
@@ -109,6 +133,8 @@ def verify(root, version):
             raise ValueError('Checksum mismatch for ' + name)
     if digest(folder / 'release-notes.md') != manifest['notes_sha256']:
         raise ValueError('Release notes changed after packaging')
+    if digest(root / '.github/release.json') != manifest['config_sha256']:
+        raise ValueError('Publication configuration changed after packaging')
     sums = ''.join(checksum + '  ' + name + '\n' for name, checksum in manifest['sha256'].items())
     if (folder / 'SHA256SUMS.txt').read_text(encoding='utf-8') != sums:
         raise ValueError('Checksum file changed after packaging')
@@ -121,6 +147,9 @@ def verify(root, version):
 
 def bundle(root, version, release_type):
     version = validated_version(version, release_type)
+    changed = subprocess.run(['git', 'diff', '--quiet', 'HEAD', '--'], cwd=root, check=False)
+    if changed.returncode:
+        raise ValueError('Commit all tracked source changes before packaging source and JAR together')
     folder = root / 'build/publication'
     folder.mkdir(parents=True, exist_ok=False)
     jar_name = 'applied-agristics-' + version + '.jar'
@@ -133,7 +162,8 @@ def bundle(root, version, release_type):
     (folder / 'SHA256SUMS.txt').write_text(''.join(value + '  ' + name + '\n' for name, value in checksums.items()), encoding='utf-8')
     commit = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=root, text=True).strip()
     manifest = {'version': version, 'type': release_type, 'commit': commit, 'sha256': checksums,
-                'notes_sha256': digest(folder / 'release-notes.md')}
+                'notes_sha256': digest(folder / 'release-notes.md'),
+                'config_sha256': digest(root / '.github/release.json')}
     (folder / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8')
     verify(root, version)
 
@@ -146,6 +176,49 @@ def write_outputs(values):
                 if '\n' in str(value) or '\r' in str(value):
                     raise ValueError('Unexpected newline in an action output')
                 output.write(key + '=' + str(value) + '\n')
+
+
+def receipt(root, version, platform, project_id, published_version, url, files):
+    """Record the uploader's receipt without equating upload acceptance with moderation approval."""
+    settings = config(root)
+    hosts = {'github': 'github.com', 'curseforge': 'www.curseforge.com', 'modrinth': 'modrinth.com'}
+    parsed = urlparse(url)
+    if platform not in PLATFORMS or parsed.scheme != 'https' or parsed.hostname != hosts[platform]:
+        raise ValueError('Missing or unexpected publication receipt URL')
+    if not project_id or not published_version:
+        raise ValueError('Publication receipt is missing project or version ID')
+    jar = 'applied-agristics-' + version + '.jar'
+    expected = {jar}
+    if platform == 'github':
+        expected |= {'applied-agristics-' + version + '-source.zip', 'SHA256SUMS.txt'}
+        if project_id != 'sudabake/applied-agristics' or published_version != 'v' + version:
+            raise ValueError('GitHub publication identity mismatch')
+    if platform == 'curseforge' and str(project_id) != str(settings['curseforge_id']):
+        raise ValueError('CurseForge publication identity mismatch')
+    if {item['name'] for item in files} != expected:
+        raise ValueError('Publication receipt contains unexpected files')
+    if platform == 'modrinth':
+        remote = api_json('https://api.modrinth.com/v2/version/' + published_version,
+                          os.environ['MODRINTH_TOKEN'])
+        required = {item['project_id'] for item in remote['dependencies'] if item['dependency_type'] == 'required'}
+        expected_hash = json.loads((root / 'build/publication/manifest.json').read_text())['sha256'][jar]
+        if (remote['project_id'] != project_id or remote['version_number'] != version or
+                remote['name'] != jar or remote['game_versions'] != [settings['minecraft']] or
+                remote['loaders'] != [settings['loader']] or required != {'XxWD5pD3', 'C95ReXie'} or
+                len(remote['files']) != 1 or remote['files'][0]['filename'] != jar or
+                remote['files'][0]['hashes']['sha256'] != expected_hash):
+            raise ValueError('Uploaded Modrinth metadata or file hash does not match the publication')
+    result = {'platform': platform, 'project': project_id, 'version_id': published_version,
+              'url': url, 'files': files, 'version': version, 'status': 'upload accepted',
+              'expected_dependencies': settings['dependencies'].get(platform, '')}
+    target = root / 'build/publication' / (platform + '-receipt.json')
+    target.write_text(json.dumps(result, indent=2) + '\n', encoding='utf-8')
+    summary = os.environ.get('GITHUB_STEP_SUMMARY')
+    if summary:
+        with open(summary, 'a', encoding='utf-8') as output:
+            output.write('### ' + platform + '\n\nUpload accepted. Platform review and public visibility are separate.\n\n' +
+                         url + '\n\nFile/version ID `' + str(published_version) + '`\n\n')
+    return result
 
 
 def main():
@@ -166,6 +239,11 @@ def main():
     elif command == 'verify':
         verify(ROOT, version)
         print('Publication files verified')
+    elif command == 'receipt':
+        receipt(ROOT, version, os.environ['PUBLICATION_PLATFORM'], os.environ['PUBLICATION_PROJECT'],
+                os.environ['PUBLICATION_ID'], os.environ['PUBLICATION_URL'],
+                json.loads(os.environ['PUBLICATION_FILES']))
+        print('Uploader receipt recorded; public-page verification remains required')
     else:
         raise ValueError('Unknown release command')
 

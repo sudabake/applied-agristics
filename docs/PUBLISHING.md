@@ -11,9 +11,9 @@
 | CURSEFORGE_TOKEN | CurseForge 作者上传 API token |
 | MODRINTH_TOKEN | 拥有该项目读取与创建版本权限的 Modrinth token |
 
-GitHub 发布使用运行时自动提供的 GITHUB_TOKEN。令牌只填在 Secrets 页面。上传前会检查所选平台的令牌，Modrinth 项目通过令牌解析为真实项目 ID。若项目还没有公开，检查取决于令牌能否访问它。
+GitHub 发布使用运行时自动提供的 GITHUB_TOKEN。令牌只填在 Secrets 页面。CurseForge 的预检查确认令牌能读取游戏版本，目标项目的上传权限由实际上传接口检查。Modrinth 项目通过令牌解析为真实项目 ID，并检查两个前置的身份。若项目还没有公开，检查取决于令牌能否访问它。
 
-令牌入口为 https://authors.curseforge.com/account/api-tokens 和 https://modrinth.com/settings/pats 。GitHub 密钥页面为 https://github.com/sudabake/applied-agristics/settings/secrets/actions 。
+令牌入口为 https://authors.curseforge.com/#/settings/api-tokens 和 https://modrinth.com/settings/pats 。GitHub 密钥页面为 https://github.com/sudabake/applied-agristics/settings/secrets/actions 。
 
 ## 每次发布
 
@@ -23,7 +23,7 @@ GitHub 发布使用运行时自动提供的 GITHUB_TOKEN。令牌只填在 Secre
 4. 首次保留“仅测试并生成下载包”的勾选，成功后可从运行的 Artifacts 下载检查。
 5. 正式上传时取消该勾选，再运行一次。
 
-稳定版使用 1.3.1 与 release。测试版使用 1.3.2-beta.1 与 beta，或 1.3.2-alpha.1 与 alpha。版本号核心必须与所选源码的 mod_version 一致，例如源码 1.3.1-dev 可以构建 1.3.1。更新日志中英文写在同一个文件，三个平台共用。
+稳定版使用 1.3.1 与 release。测试版使用 1.3.2-beta.1 与 beta，或 1.3.2-alpha.1 与 alpha。填写的完整版本号必须与源码 mod_version 完全一致。1.3.1-dev 或 1.3.1-beta.1 不能直接发布成 1.3.1；先整理并验证正式源码。README 当前版本与更新日志第一行也必须匹配。更新日志中英文写在同一个文件，三个平台共用。
 
 只配置工作流时，公开分支仍可能保留上一版源码。要发布本地新功能，先完成源码同步。工作流会拒绝给旧源码套上下一版核心版本号。
 
@@ -39,6 +39,14 @@ GitHub 发布使用运行时自动提供的 GITHUB_TOKEN。令牌只填在 Secre
 
 ## 部分平台失败
 
-三个平台分开运行，结果可分别查看。先检查失败平台是否实际收到文件，再使用 Re-run failed jobs 重跑失败作业，成功的平台继续保留结果。完整重新发起同一版本会被已有 GitHub 标签检查拒绝。
+三个平台分开运行，结果可分别查看。先检查失败平台是否实际收到文件，再使用 Re-run failed jobs 重跑失败作业，成功的平台继续保留结果。已有 GitHub 标签会阻止完整重新创建同一发行版。仅重跑失败上传前，必须先确认该平台没有收到文件；若接口已接收但后续凭据记录失败，应直接修复已有版本。工作流关闭自动重试，以免超时后重复创建文件。
 
 上传工具为 mc-publish 3.3.2，固定到已核对的提交。CurseForge 文件上传成功后仍遵循平台审核流程。自动化仅验证上传前准备与接口返回，实际下载页仍需按运行结果核对。
+
+## 发布关系与凭据
+
+CurseForge 使用已核对的项目标识 applied-energistics-2 和 mystical-agriculture，官方数字 ID 分别为 223794 与 246640。Modrinth 分别为 XxWD5pD3 与 C95ReXie。配置与经过核对的固定映射不符时停止发布。采用 CurseForge 项目标识还避免上传工具查询数字 ID 失败时静默漏掉前置。
+
+每个平台的版本显示名称与实际文件名一致，例如 applied-agristics-1.3.1.jar。上传返回的文件列表、文件／版本 ID 和链接会写入运行摘要及 receipt 附件。它记录接口接收结果，审核状态和页面实际依赖仍需核对。
+
+工具同时校验源码提交、JAR 内部版本、附件摘要、更新日志和发布配置。已经发布的页面不会因 main 更新自动改变，前置、显示名等修正需要编辑已有版本。

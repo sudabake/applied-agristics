@@ -107,7 +107,7 @@ jobs:
           RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
           RELEASE_TYPE: ${{ needs.prepare.outputs.release_type }}
         run: python3 tools/release.py bundle
-      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: matrix.dependencies == 'latest'
         with:
           name: release-${{ needs.prepare.outputs.version }}
@@ -129,7 +129,7 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           persist-credentials: false
-      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: release-${{ needs.prepare.outputs.version }}
           path: build/publication/
@@ -138,6 +138,7 @@ jobs:
           RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
         run: python3 tools/release.py verify
       - name: Upload to ${{ matrix.platform }}
+        id: upload
         uses: Kira-NT/mc-publish@c23376546a97f5ba7984e94445da359459b14419 # v3.3.2
         with:
           files: build/publication/applied-agristics-${{ needs.prepare.outputs.version }}.jar
@@ -165,3 +166,20 @@ jobs:
           modrinth-id: ${{ matrix.platform == 'modrinth' && needs.prepare.outputs.modrinth_id || '' }}
           modrinth-token: ${{ matrix.platform == 'modrinth' && secrets.MODRINTH_TOKEN || '' }}
           modrinth-dependencies: ${{ fromJSON(needs.prepare.outputs.dependencies).modrinth }}
+      - name: Record upload receipt
+        env:
+          RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
+          PUBLICATION_PLATFORM: ${{ matrix.platform }}
+          PUBLICATION_PROJECT: ${{ steps.upload.outputs[format('{0}-id', matrix.platform)] || steps.upload.outputs.github-repo }}
+          PUBLICATION_ID: ${{ steps.upload.outputs[format('{0}-version', matrix.platform)] || steps.upload.outputs.github-tag }}
+          PUBLICATION_URL: ${{ steps.upload.outputs[format('{0}-url', matrix.platform)] }}
+          PUBLICATION_FILES: ${{ steps.upload.outputs[format('{0}-files', matrix.platform)] }}
+          MODRINTH_TOKEN: ${{ matrix.platform == 'modrinth' && secrets.MODRINTH_TOKEN || '' }}
+        run: python3 tools/release.py receipt
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        if: always()
+        with:
+          name: receipt-${{ needs.prepare.outputs.version }}-${{ matrix.platform }}
+          path: build/publication/*-receipt.json
+          if-no-files-found: warn
+          retention-days: 90

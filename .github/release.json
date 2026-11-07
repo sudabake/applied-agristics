@@ -5,7 +5,7 @@
   "curseforge_id": "1772431",
   "modrinth_id": "applied-agristics",
   "dependencies": {
-    "curseforge": "223794(required)\n246640(required)",
+    "curseforge": "applied-energistics-2(required)\nmystical-agriculture(required)",
     "modrinth": "XxWD5pD3(required)\nC95ReXie(required)"
   }
 }
