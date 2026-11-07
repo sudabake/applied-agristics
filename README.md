@@ -21,6 +21,8 @@ Minecraft **1.21.1 / NeoForge / Java 21**，AE2 × Mystical Agriculture 农业�
 
 ## 构建
 
+三个平台的一键发布与首次令牌配置见 [发布说明](docs/PUBLISHING.md)。
+
 安装 JDK 21，在项目根目录运行 `gradlew.bat build`（Windows）或 `bash gradlew build`。成品位于 `build/libs/`。运行 `gradlew.bat runGameTestServer` 执行游戏测试。
 
 开发依赖为 NeoForge 21.1.248、AE2 19.2.18、Mystical Agriculture 8.0.28、GuideME 21.1.19 和 Cucumber 8.0.16。此前验证过最低核心组合 NeoForge 21.1.241、AE2 19.2.17、Mystical Agriculture 8.0.27、GuideME 21.1.17 和 Cucumber 8.0.16，完整整合包兼容范围见验证记录。
