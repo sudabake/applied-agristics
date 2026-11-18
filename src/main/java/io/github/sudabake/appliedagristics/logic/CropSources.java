@@ -18,8 +18,11 @@ import java.util.*;
 @EventBusSubscriber(modid=Agristics.ID)
 public final class CropSources {
     private static final Map<RecipeManager,Map<AEItemKey,Optional<CropSource>>> CACHE=new WeakHashMap<>();
-    public static void invalidate() { PlantingCatalog.invalidate(); synchronized(CACHE) { CACHE.clear(); } NativeSeedYield.invalidate(); Cultivations.invalidate(); }
-    @SubscribeEvent public static void reload(net.neoforged.neoforge.event.OnDatapackSyncEvent event) { invalidate(); }
+    public static void invalidate() { PlantingCatalog.invalidate(); ImportedPlanting.invalidate(); synchronized(CACHE) { CACHE.clear(); } NativeSeedYield.invalidate(); Cultivations.invalidate(); }
+    @SubscribeEvent(priority=net.neoforged.bus.api.EventPriority.HIGH) public static void reload(net.neoforged.neoforge.event.OnDatapackSyncEvent event) {
+        invalidate();
+        if (event.getPlayer() == null) HarvestEstimateCache.invalidate();
+    }
     @SubscribeEvent public static void stop(net.neoforged.neoforge.event.server.ServerStoppedEvent event) { invalidate(); }
     public static CropSource find(Level level,ItemStack seed) {
         if (level==null || seed.isEmpty()) return null;
@@ -40,11 +43,23 @@ public final class CropSources {
         if (BioData.seed(seed) || Crops.seed(seed)!=null) return null;
         // Built-in tree tables define the shared tree balance even when a broad provider is present.
         if (nativeDefault!=null && nativeDefault.recipe().lootTable().isPresent()) return nativeDefault;
+        var tree=NativeTrees.find(level,seed);
+        if(tree!=null) return tree;
         var provided=net.neoforged.fml.ModList.get().isLoaded("botanypots")
                 ? io.github.sudabake.appliedagristics.compat.botany.BotanyCrops.find(level,seed) : null;
-        return provided==null?nativeDefault:provided;
+        if(provided!=null) return provided;
+        if(nativeDefault!=null) return nativeDefault;
+        // Standard native crops keep their real block loot. Other machine recipes fill missing plants.
+        if(net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(seed.getItem()).getNamespace().equals("minecraft")
+                && Harvests.mature(seed)!=null) return null;
+        return ImportedPlanting.find(level,seed);
     }
-    public static BlockState display(Level level,ItemStack seed) { var source=find(level,seed); return source==null ? Harvests.mature(seed) : source.display(); }
+    public static BlockState display(Level level,ItemStack seed) {
+        var source=find(level,seed);
+        if(source!=null) return source.display();
+        if(seed.getItem() instanceof BlockItem item && item.getBlock() instanceof SaplingBlock) return item.getBlock().defaultBlockState();
+        return Harvests.mature(seed);
+    }
     public static boolean soil(Level level,ItemStack seed,ItemStack soil) { var source=find(level,seed); return source==null ? Crops.farmland(soil) : source.acceptsSoil(soil); }
     public static int ticks(Level level,ItemStack seed,int fallback) { var source=find(level,seed); return source==null ? fallback : source.ticks(); }
     public static int ticks(Level level,BlockPos pos,ItemStack seed,ItemStack soil,int fallback) { var source=find(level,seed); return source==null ? fallback : source.ticks(level,pos,soil); }
@@ -84,6 +99,11 @@ public final class CropSources {
         }
         @Override public int maximumBatch() { return fixedOutputs() ? Integer.MAX_VALUE : 64; }
         @Override public boolean fixedOutputs() { return !recipe.useLoot() && recipe.lootTable().isEmpty(); }
+        @Override public net.minecraft.resources.ResourceKey<net.minecraft.world.level.storage.loot.LootTable> cachedLootTable() {
+            if (recipe.lootTable().isPresent()) return net.minecraft.resources.ResourceKey.create(
+                    net.minecraft.core.registries.Registries.LOOT_TABLE, recipe.lootTable().get());
+            return recipe.useLoot() ? display().getBlock().getLootTable() : null;
+        }
     }
     private CropSources() {}
 }

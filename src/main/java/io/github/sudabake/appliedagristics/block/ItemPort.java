@@ -75,7 +75,10 @@ public final class ItemPort extends GridMachine implements SeedBank, IStoragePro
             int offered=(int)Math.min(left,key.getMaxStackSize());
             var remainder=items.insertItem(i,key.toStack(offered),simulate); left-=offered-remainder.getCount();
         }
-        if (!simulate && !input && requested>left) storedItemsChanged(key,requested-left);
+        if (!simulate && !input && requested>left) {
+            storedItemsChanged(key,requested-left);
+            exportToFront();
+        }
         return requested-left;
     }
     @Override protected int extractable(int slot,int requested) {
@@ -93,7 +96,7 @@ public final class ItemPort extends GridMachine implements SeedBank, IStoragePro
         for (int i=0;i<items.getSlots() && left>0;i++) if (key.matches(items.getStackInSlot(i))) left-=items.extractItem(i,(int)Math.min(left,Integer.MAX_VALUE),simulate).getCount();
         return requested-left;
     }
-    public void toggleAutoOutput() { if (!input) { autoOutput=!autoOutput; setChanged(); } }
+    public void toggleAutoOutput() { if (!input) { autoOutput=!autoOutput; setChanged(); exportToFront(); } }
     public Direction outputFace() { return PlanterOrientation.front(getBlockState()); }
     public IItemHandler automation(Direction side) {
         return new IItemHandler() {
@@ -103,26 +106,32 @@ public final class ItemPort extends GridMachine implements SeedBank, IStoragePro
             @Override public boolean isItemValid(int slot,ItemStack stack) { return input && valid(slot,stack); }
             @Override public ItemStack insertItem(int slot,ItemStack stack,boolean simulate) { return isItemValid(slot,stack) ? items.insertItem(slot,stack,simulate) : stack; }
             @Override public ItemStack extractItem(int slot,int amount,boolean simulate) {
-                return input || side==null || side==outputFace() ? items.extractItem(slot,amount,simulate) : ItemStack.EMPTY;
+                return items.extractItem(slot,amount,simulate);
             }
         };
     }
     @Override public void step() {
         if (structure==null || !structure.formed()) { status="unformed"; return; }
         status=getMainNode().isActive() ? "online" : "offline";
-        if (input || !autoOutput || !getMainNode().isActive()) return;
+        exportToFront();
+    }
+    private void exportToFront() {
+        if (input || !autoOutput || structure==null || !structure.formed() || !getMainNode().isActive()) return;
         var side=outputFace(); var pos=worldPosition.relative(side);
         if (!level.hasChunkAt(pos) || PlanterStructure.ownerAt(level,pos)==structure) return;
         var adjacent=level.getCapability(Capabilities.ItemHandler.BLOCK,pos,side.getOpposite());
         if (adjacent!=null) push(adjacent);
     }
     private void push(IItemHandler target) {
-        int budget=64;
-        for (int i=0;i<items.getSlots() && budget>0;i++) {
-            var offered=items.extractItem(i,budget,true);
-            for (int j=0;j<target.getSlots() && !offered.isEmpty();j++) {
-                var rest=target.insertItem(j,offered.copy(),false); int accepted=offered.getCount()-rest.getCount();
-                if (accepted>0) { items.extractItem(i,accepted,false); budget-=accepted; } offered=rest;
+        for (int i=0;i<items.getSlots();i++) {
+            var offered=items.getStackInSlot(i);
+            if (offered.isEmpty()) continue;
+            var key=AEItemKey.of(offered);
+            var rest=net.neoforged.neoforge.items.ItemHandlerHelper.insertItemStacked(target,offered.copy(),false);
+            int accepted=offered.getCount()-rest.getCount();
+            if (accepted>0) {
+                items.extractItem(i,accepted,false);
+                storedItemsChanged(key,-accepted);
             }
         }
     }

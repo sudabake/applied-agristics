@@ -11,7 +11,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.*;
 import net.minecraft.world.level.block.StemBlock;
 
-/** Read-only possible-output catalog. It never grows blocks or performs a random harvest. */
+/** Read-only possible-output catalog. Identifies outputs without placing plants in the world. */
 public final class PlantingCatalog {
   public record Entry(ItemStack seed, List<ItemStack> outputs) {}
 
@@ -64,7 +64,8 @@ public final class PlantingCatalog {
     for (var item : BuiltInRegistries.ITEM) {
       if (item == Agristics.BIO_SEED.get()) continue;
       var stack = new ItemStack(item);
-      if (Harvests.seed(stack)) candidates.put(AEItemKey.of(stack), stack);
+      if (Harvests.seed(stack) || item instanceof BlockItem block && block.getBlock() instanceof net.minecraft.world.level.block.SaplingBlock)
+        candidates.put(AEItemKey.of(stack), stack);
     }
     for (var holder : level.getRecipeManager().getAllRecipesFor(Agristics.PLANTING_TYPE.get()))
       for (var stack : holder.value().seed().getItems())
@@ -72,6 +73,7 @@ public final class PlantingCatalog {
     if (net.neoforged.fml.ModList.get().isLoaded("botanypots"))
       for (var stack : io.github.sudabake.appliedagristics.compat.botany.BotanyCrops.seeds(level))
         candidates.put(AEItemKey.of(stack),stack.copyWithCount(1));
+    for(var stack:ImportedPlanting.seeds(level)) candidates.put(AEItemKey.of(stack),stack.copyWithCount(1));
     var entries = new ListTag();
     for (var seed : candidates.values()) {
       var source = CropSources.find(level, seed);

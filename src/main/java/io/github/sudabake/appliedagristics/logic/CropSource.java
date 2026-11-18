@@ -21,4 +21,6 @@ public interface CropSource {
     default List<ItemStack> harvestNetwork(ServerLevel level,BlockPos pos) { return harvest(level,pos,networkSoil()); }
     default int maximumBatch() { return 64; }
     default boolean fixedOutputs() { return false; }
+    /** Explicit loot routes can share learned yields; custom providers retain their callbacks. */
+    default net.minecraft.resources.ResourceKey<net.minecraft.world.level.storage.loot.LootTable> cachedLootTable() { return null; }
 }

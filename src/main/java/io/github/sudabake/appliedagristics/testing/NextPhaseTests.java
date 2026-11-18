@@ -155,7 +155,7 @@ public final class NextPhaseTests {
         h.getLevel().setBlockAndUpdate(pos,PlanterOrientation.withFacing(Agristics.OUTPUT_PORT.get().defaultBlockState(),Direction.UP));f.controller().structure.refresh();
         var port=(ItemPort)h.getLevel().getBlockEntity(pos);port.items.setStackInSlot(0,new ItemStack(Items.WHEAT,4));
         h.assertTrue(port.outputFace()==Direction.UP && PlanterOrientation.front(port.getBlockState())==Direction.UP,"Top port exposes the same side in its model and I/O");
-        h.assertTrue(port.automation(Direction.UP).extractItem(0,1,true).getCount()==1 && port.automation(Direction.DOWN).extractItem(0,1,true).isEmpty(),"Only the real outward face allows output extraction");h.succeed();
+        h.assertTrue(port.automation(Direction.UP).extractItem(0,1,true).getCount()==1 && port.automation(Direction.DOWN).extractItem(0,1,true).getCount()==1,"Pipes can extract from all faces while the front controls automatic pushing");h.succeed();
     }
 
     @GameTest(template="empty",templateNamespace=Agristics.ID,timeoutTicks=240)

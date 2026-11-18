@@ -71,6 +71,9 @@ def install():
 
     guide = ROOT / 'assets/appliedagristics/ae2guide/index.md'
     text = guide.read_text(encoding='utf-8')
+    compatibility = '种植先使用本 Mod 内置规则和整合包 planting 覆盖。普通树苗还会读取原生树木定义，包括神秘学异界树苗和新生魔艺至高树苗。可选植物盆、沉浸工程园艺玻璃罩、MekMM 种植站的有效配方可补充其他作物，JEI 共用同一份种植目录。工业先锋水培床使用原生生长与收割逻辑，其常规作物和树木由原生成熟掉落及树木定义覆盖。'
+    if compatibility not in text:
+        text += '\n' + compatibility + '\n'
     heading = '## 原版植物与端口朝向'
     if heading not in text:
         text += ('\n' + heading + '\n\n'

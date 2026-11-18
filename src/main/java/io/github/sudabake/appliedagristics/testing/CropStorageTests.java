@@ -19,6 +19,36 @@ import java.util.*;
 @PrefixGameTestTemplate(false)
 public final class CropStorageTests {
     @GameTest(template="empty",templateNamespace=Agristics.ID,timeoutTicks=240)
+    public static void cachedOutputOrderTracksPriorityChangesAndLoad(GameTestHelper h) {
+        var fixture=PlanterFixture.install(h.getLevel(),h.absolutePos(new BlockPos(2,1,1)),true);
+        var secondPos=fixture.controller().getBlockPos().west().above(2);
+        h.getLevel().setBlockAndUpdate(secondPos,Agristics.ESSENCE_VAULT.get().defaultBlockState());
+        fixture.controller().structure.refresh();
+        var second=(EssenceVault)h.getLevel().getBlockEntity(secondPos);
+        h.runAtTickTime(100,()->{
+            var key=AEItemKey.of(new ItemStack(Items.WHEAT));
+            var output=fixture.controller().structure.outputs();
+            var source=IActionSource.ofMachine(fixture.controller());
+            second.setPriority(5);
+            h.assertTrue(output.insert(key,6,Actionable.SIMULATE,source)==6,"Simulation reports capacity without storing items");
+            output.insert(key,5,Actionable.MODULATE,source);
+            fixture.vault().setPriority(10);
+            output.insert(key,3,Actionable.MODULATE,source);
+            var saved=fixture.vault().saveWithFullMetadata(h.getLevel().registryAccess());
+            saved.putInt("priority",-1);
+            fixture.vault().loadWithComponents(saved,h.getLevel().registryAccess());
+            output.insert(key,7,Actionable.MODULATE,source);
+            var firstCounts=new appeng.api.stacks.KeyCounter();
+            var secondCounts=new appeng.api.stacks.KeyCounter();
+            fixture.vault().mountInventories((inventory,priority)->inventory.getAvailableStacks(firstCounts));
+            second.mountInventories((inventory,priority)->inventory.getAvailableStacks(secondCounts));
+            h.assertTrue(firstCounts.get(key)==3 && secondCounts.get(key)==12,
+                    "Cached routing follows priority edits and loaded priorities without changing inventories during simulation");
+            h.succeed();
+        });
+    }
+
+    @GameTest(template="empty",templateNamespace=Agristics.ID,timeoutTicks=240)
     public static void ordinarySeedsWithOutput(GameTestHelper h) { routing(h,false,false); }
     @GameTest(template="empty",templateNamespace=Agristics.ID,timeoutTicks=240)
     public static void ordinarySeedsWithCropStorage(GameTestHelper h) { routing(h,false,true); }

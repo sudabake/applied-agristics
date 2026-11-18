@@ -11,18 +11,18 @@ import net.minecraft.world.level.block.state.BlockState;
 /** The only physical AE node of a formed planter. */
 public final class NetworkAccess extends GridMachine implements IStorageProvider {
     private PlanterStructure structure;
-    private appeng.api.stacks.KeyCounter productionInventory;
+    private java.util.Map<appeng.api.stacks.AEKey,Long> productionInventory;
     private boolean storageDirty;
 
     /** Server-thread production scope. Reflect local mutations before the next crop's target check. */
-    public void beginProduction(appeng.api.stacks.KeyCounter inventory) {
+    public void beginProduction(java.util.Map<appeng.api.stacks.AEKey,Long> inventory) {
         if (productionInventory!=null) throw new IllegalStateException("Production batch already active");
         productionInventory=inventory;
         storageDirty=false;
     }
     void storageChanged(appeng.api.stacks.AEKey key,long delta) {
         if (productionInventory!=null) {
-            if (key!=null && delta!=0) productionInventory.add(key,delta);
+            if (key!=null && delta!=0) productionInventory.merge(key,delta,com.google.common.math.LongMath::saturatedAdd);
             storageDirty=true;
         } else {
             var grid=getMainNode().getGrid();

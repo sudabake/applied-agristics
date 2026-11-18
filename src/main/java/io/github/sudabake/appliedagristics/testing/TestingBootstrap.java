@@ -11,6 +11,14 @@ public final class TestingBootstrap {
     @SubscribeEvent public static void register(RegisterGameTestsEvent event) {
         if(!Boolean.getBoolean("appliedagristics.tests")) return;
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(TestingBootstrap::releaseTestStructures);
+        if (Boolean.getBoolean("appliedagristics.storageRepro")) {
+            event.register(OutputAndStorageTests.class);
+            return;
+        }
+        if (System.getProperty("appliedagristics.benchmark") != null) {
+            event.register(PlanterPerformanceTest.class);
+            return;
+        }
         event.register(AgristicsGameTests.class);event.register(BiologyGameTests.class);
         event.register(UniversalSeedGameTests.class);event.register(MultiblockGameTests.class);
         event.register(RemainingWorkGameTests.class);event.register(RevisionGameTests.class);
@@ -27,6 +35,9 @@ public final class TestingBootstrap {
         event.register(UIUnificationTests.class);
         event.register(JdteBatchTests.class);
         event.register(CultivationRevisionTests.class);
+        event.register(HarvestEstimateTests.class);
+        event.register(OutputAndStorageTests.class);
+        event.register(PlantingCompatibilityTests.class);
     }
 
     private static void releaseTestStructures(net.neoforged.neoforge.event.server.ServerStoppingEvent event) {

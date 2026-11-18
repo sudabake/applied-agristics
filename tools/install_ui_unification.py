@@ -78,6 +78,9 @@ def install():
     extra = '所有 AE 联网机器自身不占频道。ME 加工机六面均可输入，输出方向页只设置各面是否启用输出；启用输出的面仍可输入。'
     if extra not in text:
         text += '\n' + extra + '\n'
+    output_rules = '输出口只接收阵列内部收获，外部仅可提取。开启自动输出后，收获物到达时立即推送有图案一面的容器，其余面可用管道抽取。ME 加工订单的结果返还网络，手动自动输出只推送配置面的相邻容器。'
+    if output_rules not in text:
+        text += '\n' + output_rules + '\n'
     path.write_text(text, encoding='utf-8')
 
 

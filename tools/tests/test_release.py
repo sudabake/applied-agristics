@@ -33,6 +33,13 @@ class ReleaseTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'Dependency IDs'):
                 release.prepare(root, '1.3.1', 'release', 'all', True)
 
+    def test_github_and_curseforge_selection_excludes_modrinth(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            self.fixture(root)
+            result = release.prepare(root, '1.3.1', 'release', 'github-curseforge', True)
+            self.assertEqual(json.loads(result['platforms']), ['github', 'curseforge'])
+
     def test_exact_source_notes_and_readme_versions_are_required(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)

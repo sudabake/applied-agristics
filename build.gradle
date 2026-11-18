@@ -25,6 +25,10 @@ neoForge {
             type = 'gameTestServer'
             systemProperty 'neoforge.enabledGameTestNamespaces', 'appliedagristics'
             systemProperty 'appliedagristics.tests', 'true'
+            if (project.hasProperty('storageRepro')) systemProperty 'appliedagristics.storageRepro', 'true'
+            if (project.hasProperty('planterBenchmark')) {
+                systemProperty 'appliedagristics.benchmark', project.property('planterBenchmark')
+            }
         }
     }
     mods { appliedagristics { sourceSet(sourceSets.main) } }
@@ -46,6 +50,9 @@ dependencies {
         else runtimeOnly "maven.modrinth:prickle:21.1.11"
     }
     if (project.hasProperty('botanyTreesJar')) runtimeOnly files(project.property('botanyTreesJar'))
+    if (project.hasProperty('performanceReferenceJar')) runtimeOnly files(project.property('performanceReferenceJar'))
+    if (project.hasProperty('compatReferenceJars')) runtimeOnly files(project.property('compatReferenceJars').split(';'))
+    if (project.hasProperty('compatReferenceJarsFile')) runtimeOnly files(file(project.property('compatReferenceJarsFile')).readLines('UTF-8').findAll { !it.isBlank() })
     if (project.hasProperty('jeiTests')) {
         if (project.hasProperty('jeiJar')) runtimeOnly files(project.property('jeiJar'))
         else runtimeOnly "mezz.jei:jei-1.21.1-neoforge:${jei_version}"

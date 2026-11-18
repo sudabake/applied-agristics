@@ -147,17 +147,21 @@ public abstract class AEProcessingMachine extends GridMachine
     var output = items.getStackInSlot(outputSlot);
     if (output.isEmpty()) return;
     var grid = getMainNode().getGrid();
-    if (grid != null && getMainNode().isActive()) {
-      long accepted =
-          grid.getStorageService()
-              .getInventory()
-              .insert(
-                  AEItemKey.of(output),
-                  output.getCount(),
-                  Actionable.MODULATE,
-                  IActionSource.ofMachine(this));
-      items.extractItem(outputSlot, (int) accepted, false);
+    if (craftingDelivery) {
+      if (grid != null && getMainNode().isActive()) {
+        long accepted =
+            grid.getStorageService()
+                .getInventory()
+                .insert(
+                    AEItemKey.of(output),
+                    output.getCount(),
+                    Actionable.MODULATE,
+                    IActionSource.ofMachine(this));
+        items.extractItem(outputSlot, (int) accepted, false);
+      }
+      return;
     }
+    if (!autoOutput) return;
     for (var side : Direction.values()) {
       if (sides[side.ordinal()] != 2 && sides[side.ordinal()] != 3) continue;
       var pos = worldPosition.relative(side);

@@ -81,7 +81,7 @@ def install():
     path=A/'ae2guide/index.md';text=path.read_text(encoding='utf-8')
     text=text.replace('  - appliedagristics:cell_cultivator\n','  - appliedagristics:me_bio_cultivator\n').replace('  - appliedagristics:biological_altar\n','')
     text=re.sub(r'基础种植机和细胞培养器可在前期制作[^\n]*','基础种植机可在前期制作。ME 生物培养器连接 AE 网络，消耗已采样棉签、营养试剂和空白生物种子，直接产出对应物种的种子。基础加工 10 秒，可装四张独立 AE 加速卡。',text)
-    text=re.sub(r'生物棉签右键生物采样[^\n]*','生物棉签右键生物采样，不伤害生物。营养试剂由水桶、骨粉和下级精华合成，合成返还空桶。ME 生物培养器的三个输入各消耗一份；机器使用 AE 电力。可从 JEI 将对应配方填入 AE 加工样板，产物自动输出到网络或配置的相邻容器。',text)
+    text=re.sub(r'生物棉签右键生物采样[^\n]*','生物棉签右键生物采样，不伤害生物。营养试剂由水桶、骨粉和下级精华合成，合成返还空桶。ME 生物培养器的三个输入各消耗一份，机器使用 AE 电力。可从 JEI 将对应配方填入 AE 加工样板，订单产物返还 ME 网络。手动供料的自动输出送入方向页启用面的相邻容器。',text)
     extra='ME 种子仓的自动收容开关控制每秒从网络主动拉取已有种子。控制器的“新种默认启用”开关控制首次进入本阵列的物种，手动暂停的已有任务继续保持设置。两项默认关闭，可按需开启，实现生物采样到种植的自动衔接。'
     if 'ME 种子仓的自动收容开关' not in text:text+='\n'+extra+'\n'
     path.write_text(text,encoding='utf-8')

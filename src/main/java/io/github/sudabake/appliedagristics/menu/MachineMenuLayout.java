@@ -17,9 +17,9 @@ record MachineMenuLayout(List<MachineSlot> slots, int inventoryX, int inventoryY
       slots.add(new MachineSlot(3,116,40,true));
       for(int i=4;i<8;i++) slots.add(new MachineSlot(i,179,5+(i-4)*18,false));
       inventoryY=100;
-    } else if (machine instanceof ItemPort) {
+    } else if (machine instanceof ItemPort port) {
       for (int i = 0; i < 16; i++)
-        slots.add(new MachineSlot(i, 52 + i % 4 * 18, 24 + i / 4 * 18, false));
+        slots.add(new MachineSlot(i, 52 + i % 4 * 18, 24 + i / 4 * 18, !port.isInput()));
       inventoryY = 116;
     } else if (machine instanceof MEInfusionAltar) {
       slots.add(new MachineSlot(0, 48, 40, false));

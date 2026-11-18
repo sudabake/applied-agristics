@@ -22,6 +22,7 @@ public final class PlanterStructure {
     private List<SeedStorage> seeds = List.of();
     private List<ItemPort> ports = List.of();
     private List<EssenceVault> vaults = List.of();
+    private List<EssenceVault> outputVaults = List.of();
     private NetworkAccess access;
     private boolean dirty = true, checking;
     private PlanterLayout.Result result = new PlanterLayout.Result(false, "unformed", 0, 0, 0);
@@ -45,7 +46,7 @@ public final class PlanterStructure {
         @Override public long insert(appeng.api.stacks.AEKey key,long amount,appeng.api.config.Actionable mode,appeng.api.networking.security.IActionSource source) {
             if (!formed() || !(key instanceof appeng.api.stacks.AEItemKey item) || amount<=0) return 0;
             boolean simulate=mode==appeng.api.config.Actionable.SIMULATE; long left=amount;
-            for (var vault:vaults.stream().sorted(Comparator.comparingInt(EssenceVault::getPriority).reversed()).toList()) { left-=vault.storeProduced(item,left,simulate); if (left==0) break; }
+            for (var vault:outputVaults) { left-=vault.storeProduced(item,left,simulate); if (left==0) break; }
             for (var port:ports) if (!port.isInput() && left>0) left-=port.insertLocal(item,left,simulate);
             return amount-left;
         }
@@ -53,6 +54,9 @@ public final class PlanterStructure {
         @Override public void getAvailableStacks(appeng.api.stacks.KeyCounter out) { }
     };
     public appeng.api.storage.MEStorage outputs() { return outputs; }
+    public void refreshOutputOrder() {
+        outputVaults = vaults.stream().sorted(Comparator.comparingInt(EssenceVault::getPriority).reversed()).toList();
+    }
     public NetworkAccess access() { refresh(); return access; }
 
     private static Set<PlanterStructure> structures(Level level) { return LOADED.computeIfAbsent(level, l -> new LinkedHashSet<>()); }
@@ -126,7 +130,7 @@ public final class PlanterStructure {
         if (previous != null) previous.unbind(this);
         seeds.forEach(seed -> seed.unbind(this)); seeds = List.of();
         ports.forEach(port -> port.unbind(this)); ports=List.of();
-        vaults.forEach(vault -> vault.unbind(this)); vaults=List.of();
+        vaults.forEach(vault -> vault.unbind(this)); vaults=List.of(); outputVaults=List.of();
         var level = controller.getLevel();
         if (level != null) for (var pos : positions) {
             if (!level.hasChunkAt(pos)) continue;
@@ -179,6 +183,7 @@ public final class PlanterStructure {
             if (result.formed() && !sameBindings) clearFormation();
             result=validated;
             positions=List.copyOf(members); seeds=List.copyOf(foundSeeds); ports=List.copyOf(foundPorts); vaults=List.copyOf(foundVaults); access=foundAccess;
+            refreshOutputOrder();
             if (!sameBindings) { seeds.forEach(seed -> seed.bind(this)); ports.forEach(port -> port.bind(this)); vaults.forEach(vault -> vault.bind(this)); access.bind(this); }
             for (int cell=0; cell<positions.size(); cell++) {
                 var pos=positions.get(cell);

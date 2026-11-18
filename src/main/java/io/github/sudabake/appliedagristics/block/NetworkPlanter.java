@@ -155,13 +155,18 @@ public final class NetworkPlanter extends GridMachine {
         observeNewSeeds();
         var enabled = tasks.entrySet().stream().filter(e -> e.getValue().enabled || !e.getValue().pending.isEmpty()).toList();
         if (enabled.isEmpty()) { status="idle"; return; }
-        var available=grid.getStorageService().getInventory().getAvailableStacks();
+        // Reservation deltas may be negative. Keep them out of AE counters, whose
+        // semantics can be extended to represent infinite external storage.
+        var available = new HashMap<appeng.api.stacks.AEKey,Long>();
+        if (enabled.stream().anyMatch(entry -> entry.getValue().enabled && entry.getValue().target >= 0))
+            for (var entry:grid.getStorageService().getInventory().getAvailableStacks())
+                available.put(entry.getKey(),entry.getLongValue());
         var access=structure.access();
         access.beginProduction(available);
         try { produce(grid,available,enabled); }
         finally { access.endProduction(); }
     }
-    private void produce(appeng.api.networking.IGrid grid,appeng.api.stacks.KeyCounter available,
+    private void produce(appeng.api.networking.IGrid grid,Map<appeng.api.stacks.AEKey,Long> available,
             List<Map.Entry<ResourceLocation,Task>> enabled) {
         var source=IActionSource.ofMachine(this);
         var destination=structure.outputs();
@@ -186,7 +191,7 @@ public final class NetworkPlanter extends GridMachine {
             var seed=task.allocations.keySet().iterator().next().key.toStack(1);
             int duration=CropSources.ticks(level,worldPosition,seed,Harvests.networkSoil(level,seed),Balance.LATE_TICKS.get());
             long batchLimit=Math.min(Harvests.maximumBatch(level,seed),structure.vaults().isEmpty() ? 64L : Integer.MAX_VALUE);
-            var output = AEItemKey.of(crop.essenceStack()); long stock = available.get(output);
+            var output = AEItemKey.of(crop.essenceStack()); long stock = task.target >= 0 ? available.getOrDefault(output,0L) : 0;
             if (Amounts.harvestSize(stock, task.target, 1) == 0) { task.status = "target_reached"; continue; }
             if (destination.insert(output, 1, Actionable.SIMULATE, source) == 0) { task.status = blockedOutput(); continue; }
             double work=ProductionMath.stepWork(task.occupied,speed(),duration,batchLimit);

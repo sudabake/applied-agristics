@@ -17,7 +17,7 @@ on:
         description: '上传平台'
         required: true
         type: choice
-        options: [all, github, curseforge, modrinth]
+        options: [all, github-curseforge, github, curseforge, modrinth]
         default: all
       dry_run:
         description: '仅测试并生成下载包，取消勾选才正式上传'

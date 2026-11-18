@@ -2,7 +2,7 @@
 
 Minecraft **1.21.1 / NeoForge / Java 21**，AE2 × Mystical Agriculture 农业附属。
 
-当前版本为 **1.3.1**。
+当前版本为 **1.3.2**。
 
 下载见 [GitHub Releases](https://github.com/sudabake/applied-agristics/releases)、[CurseForge](https://www.curseforge.com/minecraft/mc-mods/applied-agristics) 和 [Modrinth](https://modrinth.com/mod/applied-agristics)。
 
@@ -23,11 +23,11 @@ Minecraft **1.21.1 / NeoForge / Java 21**，AE2 × Mystical Agriculture 农业�
 
 阵列使用独立完整面，五面共用机壳、功能正面单独绘制，三种模块六面复用各自贴图。培养舱透明，控制器保留屏幕状态动画。
 
-## 1.3.1 更新
+## 1.3.2 更新
 
-新增本体树木与特殊植物种植规则，修正成型部件朝向、外部配方优先级、实际耗电预估和 JEI 产物预览。详细中英文更新日志见 [1.3.1 更新说明](docs/RELEASE_NOTES.md)。
+修复 ME 注魔祭坛与生物培养器 Shift＋右键安装加速卡、Cell4 环境下种子库存异常显示、输出口和 ME 加工结果投递。新增通用树苗及沉浸工程／MekMM 种植配方支持，并优化多作物阵列的服务端计算。详细中英文日志见 [1.3.2 更新说明](docs/RELEASE_NOTES.md)。
 
-客户端与服务器需同步更新。旧版已被自动覆盖的部件朝向需要手动调整一次；现用方块身份、库存和种植占用数据继续保留。
+客户端与服务器需同步更新。遇到此前 Cell4 异常库存显示时，请完整重启游戏或服务器以清除运行时缓存。
 
 ## 构建
 

@@ -41,6 +41,7 @@ public final class EssenceVault extends GridMachine implements IStorageProvider 
     public void setPriority(int value) {
         if (priority==value) return;
         priority=value; setChanged();
+        if (structure != null) structure.refreshOutputOrder();
         IStorageProvider.requestUpdate(getMainNode());
     }
     public long storeProduced(AEItemKey key,long amount,boolean simulate) {
@@ -61,6 +62,7 @@ public final class EssenceVault extends GridMachine implements IStorageProvider 
         priority=tag.getInt("priority");
         contents.clear();
         unresolved=StoredItemCounts.load(tag.getList("essences",Tag.TAG_COMPOUND),contents,registries);
+        if (structure != null) structure.refreshOutputOrder();
     }
     @Override public CompoundTag snapshot(int offset,String search) {
         var tag=super.snapshot(offset,search); tag.putInt("unresolved",unresolved.size()); var entries=List.copyOf(contents.entrySet());

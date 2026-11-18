@@ -63,15 +63,15 @@
   },
   "planter_output_port": {
     "zh_cn": [
-      "缓存并输出阵列产生的收获物",
-      "16 个槽位，可向正面容器自动输出",
-      "联网时也可由 AE 提取",
+      "只接收阵列收获物，拒绝外部存入",
+      "16 格缓存，开启自动输出后即时推送正面",
+      "所有面可抽取，联网时也可由 AE 提取",
       "支持六向放置与扳手旋转，成型与拆结构保留朝向"
     ],
     "en_us": [
-      "Buffers and outputs array harvests",
-      "16 slots; can push to the container in front",
-      "AE can also extract while the array is online",
+      "Accepts array harvests internally with extraction-only external access",
+      "16 slots. Auto output pushes arriving harvests to the front container",
+      "Pipes can extract from every face. AE can extract while online",
       "Six-way placement and wrench rotation. Formation preserves facing"
     ]
   },
@@ -143,12 +143,14 @@
     "zh_cn": [
       "通过 ME 网络自动完成神秘农业注魔",
       "替换原注魔祭坛中心，保留八个基座",
-      "支持 AE 加工样板与四张独立加速卡"
+      "支持 AE 加工样板与四张独立加速卡",
+      "加工订单返网，手动自动输出送相邻容器"
     ],
     "en_us": [
       "Automates Mystical Agriculture infusion through ME",
-      "Replaces the altar center; keep all eight pedestals",
-      "Supports processing patterns and four separate acceleration cards"
+      "Replaces the altar center with all eight pedestals retained",
+      "Supports processing patterns and four separate acceleration cards",
+      "Crafting orders return to ME. Auto output uses adjacent containers"
     ]
   },
   "bio_sampler": {

@@ -32,7 +32,8 @@ public final class Harvests {
             return state.setValue(age, Collections.max(age.getPossibleValues()));
         return null;
     }
-    public static boolean seed(ItemStack seed) { return io.github.sudabake.appliedagristics.biology.BioData.seed(seed) || mature(seed) != null; }
+    public static boolean seed(ItemStack seed) { return io.github.sudabake.appliedagristics.biology.BioData.seed(seed)
+            || seed.getItem() instanceof BlockItem item && item.getBlock() instanceof SaplingBlock || mature(seed) != null; }
     public static boolean seed(ItemStack seed,Level level) { return seed(seed) || CropSources.find(level,seed)!=null; }
     public static <T> T inField(ServerLevel level, BlockPos machine, BlockState plant, ItemStack soil, java.util.function.Supplier<T> operation) {
         if (!(soil.getItem() instanceof BlockItem ground)) throw new IllegalArgumentException("Missing soil");
@@ -72,13 +73,20 @@ public final class Harvests {
     }
     public static ItemStack networkSoil(Level level,ItemStack seed) { var source=CropSources.find(level,seed); return source==null?networkSoil():source.networkSoil(); }
     public static long maximumBatch(Level level,ItemStack seed) { var source=CropSources.find(level,seed); return source==null ? Integer.MAX_VALUE : source.maximumBatch(); }
-    /** Standard MA crops use exact expected yield with saved fractional remainders.
-     * Unknown native loot implementations use at most 64 rolls per batch, scaled by cycles. */
+    /** MA formulas and learned native loot use saved fractional remainders.
+     * Low-throughput/disabled-cache native loot retains its bounded sampling path. */
     public static Map<appeng.api.stacks.AEItemKey, Long> networkBatch(ServerLevel level, BlockPos pos, ItemStack seed, long cycles,
             Map<appeng.api.stacks.AEItemKey, Double> fractions) {
         if (cycles<=0) return Map.of();
         var source=CropSources.find(level,seed);
         if (source!=null) {
+            if (useCachedLoot(cycles) && source.cachedLootTable() != null) {
+                var averages = HarvestEstimateCache.get(level).expected(level, pos, seed, source.networkSoil(),
+                        source.display(), source.cachedLootTable(), cycles, () -> source.harvestNetwork(level, pos));
+                var result = settle(averages, fractions);
+                addFallback(level, seed, source.networkSoil(), cycles, result);
+                return result;
+            }
             var result=new LinkedHashMap<appeng.api.stacks.AEItemKey,Long>();
             if (source.fixedOutputs()) {
                 for (var drop:source.harvestNetwork(level,pos)) result.merge(appeng.api.stacks.AEItemKey.of(drop),Math.multiplyExact(cycles,drop.getCount()),Math::addExact);
@@ -109,15 +117,33 @@ public final class Harvests {
             if (crop != ModCrops.INFERIUM) expected.put(appeng.api.stacks.AEItemKey.of(new ItemStack(com.blakebr0.mysticalagriculture.init.ModItems.FERTILIZED_ESSENCE.get())),
                 Math.clamp(ModConfigs.FERTILIZED_ESSENCE_DROP_CHANCE.get(), 0, 1) * cycles);
         } else {
-            int samples = (int)Math.min(64, cycles);
-            for (int i = 0; i < samples; i++) for (var drop : nativeHarvest(level, pos, seed, soil))
-                expected.merge(appeng.api.stacks.AEItemKey.of(drop), drop.getCount() * (double)cycles / samples, Double::sum);
+            if (useCachedLoot(cycles) && plant != null) {
+                var block = plant.getBlock();
+                if (block instanceof StemBlock stem) block = level.registryAccess().registryOrThrow(
+                        net.minecraft.core.registries.Registries.BLOCK).get(((io.github.sudabake.appliedagristics.mixin.StemAccessor) stem).agrFruit());
+                expected.putAll(HarvestEstimateCache.get(level).expected(level, pos, seed, soil, plant,
+                        block.getLootTable(), cycles, () -> nativeHarvest(level, pos, seed, soil)));
+            } else {
+                int samples = (int)Math.min(64, cycles);
+                for (int i = 0; i < samples; i++) for (var drop : nativeHarvest(level, pos, seed, soil))
+                    expected.merge(appeng.api.stacks.AEItemKey.of(drop), drop.getCount() * (double)cycles / samples, Double::sum);
+            }
         }
+        var result = settle(expected, fractions);
+        addFallback(level,seed,soil,cycles,result); return result;
+    }
+    private static boolean useCachedLoot(long cycles) {
+        return io.github.sudabake.appliedagristics.Balance.CACHE_NETWORK_LOOT.get()
+                && cycles >= io.github.sudabake.appliedagristics.Balance.NETWORK_LOOT_SAMPLES.get();
+    }
+    private static LinkedHashMap<appeng.api.stacks.AEItemKey, Long> settle(
+            Map<appeng.api.stacks.AEItemKey, Double> expected,
+            Map<appeng.api.stacks.AEItemKey, Double> fractions) {
         var result = new LinkedHashMap<appeng.api.stacks.AEItemKey, Long>();
         expected.forEach((key, amount) -> {
             double total = amount + fractions.getOrDefault(key, 0.0); long whole = (long)Math.floor(total + 1e-9);
             fractions.put(key, Math.max(0, total - whole)); if (whole > 0) result.put(key, whole);
-        }); addFallback(level,seed,soil,cycles,result); return result;
+        }); return result;
     }
     public static List<ItemStack> harvest(ServerLevel level, BlockPos machine, ItemStack seed, ItemStack soil) {
         var drops=new ArrayList<>(nativeHarvest(level,machine,seed,soil));

@@ -19,6 +19,7 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.neoforged.neoforge.fluids.FluidUtil;
 import java.util.List;
 
+@net.neoforged.fml.common.EventBusSubscriber(modid = Agristics.ID)
 public class MachineBlock extends BaseEntityBlock {
     public enum Kind {
         EARLY(0), SEEDS(1), NETWORK(2), ACCESS(5), ME_INFUSION(6), INPUT_PORT(7), OUTPUT_PORT(8), ESSENCE_VAULT(9), ME_BIO(11);
@@ -75,6 +76,18 @@ public class MachineBlock extends BaseEntityBlock {
         }
         if (kind == Kind.EARLY && FluidUtil.interactWithFluidHandler(player, hand, level, pos, hit.getDirection())) return ItemInteractionResult.sidedSuccess(level.isClientSide);
         return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+    }
+    @net.neoforged.bus.api.SubscribeEvent(priority = net.neoforged.bus.api.EventPriority.LOWEST)
+    public static void allowAccelerationInteraction(net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickBlock event) {
+        var player = event.getEntity();
+        if (!player.isSecondaryUseActive() || player.isSpectator() || !player.mayBuild()
+            || event.getUseBlock() == net.neoforged.neoforge.common.util.TriState.FALSE
+            || !event.getItemStack().is(appeng.core.definitions.AEItems.SPEED_CARD.asItem())
+            || !event.getLevel().mayInteract(player, event.getPos())) return;
+        if (event.getLevel().getBlockEntity(event.getPos()) instanceof AEProcessingMachine) {
+            // Sneaking normally skips useItemOn. Keep the existing insertion and slot limits.
+            event.setUseBlock(net.neoforged.neoforge.common.util.TriState.TRUE);
+        }
     }
     @Override protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
         if (kind==Kind.ACCESS) return InteractionResult.PASS;

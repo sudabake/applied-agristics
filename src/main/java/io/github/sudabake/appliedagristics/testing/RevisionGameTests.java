@@ -156,7 +156,24 @@ public final class RevisionGameTests {
             h.assertTrue(!altar.pushPattern(pattern,counters,Direction.NORTH),"A running altar rejects duplicate pushes");
             for (int i=2;i<6;i++) altar.items.setStackInSlot(i,AEItems.SPEED_CARD.stack());
             for (int i=0;i<8;i++) altar.step();
-            h.assertTrue(altar.getMainNode().getGrid().getStorageService().getInventory().getAvailableStacks().get(AEItemKey.of(output))>=output.getCount(),"Ordered result returns to AE even with manual auto-output disabled"); h.succeed();
+            h.assertTrue(altar.getMainNode().getGrid().getStorageService().getInventory().getAvailableStacks().get(AEItemKey.of(output))>=output.getCount(),"Ordered result returns to AE even with manual auto-output disabled");
+            drive.getInternalInventory().setItemDirect(0,ItemStack.EMPTY);
+            h.setBlock(pos.north(),net.minecraft.world.level.block.Blocks.CHEST);
+            altar.configureSide(Direction.NORTH.ordinal(),3);
+            altar.toggleAutoOutput();
+            h.assertTrue(altar.pushPattern(pattern,counters,Direction.NORTH),"The next order can start with empty output and pedestals");
+            for(int i=0;i<8;i++) altar.step();
+            var chest=(net.minecraft.world.level.block.entity.ChestBlockEntity)h.getLevel().getBlockEntity(h.absolutePos(pos.north()));
+            h.assertTrue(!altar.items.getStackInSlot(1).isEmpty() && chest.isEmpty(),
+                    "A network-full order stays in its output slot even when adjacent automatic output is enabled");
+            drive.getInternalInventory().setItemDirect(0,AEItems.ITEM_CELL_1K.stack());
+            h.runAfterDelay(1,()->{
+                altar.step();
+                h.assertTrue(altar.items.getStackInSlot(1).isEmpty() && chest.isEmpty()
+                        && altar.getMainNode().getGrid().getStorageService().getInventory().getAvailableStacks().get(AEItemKey.of(output))>=output.getCount(),
+                        "Restored disk capacity receives the pending order exactly once");
+                h.succeed();
+            });
         });
     }
 }

@@ -44,6 +44,7 @@ for lang,index in (('zh_cn',0),('en_us',1)):
         'status.appliedagristics.structure_unloaded':('部分结构区块未加载','Part of structure not loaded'),
         'status.appliedagristics.structure_overlap':('与另一座结构重叠','Overlaps another structure'),
         'status.appliedagristics.missing_infusion_pedestals':('缺少周围的注魔基座','Missing surrounding infusion pedestals'),
+        'status.appliedagristics.infusing':('注魔中','Infusing'),
         'gui.appliedagristics.module_summary':('速度模块 %s；并行模块 %s；种子转换 %s','Speed modules %s; parallel modules %s; seed conversion %s'),
         'gui.appliedagristics.auto_input_label':('自动输入','Auto input'),
         'gui.appliedagristics.auto_input_on':('自动输入：开','Auto input: on'),

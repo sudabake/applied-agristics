@@ -20,6 +20,32 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 @PrefixGameTestTemplate(false)
 public final class CultivationRevisionTests {
     @GameTest(template="empty",templateNamespace=Agristics.ID,timeoutTicks=240)
+    public static void seedBankAutomaticallyCollectsNativeTrees(GameTestHelper h) {
+        var f=PlanterFixture.install(h.getLevel(),h.absolutePos(new BlockPos(2,1,1)),true);
+        h.runAtTickTime(100,()-> {
+            f.drive().getInternalInventory().setItemDirect(0,AEItems.ITEM_CELL_1K.stack());
+            var cell=f.drive().getCellInventory(0);
+            var trees=List.of(Items.OAK_SAPLING,Items.SPRUCE_SAPLING,Items.BIRCH_SAPLING,Items.JUNGLE_SAPLING,
+                    Items.ACACIA_SAPLING,Items.DARK_OAK_SAPLING,Items.CHERRY_SAPLING,Items.MANGROVE_PROPAGULE,
+                    Items.AZALEA,Items.FLOWERING_AZALEA,Items.CRIMSON_FUNGUS,Items.WARPED_FUNGUS);
+            var source=appeng.api.networking.security.IActionSource.ofMachine(f.controller());
+            for(var item:trees) {
+                var key=AEItemKey.of(new ItemStack(item));
+                h.assertTrue(cell.insert(key,7,appeng.api.config.Actionable.MODULATE,source)==7,"Tree stock enters the ME cell");
+            }
+            f.seeds().setCollectFilter(1);
+            f.seeds().toggleAutoCollect();
+            f.seeds().step();
+            f.seeds().step();
+            for(var item:trees) {
+                var key=AEItemKey.of(new ItemStack(item));
+                h.assertTrue(f.seeds().count(key)==7 && cell.getAvailableStacks().get(key)==0,
+                        "Automatic vanilla collection includes every supported native tree: "+item);
+            }
+            h.succeed();
+        });
+    }
+    @GameTest(template="empty",templateNamespace=Agristics.ID,timeoutTicks=240)
     public static void formedRotationPreservesNetworkClaimsAndDirections(GameTestHelper h) {
         var f=PlanterFixture.install(h.getLevel(),h.absolutePos(new BlockPos(2,1,1)),true);
         var seed=AEItemKey.of(BioData.withIdentity(Agristics.BIO_SEED.get(),ResourceLocation.parse("minecraft:cow")));
@@ -107,6 +133,9 @@ public final class CultivationRevisionTests {
             var row=a.snapshot(0,"").getList("rows",10).getCompound(0);
             h.assertTrue(Math.abs(row.getDouble("power")-2343.75)<.00001 && Math.abs(row.getDouble("requiredPower")-row.getDouble("power"))<.00001,"Tree actual cost and current power preview share the same batch limit");
             h.assertTrue(Math.abs(row.getDouble("fullLoadPower")-5000)<.00001 && Math.abs(row.getDouble("nextSpeedPower")-row.getDouble("power"))<.00001,"Full-load explanation is separate and saturated upgrades do not invent extra demand");
+            // Test steady production after learning, rather than a few initial random samples.
+            for(int warmup=0;warmup<Balance.LOOT_LEARNING_SAMPLES.get();warmup++)
+                Harvests.networkBatch(h.getLevel(),a.getBlockPos(),seed.toStack(1),64,new HashMap<>());
             var logs=AEItemKey.of(new ItemStack(Items.OAK_LOG));long before=f.producedCount(logs);
             for(int step=0;step<400;step++) a.step();
             long produced=f.producedCount(logs)-before;

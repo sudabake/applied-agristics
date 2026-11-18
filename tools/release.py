@@ -62,9 +62,10 @@ def prepare(root, version, release_type, target, dry_run):
     readme = (root / 'README.md').read_text(encoding='utf-8')
     if '当前版本为 **' + version + '**' not in readme:
         raise ValueError('Update the README current version before publishing')
-    if target not in (*PLATFORMS, 'all'):
+    if target not in (*PLATFORMS, 'all', 'github-curseforge'):
         raise ValueError('Unknown publication target')
-    platforms = list(PLATFORMS) if target == 'all' else [target]
+    selections = {'all': list(PLATFORMS), 'github-curseforge': ['github', 'curseforge']}
+    platforms = selections.get(target, [target])
     settings = config(root)
     for platform in platforms:
         if platform != 'github' and not settings.get(platform + '_id'):
