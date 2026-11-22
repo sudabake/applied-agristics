@@ -27,13 +27,7 @@ public final class UniversalSeedGameTests {
         DriveBlockEntity drive = (DriveBlockEntity) h.getBlockEntity(new BlockPos(1, 1, 1));
         drive.getInternalInventory().setItemDirect(0, appeng.core.definitions.AEItems.ITEM_CELL_1K.stack());
         // Local test player, no login handshake or unrelated datapack-sync packets.
-        var profile = new com.mojang.authlib.GameProfile(UUID.randomUUID(), "transfer-test");
-        var player = new net.minecraft.server.level.ServerPlayer(h.getLevel().getServer(), h.getLevel(), profile);
-        var connection = new net.minecraft.network.Connection(net.minecraft.network.protocol.PacketFlow.SERVERBOUND);
-        new io.netty.channel.embedded.EmbeddedChannel(connection);
-        player.connection = new net.minecraft.server.network.ServerGamePacketListenerImpl(h.getLevel().getServer(), connection, player) {
-            @Override public void send(net.minecraft.network.protocol.Packet<?> packet) {}
-        };
+        var player = ForgeTestInputs.mockPlayer(h, net.minecraft.world.level.GameType.SURVIVAL);
         var host = appeng.api.parts.PartHelper.getOrPlacePartHost(h.getLevel(), h.absolutePos(new BlockPos(2, 1, 1)), false, player);
         host.addPart(appeng.core.definitions.AEParts.GLASS_CABLE.item(appeng.api.util.AEColor.TRANSPARENT), null, player);
         var terminal = host.addPart(appeng.core.definitions.AEParts.CRAFTING_TERMINAL.asItem(), Direction.NORTH, player);
