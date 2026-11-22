@@ -2,7 +2,9 @@
 
 Minecraft **1.20.1 / Forge / Java 17**，AE2 × Mystical Agriculture 农业附属。
 
-本分支以已发布的 1.21.1 版 **1.3.2** 为基线，用于 Forge 本地测试。两个 Minecraft 版本各用对应存档。
+本分支以 1.21.1 版 **1.3.2** 为基线，提供 **1.20.1 Forge Beta**。两个 Minecraft 版本各用对应存档。
+
+下载和更新说明见 [GitHub Releases](https://github.com/sudabake/applied-agristics/releases/tag/v1.3.2-forge-1.20.1) 和 [CurseForge](https://www.curseforge.com/minecraft/mc-mods/applied-agristics/files/9748014)。
 
 ## 主要内容
 

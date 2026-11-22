@@ -1,9 +1,6 @@
 name: Publish release
 
 on:
-  push:
-    branches: [port/forge-1.20.1]
-    paths: [.github/workflows/release.yml, 'src/**']
   workflow_dispatch:
     inputs:
       version:
@@ -42,11 +39,7 @@ env:
 
 jobs:
   verify:
-    if: >-
-      github.repository == 'sudabake/applied-agristics' &&
-      github.ref == 'refs/heads/port/forge-1.20.1' &&
-      (github.event_name == 'workflow_dispatch' ||
-       github.event.head_commit.message == 'Publish verified Forge 1.20.1 beta')
+    if: github.repository == 'sudabake/applied-agristics' && github.ref == 'refs/heads/port/forge-1.20.1'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -55,9 +48,9 @@ jobs:
           persist-credentials: false
       - name: Check release inputs
         env:
-          REQUESTED_VERSION: ${{ inputs.version || '1.3.2' }}
-          REQUESTED_TYPE: ${{ inputs.release_type || 'beta' }}
-          REQUESTED_TARGET: ${{ inputs.target || 'github-curseforge' }}
+          REQUESTED_VERSION: ${{ inputs.version }}
+          REQUESTED_TYPE: ${{ inputs.release_type }}
+          REQUESTED_TARGET: ${{ inputs.target }}
         run: |
           test "$REQUESTED_VERSION" = '1.3.2'
           test "$REQUESTED_TYPE" = beta
@@ -87,14 +80,14 @@ jobs:
 
   publish:
     needs: verify
-    if: ${{ github.event_name == 'push' || !inputs.dry_run }}
+    if: ${{ !inputs.dry_run }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
     strategy:
       fail-fast: false
       matrix:
-        platform: ${{ fromJSON((github.event_name == 'push' || inputs.target == 'github-curseforge') && '["github","curseforge"]' || format('["{0}"]', inputs.target)) }}
+        platform: ${{ fromJSON(inputs.target == 'github-curseforge' && '["github","curseforge"]' || format('["{0}"]', inputs.target)) }}
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
