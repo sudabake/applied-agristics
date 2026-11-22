@@ -8,5 +8,5 @@
     "P": {"item": "ae2:engineering_processor"},
     "A": {"item": "mysticalagriculture:infusion_altar"}
   },
-  "result": {"id": "appliedagristics:me_infusion_altar", "count": 1}
+  "result": {"item": "appliedagristics:me_infusion_altar", "count": 1}
 }

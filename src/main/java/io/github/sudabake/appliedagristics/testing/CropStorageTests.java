@@ -13,7 +13,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.*;
 import net.minecraft.world.item.crafting.*;
 import net.minecraft.world.level.block.*;
-import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+import net.minecraftforge.gametest.PrefixGameTestTemplate;
 import java.util.*;
 
 @PrefixGameTestTemplate(false)
@@ -34,9 +34,9 @@ public final class CropStorageTests {
             output.insert(key,5,Actionable.MODULATE,source);
             fixture.vault().setPriority(10);
             output.insert(key,3,Actionable.MODULATE,source);
-            var saved=fixture.vault().saveWithFullMetadata(h.getLevel().registryAccess());
+            var saved=fixture.vault().saveWithFullMetadata();
             saved.putInt("priority",-1);
-            fixture.vault().loadWithComponents(saved,h.getLevel().registryAccess());
+            fixture.vault().load(saved);
             output.insert(key,7,Actionable.MODULATE,source);
             var firstCounts=new appeng.api.stacks.KeyCounter();
             var secondCounts=new appeng.api.stacks.KeyCounter();
@@ -65,9 +65,8 @@ public final class CropStorageTests {
     }
     private static void withRecipe(GameTestHelper h,List<ItemStack> outputs,Runnable check) {
         var manager=h.getLevel().getRecipeManager();var original=new ArrayList<>(manager.getRecipes());
-        var recipes=new ArrayList<RecipeHolder<?>>(original);
-        recipes.add(new RecipeHolder<>(ResourceLocation.fromNamespaceAndPath(Agristics.ID,"test/crop_storage"),
-            new PlantingRecipe(Ingredient.of(Items.COOKIE),Ingredient.of(Blocks.DIRT),outputs,Blocks.WHEAT.defaultBlockState(),false,200,true)));
+        var recipes=new ArrayList<Recipe<?>>(original);
+        recipes.add(new PlantingRecipe(new ResourceLocation(Agristics.ID,"test/crop_storage"), Ingredient.of(Items.COOKIE),Ingredient.of(Blocks.DIRT),outputs,Blocks.WHEAT.defaultBlockState(),false,200,true, java.util.Optional.empty()));
         try{manager.replaceRecipes(recipes);CropSources.invalidate();check.run();}
         finally{manager.replaceRecipes(original);CropSources.invalidate();}
     }
@@ -103,19 +102,19 @@ public final class CropStorageTests {
 
     @GameTest(template="empty",templateNamespace=Agristics.ID)
     public static void cropStorageItemKeepsAllCountsAndPriority(GameTestHelper h) {
-        var pos=new BlockPos(1,1,1);h.setBlock(pos,Agristics.ESSENCE_VAULT.get());EssenceVault vault=h.getBlockEntity(pos);
-        var essence=AEItemKey.of(new ItemStack(Crops.all().getFirst().getEssenceItem()));var wheat=AEItemKey.of(new ItemStack(Items.WHEAT));
+        var pos=new BlockPos(1,1,1);h.setBlock(pos,Agristics.ESSENCE_VAULT.get());EssenceVault vault = (EssenceVault) h.getBlockEntity(pos);
+        var essence=AEItemKey.of(new ItemStack(Crops.all().get(0).getEssenceItem()));var wheat=AEItemKey.of(new ItemStack(Items.WHEAT));
         var old=new CompoundTag();var entries=new ListTag();var entry=new CompoundTag();
-        entry.put("key",essence.toTag(h.getLevel().registryAccess()));entry.putLong("count",10_000_000_000L);entries.add(entry);
-        old.put("essences",entries);old.putInt("priority",37);vault.loadWithComponents(old,h.getLevel().registryAccess());
+        entry.put("key",essence.toTag());entry.putLong("count",10_000_000_000L);entries.add(entry);
+        old.put("essences",entries);old.putInt("priority",37);vault.load(old);
         h.assertTrue(vault.storeProduced(wheat,11,false)==11,"Crop storage accepts essence and ordinary crops");
-        var player=h.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
-        var drop=Block.getDrops(vault.getBlockState(),h.getLevel(),vault.getBlockPos(),vault,player,ItemStack.EMPTY).getFirst();
+        var player=h.makeMockSurvivalPlayer();
+        var drop=Block.getDrops(vault.getBlockState(),h.getLevel(),vault.getBlockPos(),vault,player,ItemStack.EMPTY).get(0);
         var next=new BlockPos(2,1,1);h.setBlock(next,Agristics.ESSENCE_VAULT.get());var absolute=h.absolutePos(next);
         h.assertTrue(BlockItem.updateCustomBlockEntityTag(h.getLevel(),player,absolute,drop),"Portable crop storage restores its inventory");
-        EssenceVault restored=h.getBlockEntity(next);var counter=new appeng.api.stacks.KeyCounter();restored.mountInventories((storage,priority)->storage.getAvailableStacks(counter));
+        EssenceVault restored = (EssenceVault) h.getBlockEntity(next);var counter=new appeng.api.stacks.KeyCounter();restored.mountInventories((storage,priority)->storage.getAvailableStacks(counter));
         h.assertTrue(counter.get(essence)==10_000_000_000L && counter.get(wheat)==11 && restored.getPriority()==37,"All crop counts and priority survive dismantling and replacing");
-        h.assertTrue(restored.saveWithFullMetadata(h.getLevel().registryAccess()).getList("essences",10).size()==2,"Current crop storage uses long-count essences entries");h.succeed();
+        h.assertTrue(restored.saveWithFullMetadata().getList("essences",10).size()==2,"Current crop storage uses long-count essences entries");h.succeed();
     }
 
     @GameTest(template="empty",templateNamespace=Agristics.ID,timeoutTicks=240)
@@ -124,14 +123,14 @@ public final class CropStorageTests {
         h.runAtTickTime(100,()->{
             var a=f.controller();var wheat=AEItemKey.of(new ItemStack(Items.WHEAT));
             var id=Cultivations.id(new ItemStack(Items.WHEAT_SEEDS),h.getLevel());
-            var old=a.saveWithFullMetadata(h.getLevel().registryAccess());
-            var batch=new ListTag();var item=new CompoundTag();item.put("key",wheat.toTag(h.getLevel().registryAccess()));item.putLong("count",5);batch.add(item);
+            var old=a.saveWithFullMetadata();
+            var batch=new ListTag();var item=new CompoundTag();item.put("key",wheat.toTag());item.putLong("count",5);batch.add(item);
             var tasks=new ListTag();var task=new CompoundTag();task.putString("id",id.toString());task.putBoolean("enabled",false);task.putLong("target",111);task.putDouble("work",123.5);task.put("batch",batch);tasks.add(task);old.put("tasks",tasks);
-            a.loadWithComponents(old,h.getLevel().registryAccess());a.step();
+            a.load(old);a.step();
             h.assertTrue(f.producedCount(wheat)==5 && a.tasks.get(id).progress==123.5 && a.tasks.get(id).target==111,"Paid output, work and stock target survive reload");
-            var saved=a.saveWithFullMetadata(h.getLevel().registryAccess());
+            var saved=a.saveWithFullMetadata();
             h.assertTrue(!saved.contains("directNetworkOutput") && !a.snapshot(0,"").contains("directNetworkOutput"),"Retired setting is absent from saves and UI snapshots");
-            a.loadWithComponents(saved,h.getLevel().registryAccess());a.step();
+            a.load(saved);a.step();
             h.assertTrue(f.producedCount(wheat)==5,"Reloading cannot publish the paid batch twice");h.succeed();
         });
     }

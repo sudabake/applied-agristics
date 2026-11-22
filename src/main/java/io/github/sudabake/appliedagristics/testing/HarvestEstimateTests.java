@@ -11,7 +11,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.*;
 import net.minecraft.world.item.*;
 import net.minecraft.world.level.block.Blocks;
-import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+import net.minecraftforge.gametest.PrefixGameTestTemplate;
 
 @PrefixGameTestTemplate(false)
 public final class HarvestEstimateTests {
@@ -68,8 +68,8 @@ public final class HarvestEstimateTests {
                 "Rare drops missed by the initial sample are learned later");
         cache.expected(level, pos, seed.copyWithCount(30), soil, state, table, 100, sample);
         helper.assertTrue(calls.get() == learned, "Changing seed count reuses learned per-harvest yield");
-        var saved = cache.save(new net.minecraft.nbt.CompoundTag(), level.registryAccess());
-        var restored = HarvestEstimateCache.load(saved, level.registryAccess());
+        var saved = cache.save(new net.minecraft.nbt.CompoundTag());
+        var restored = HarvestEstimateCache.load(saved);
         var reused = restored.expected(level, pos, seed, soil, state, table, 100, sample);
         helper.assertTrue(reused.equals(expected) && calls.get() == learned,
                 "Save/reload retains statistics and does not reroll the next harvest");

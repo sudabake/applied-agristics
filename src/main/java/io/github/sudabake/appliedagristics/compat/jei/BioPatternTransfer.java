@@ -1,7 +1,7 @@
 package io.github.sudabake.appliedagristics.compat.jei;
 
 import appeng.api.stacks.GenericStack;
-import appeng.integration.modules.itemlists.EncodingHelper;
+import appeng.integration.modules.jeirei.EncodingHelper;
 import appeng.menu.me.items.PatternEncodingTermMenu;
 import io.github.sudabake.appliedagristics.Agristics;
 import io.github.sudabake.appliedagristics.biology.BioData;

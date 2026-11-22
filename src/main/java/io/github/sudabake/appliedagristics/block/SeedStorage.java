@@ -11,7 +11,7 @@ import net.minecraft.nbt.*;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.items.IItemHandler;
+import net.minecraftforge.items.IItemHandler;
 import java.util.*;
 
 public final class SeedStorage extends GridMachine implements appeng.api.storage.IStorageProvider, io.github.sudabake.appliedagristics.multiblock.SeedBank {
@@ -148,16 +148,16 @@ public final class SeedStorage extends GridMachine implements appeng.api.storage
         if(autoCollect) collect(IActionSource.ofMachine(this));
         status = structure==null || !structure.formed() ? "unformed" : getMainNode().isActive() ? "online" : "offline";
     }
-    @Override protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.saveAdditional(tag, registries);
-        tag.put("seeds",StoredItemCounts.save(seeds,unresolved,registries));
+    @Override protected void saveAdditional(CompoundTag tag) {
+        super.saveAdditional(tag);
+        tag.put("seeds",StoredItemCounts.save(seeds,unresolved));
         tag.putBoolean("autoCollect",autoCollect); tag.putInt("collectFilter",collectFilter);
     }
-    @Override protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.loadAdditional(tag, registries);
-        autoCollect=tag.getBoolean("autoCollect"); collectFilter=Math.clamp(tag.getInt("collectFilter"),0,3);
+    @Override public void load(CompoundTag tag) {
+        super.load(tag);
+        autoCollect=tag.getBoolean("autoCollect"); collectFilter=net.minecraft.util.Mth.clamp(tag.getInt("collectFilter"),0,3);
         seeds.clear(); leases.clear();
-        unresolved=StoredItemCounts.load(tag.getList("seeds",Tag.TAG_COMPOUND),seeds,registries);
+        unresolved=StoredItemCounts.load(tag.getList("seeds",Tag.TAG_COMPOUND),seeds);
     }
     @Override public CompoundTag snapshot(int page, String search) {
         var tag = super.snapshot(page, search);
@@ -168,7 +168,7 @@ public final class SeedStorage extends GridMachine implements appeng.api.storage
         int scrollRows=Math.max(1,(filtered.size()+2)/3-3);
         var rows = new ListTag(); int start = Math.min(scrollRows-1,Math.max(0,page))*3;
         for (var key : filtered.subList(start, Math.min(start + 12, filtered.size()))) {
-            var row = new CompoundTag(); row.put("seed", key.toStack(1).save(level.registryAccess())); row.putString("id", Cultivations.id(key.toStack(1),level).toString());
+            var row = new CompoundTag(); row.put("seed", key.toStack(1).save(new CompoundTag())); row.putString("id", Cultivations.id(key.toStack(1),level).toString());
             row.putString("name", key.getDisplayName().getString()); row.putLong("count", count(key)); row.putLong("used", used(key)); rows.add(row);
         }
         tag.put("rows", rows); tag.putInt("pages",scrollRows); return tag;

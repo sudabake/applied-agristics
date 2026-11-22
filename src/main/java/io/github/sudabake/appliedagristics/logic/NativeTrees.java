@@ -4,11 +4,12 @@ import io.github.sudabake.appliedagristics.Crops;
 import io.github.sudabake.appliedagristics.biology.BioLootCatalog;
 import io.github.sudabake.appliedagristics.mixin.SaplingAccessor;
 import io.github.sudabake.appliedagristics.mixin.TreeGrowerAccessor;
+import io.github.sudabake.appliedagristics.mixin.MegaTreeGrowerAccessor;
 import java.util.*;
 import java.util.stream.Stream;
 import net.minecraft.core.*;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.*;
@@ -28,12 +29,18 @@ public final class NativeTrees {
 
     public static CropSource find(Level level,ItemStack seed) {
         if (!(level instanceof ServerLevel) || !(seed.getItem() instanceof BlockItem item) || !(item.getBlock() instanceof SaplingBlock sapling)) return null;
-        var grower=(TreeGrowerAccessor)(Object)((SaplingAccessor)sapling).agristicsTreeGrower();
+        var grower=((SaplingAccessor)sapling).agristicsTreeGrower();
         var features=level.registryAccess().registryOrThrow(Registries.CONFIGURED_FEATURE);
-        var keys=Stream.of(grower.agristicsTree(),grower.agristicsMegaTree(),
-                grower.agristicsSecondaryTree(),grower.agristicsSecondaryMegaTree()).flatMap(Optional::stream).distinct().toList();
+        var keys = new LinkedHashSet<net.minecraft.resources.ResourceKey<net.minecraft.world.level.levelgen.feature.ConfiguredFeature<?, ?>>>();
+        var featureRandom = RandomSource.create(742019L);
+        for (int sample = 0; sample < 64; sample++) {
+            keys.add(((TreeGrowerAccessor) grower).agristicsTree(featureRandom, false));
+            keys.add(((TreeGrowerAccessor) grower).agristicsTree(featureRandom, true));
+            if (grower instanceof MegaTreeGrowerAccessor mega) keys.add(mega.agristicsMegaTree(featureRandom));
+        }
+        keys.remove(null);
         BlockStateProvider primary=null;
-        ResourceKey<LootTable> table=null;
+        ResourceLocation table=null;
         var logs=new LinkedHashMap<net.minecraft.world.item.Item,ItemStack>();
         var knownDrops=new HashMap<BlockState,List<ItemStack>>();
         var random=RandomSource.create(742019L);
@@ -55,7 +62,7 @@ public final class NativeTrees {
 
     private static List<ItemStack> displayDrops(ServerLevel level,BlockState state) {
         var table=state.getBlock().getLootTable();
-        var possible=BioLootCatalog.possibleTableItems(level,table.location());
+        var possible=BioLootCatalog.possibleTableItems(level,table);
         var blockItem=new ItemStack(state.getBlock());
         if(!blockItem.isEmpty() && possible.contains(blockItem.getItem())) return List.of(blockItem);
         // Resolve state-dependent replacements without advancing world RNG or running global loot modifiers.
@@ -63,9 +70,9 @@ public final class NativeTrees {
                 .withParameter(LootContextParams.BLOCK_STATE,state)
                 .withParameter(LootContextParams.ORIGIN,net.minecraft.world.phys.Vec3.ZERO)
                 .withParameter(LootContextParams.TOOL,ItemStack.EMPTY).create(LootContextParamSets.BLOCK);
-        var context=new LootContext.Builder(params).withOptionalRandomSeed(742019L).create(Optional.of(table.location()));
+        var context=new LootContext.Builder(params).withOptionalRandomSeed(742019L).create(table);
         var result=new ArrayList<ItemStack>();
-        level.getServer().reloadableRegistries().getLootTable(table).getRandomItemsRaw(context,
+        level.getServer().getLootData().getLootTable(table).getRandomItemsRaw(context,
                 stack->{if(!stack.isEmpty()) result.add(stack.copyWithCount(1));});
         if(result.isEmpty()) possible.stream().sorted(Comparator.comparing(item->net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(item).toString()))
                 .map(ItemStack::new).forEach(result::add);
@@ -73,8 +80,8 @@ public final class NativeTrees {
     }
 
     private record Source(ItemStack seed,BlockStateProvider trunk,List<ItemStack> logs,BlockState display,
-                          ResourceKey<LootTable> table) implements CropSource {
-        @Override public ItemStack product() { return logs.getFirst().copy(); }
+                          ResourceLocation table) implements CropSource {
+        @Override public ItemStack product() { return logs.get(0).copy(); }
         @Override public List<ItemStack> previewOutputs(ServerLevel level) {
             var result=new ArrayList<>(logs.stream().map(ItemStack::copy).toList());
             result.add(seed.copy());
@@ -88,7 +95,7 @@ public final class NativeTrees {
                     && Harvests.inField(level,pos,display,soil,()->display.canSurvive(level,pos.above()));
         }
         @Override public boolean reproduces() { return true; }
-        @Override public ResourceKey<LootTable> cachedLootTable() { return table; }
+        @Override public ResourceLocation cachedLootTable() { return table; }
         @Override public List<ItemStack> harvest(ServerLevel level,BlockPos pos,ItemStack soil) {
             var state=trunk.getState(level.random,pos);
             int blocks=1+level.random.nextInt(4);

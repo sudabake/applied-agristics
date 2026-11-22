@@ -19,18 +19,17 @@ public final class MachineActivityRenderer implements BlockEntityRenderer<Networ
         boolean formed=machine.getBlockState().getValue(PlanterPartBlock.FORMED);
         boolean active=formed && machine.poweredVisual();
         int frame=!active?0:machine.workingVisual()?2+(int)(time/4)%24:1;
-        var texture=net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("appliedagristics","textures/block/network_planter_screen.png");
+        var texture=new net.minecraft.resources.ResourceLocation("appliedagristics","textures/block/network_planter_screen.png");
         var image=buffers.getBuffer(RenderType.entityCutoutNoCull(texture));
         textured(image,poses,3f/16,3f/16,13f/16,13f/16,-.002f,0,frame/26f,1,(frame+1)/26f,light);
         poses.popPose();
     }
     private static void textured(VertexConsumer out,PoseStack pose,float x0,float y0,float x1,float y1,float z,float u0,float v0,float u1,float v1,int light) {
         var m=pose.last().pose();
-        out.addVertex(m,x0,y0,z).setColor(-1).setUv(u0,v1).setOverlay(net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose.last(),0,0,-1);
-        out.addVertex(m,x0,y1,z).setColor(-1).setUv(u0,v0).setOverlay(net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose.last(),0,0,-1);
-        out.addVertex(m,x1,y1,z).setColor(-1).setUv(u1,v0).setOverlay(net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose.last(),0,0,-1);
-        out.addVertex(m,x1,y0,z).setColor(-1).setUv(u1,v1).setOverlay(net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose.last(),0,0,-1);
+        out.vertex(m,x0,y0,z).color(255,255,255,255).uv(u0,v1).overlayCoords(net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY).uv2(light).normal(pose.last().normal(),0,0,-1).endVertex();
+        out.vertex(m,x0,y1,z).color(255,255,255,255).uv(u0,v0).overlayCoords(net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY).uv2(light).normal(pose.last().normal(),0,0,-1).endVertex();
+        out.vertex(m,x1,y1,z).color(255,255,255,255).uv(u1,v0).overlayCoords(net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY).uv2(light).normal(pose.last().normal(),0,0,-1).endVertex();
+        out.vertex(m,x1,y0,z).color(255,255,255,255).uv(u1,v1).overlayCoords(net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY).uv2(light).normal(pose.last().normal(),0,0,-1).endVertex();
     }
-    @Override public AABB getRenderBoundingBox(NetworkPlanter machine) { return new AABB(machine.getBlockPos()); }
 }
 

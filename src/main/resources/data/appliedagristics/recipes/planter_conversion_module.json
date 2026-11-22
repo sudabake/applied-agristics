@@ -8,5 +8,5 @@
     "F": {"item": "appliedagristics:planter_frame"},
     "S": {"item": "mysticalagriculture:prosperity_seed_base"}
   },
-  "result": {"id": "appliedagristics:planter_conversion_module", "count": 1}
+  "result": {"item": "appliedagristics:planter_conversion_module", "count": 1}
 }

@@ -12,25 +12,24 @@ import net.minecraft.world.item.*;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.BlockHitResult;
-import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+import net.minecraftforge.gametest.PrefixGameTestTemplate;
 
 @PrefixGameTestTemplate(false)
 public final class Alpha19Tests {
-    private static final ResourceLocation COW=ResourceLocation.parse("minecraft:cow");
+    private static final ResourceLocation COW=new ResourceLocation("minecraft:cow");
 
     @GameTest(template="empty",templateNamespace=Agristics.ID,timeoutTicks=100)
     public static void shiftClickAccelerationThroughGameMode(GameTestHelper h) {
         var profile = new com.mojang.authlib.GameProfile(java.util.UUID.randomUUID(), "card-test");
-        var cookie = net.minecraft.server.network.CommonListenerCookie.createInitial(profile, false);
-        var player = new net.minecraft.server.level.ServerPlayer(h.getLevel().getServer(), h.getLevel(), profile, cookie.clientInformation());
+        var player = new net.minecraft.server.level.ServerPlayer(h.getLevel().getServer(), h.getLevel(), profile);
         var connection = new net.minecraft.network.Connection(net.minecraft.network.protocol.PacketFlow.SERVERBOUND);
-        player.connection = new net.minecraft.server.network.ServerGamePacketListenerImpl(h.getLevel().getServer(), connection, player, cookie);
+        player.connection = new net.minecraft.server.network.ServerGamePacketListenerImpl(h.getLevel().getServer(), connection, player);
         player.gameMode.changeGameModeForPlayer(GameType.SURVIVAL);
         player.setShiftKeyDown(true);
         for (var block : java.util.List.of(Agristics.ME_INFUSION.get(), Agristics.ME_BIO.get())) {
             var pos = new BlockPos(1, 1, 1);
             h.setBlock(pos, block);
-            AEProcessingMachine machine = h.getBlockEntity(pos);
+            AEProcessingMachine machine = (AEProcessingMachine) h.getBlockEntity(pos);
             var hit = new BlockHitResult(h.absolutePos(pos).getCenter(), Direction.UP, h.absolutePos(pos), false);
             for (var hand : InteractionHand.values()) {
                 player.setItemInHand(hand, appeng.core.definitions.AEItems.SPEED_CARD.stack(3));
@@ -43,18 +42,18 @@ public final class Alpha19Tests {
             player.gameMode.changeGameModeForPlayer(GameType.CREATIVE);
             h.setBlock(pos, Blocks.AIR);
             h.setBlock(pos, block);
-            machine = h.getBlockEntity(pos);
+            machine = (AEProcessingMachine) h.getBlockEntity(pos);
             player.setItemInHand(InteractionHand.MAIN_HAND, appeng.core.definitions.AEItems.SPEED_CARD.stack());
             player.gameMode.useItemOn(player, h.getLevel(), player.getMainHandItem(), InteractionHand.MAIN_HAND, hit);
             h.assertTrue(machine.accelerationCards() == 1 && player.getMainHandItem().getCount() == 1, "Creative inserts one card without consuming the held card");
-            var denied = new net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickBlock(player, InteractionHand.MAIN_HAND, h.absolutePos(pos), hit);
-            denied.setUseBlock(net.neoforged.neoforge.common.util.TriState.FALSE);
+            var denied = new net.minecraftforge.event.entity.player.PlayerInteractEvent.RightClickBlock(player, InteractionHand.MAIN_HAND, h.absolutePos(pos), hit);
+            denied.setUseBlock(net.minecraftforge.eventbus.api.Event.Result.DENY);
             MachineBlock.allowAccelerationInteraction(denied);
-            h.assertTrue(denied.getUseBlock() == net.neoforged.neoforge.common.util.TriState.FALSE, "An explicitly denied block interaction stays denied");
+            h.assertTrue(denied.getUseBlock() == net.minecraftforge.eventbus.api.Event.Result.DENY, "An explicitly denied block interaction stays denied");
             player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.STICK));
-            var unrelated = new net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickBlock(player, InteractionHand.MAIN_HAND, h.absolutePos(pos), hit);
-            net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(unrelated);
-            h.assertTrue(unrelated.getUseBlock().isDefault(), "Sneaking with other items keeps the normal interaction rules");
+            var unrelated = new net.minecraftforge.event.entity.player.PlayerInteractEvent.RightClickBlock(player, InteractionHand.MAIN_HAND, h.absolutePos(pos), hit);
+            net.minecraftforge.common.MinecraftForge.EVENT_BUS.post(unrelated);
+            h.assertTrue(unrelated.getUseBlock() == net.minecraftforge.eventbus.api.Event.Result.DEFAULT, "Sneaking with other items keeps the normal interaction rules");
             player.setItemInHand(InteractionHand.OFF_HAND, ItemStack.EMPTY);
             player.gameMode.changeGameModeForPlayer(GameType.SURVIVAL);
         }
@@ -64,11 +63,11 @@ public final class Alpha19Tests {
 
     @GameTest(template="empty",templateNamespace=Agristics.ID,timeoutTicks=100)
     public static void altarCardsAndNoChannel(GameTestHelper h) {
-        var pos=new BlockPos(1,1,1);h.setBlock(pos,Agristics.ME_INFUSION.get());MEInfusionAltar altar=h.getBlockEntity(pos);altar.ensureNode();
+        var pos=new BlockPos(1,1,1);h.setBlock(pos,Agristics.ME_INFUSION.get());MEInfusionAltar altar = (MEInfusionAltar) h.getBlockEntity(pos);altar.ensureNode();
         h.assertTrue(!altar.getMainNode().getNode().hasFlag(appeng.api.networking.GridFlags.REQUIRE_CHANNEL),"ME infusion altar does not consume a channel");
-        var player=h.makeMockPlayer(GameType.SURVIVAL);var cards=appeng.core.definitions.AEItems.SPEED_CARD.stack(6);player.setItemInHand(InteractionHand.MAIN_HAND,cards);
+        var player=h.makeMockSurvivalPlayer();var cards=appeng.core.definitions.AEItems.SPEED_CARD.stack(6);player.setItemInHand(InteractionHand.MAIN_HAND,cards);
         var hit=new BlockHitResult(h.absolutePos(pos).getCenter(),Direction.UP,h.absolutePos(pos),false);
-        for(int i=0;i<6;i++) altar.getBlockState().useItemOn(cards,h.getLevel(),player,InteractionHand.MAIN_HAND,hit);
+        for(int i=0;i<6;i++) altar.getBlockState().use(h.getLevel(),player,InteractionHand.MAIN_HAND,hit);
         h.assertTrue(cards.getCount()==2 && altar.accelerationCards()==4,"Right click fills four independent slots and never consumes a fifth card");
         for(int i=2;i<6;i++) h.assertTrue(altar.items.getStackInSlot(i).getCount()==1,"Each acceleration slot holds exactly one card");h.succeed();
     }

@@ -35,9 +35,9 @@ public final class Cultivations {
         synchronized (ORDINARY) {
             var key=appeng.api.stacks.AEItemKey.of(stack.copyWithCount(1)); var cached = ORDINARY.get(key); if (cached != null) return cached;
             var drops = Harvests.harvest(level, pos, stack.copyWithCount(1), new ItemStack(Blocks.FARMLAND));
-            var edibleSeed = stack.get(net.minecraft.core.component.DataComponents.FOOD) != null
+            var edibleSeed = stack.getItem().getFoodProperties(stack, null) != null
                 ? drops.stream().filter(d -> d.is(stack.getItem())).findFirst().orElse(ItemStack.EMPTY) : ItemStack.EMPTY;
-            var product = !edibleSeed.isEmpty() ? edibleSeed : drops.stream().filter(d -> !d.is(stack.getItem())).findFirst().orElse(drops.isEmpty() ? ItemStack.EMPTY : drops.getFirst());
+            var product = !edibleSeed.isEmpty() ? edibleSeed : drops.stream().filter(d -> !d.is(stack.getItem())).findFirst().orElse(drops.isEmpty() ? ItemStack.EMPTY : drops.get(0));
             if (product.isEmpty()) return null;
             var entry = new Entry(id(stack,level), stack.getItem(), product.getItem(), stack.getHoverName(),null,stack.copyWithCount(1),product.copyWithCount(1));
             ORDINARY.put(key, entry); return entry;
@@ -55,21 +55,31 @@ public final class Cultivations {
     }
     public static ResourceLocation id(ItemStack stack,net.minecraft.world.level.Level level) {
         var base=id(stack);
-        if (stack.getComponentsPatch().isEmpty() || io.github.sudabake.appliedagristics.biology.BioData.seed(stack) || level==null) return base;
+        if (!stack.hasTag() || io.github.sudabake.appliedagristics.biology.BioData.seed(stack) || level==null) return base;
         synchronized(VARIANTS) {
             return VARIANTS.computeIfAbsent(appeng.api.stacks.AEItemKey.of(stack.copyWithCount(1)),key->{
-                var json=ItemStack.CODEC.encodeStart(level.registryAccess().createSerializationContext(com.mojang.serialization.JsonOps.INSTANCE),stack.copyWithCount(1)).getOrThrow();
+                var data = canonicalTag(stack.copyWithCount(1).save(new net.minecraft.nbt.CompoundTag()));
                 try {
-                    var digest=java.security.MessageDigest.getInstance("SHA-256").digest(canonical(json).toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));
-                    return ResourceLocation.fromNamespaceAndPath(Agristics.ID,"variant/"+base.getNamespace()+"/"+base.getPath()+"/"+java.util.HexFormat.of().formatHex(digest));
+                    var digest=java.security.MessageDigest.getInstance("SHA-256").digest(data.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                    return new ResourceLocation(Agristics.ID,"variant/"+base.getNamespace()+"/"+base.getPath()+"/"+java.util.HexFormat.of().formatHex(digest));
                 } catch (java.security.NoSuchAlgorithmException error) { throw new IllegalStateException(error); }
             });
         }
     }
-    private static com.google.gson.JsonElement canonical(com.google.gson.JsonElement value) {
-        if (value.isJsonObject()) { var result=new com.google.gson.JsonObject(); new java.util.TreeMap<>(value.getAsJsonObject().asMap()).forEach((k,v)->result.add(k,canonical(v))); return result; }
-        if (value.isJsonArray()) { var result=new com.google.gson.JsonArray(); value.getAsJsonArray().forEach(v->result.add(canonical(v))); return result; }
-        return value;
+    private static String canonicalTag(net.minecraft.nbt.Tag tag) {
+        if (tag instanceof net.minecraft.nbt.CompoundTag compound) {
+            var sorted = new java.util.TreeMap<String, String>();
+            compound.getAllKeys().forEach(key -> sorted.put(key, canonicalTag(compound.get(key))));
+            var json = new com.google.gson.JsonObject();
+            sorted.forEach(json::addProperty);
+            return json.toString();
+        }
+        if (tag instanceof net.minecraft.nbt.ListTag list) {
+            var json = new com.google.gson.JsonArray();
+            list.forEach(element -> json.add(canonicalTag(element)));
+            return json.toString();
+        }
+        return tag.toString();
     }
     private Cultivations() {}
 }

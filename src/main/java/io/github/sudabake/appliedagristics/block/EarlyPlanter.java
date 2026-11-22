@@ -7,16 +7,16 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluids;
-import net.neoforged.neoforge.fluids.capability.templates.FluidTank;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction;
-import net.neoforged.neoforge.items.*;
-import net.neoforged.neoforge.items.wrapper.RangedWrapper;
+import net.minecraftforge.fluids.capability.templates.FluidTank;
+import net.minecraftforge.fluids.capability.IFluidHandler.FluidAction;
+import net.minecraftforge.items.*;
+import net.minecraftforge.items.wrapper.RangedWrapper;
 
 public final class EarlyPlanter extends MachineEntity {
     private java.util.List<ItemStack> pending;
     private final GrowthClock clock = new GrowthClock();
     public final FluidTank water = new FluidTank(16000, stack -> stack.getFluid() == Fluids.WATER) {
-        @Override protected void onContentsChanged() { setChanged(); }
+    @Override protected void onContentsChanged() { setChanged(); }
     };
     public EarlyPlanter(BlockPos pos, BlockState state) { super(Agristics.EARLY_BE.get(), pos, state, 11); }
     @Override protected boolean valid(int slot, ItemStack stack) { return slot == 0 ? io.github.sudabake.appliedagristics.logic.Harvests.seed(stack,level) : slot == 1 && (stack.getItem() instanceof net.minecraft.world.item.BlockItem || io.github.sudabake.appliedagristics.logic.CropSources.soil(level,items.getStackInSlot(0),stack)); }
@@ -24,15 +24,14 @@ public final class EarlyPlanter extends MachineEntity {
         if (slot < 2 && clock != null && pending == null) clock.reset();
         if (slot<2 && level!=null && !level.isClientSide) level.sendBlockUpdated(worldPosition,getBlockState(),getBlockState(),net.minecraft.world.level.block.Block.UPDATE_CLIENTS);
     }
-    @Override public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
+    @Override public net.minecraft.world.phys.AABB getRenderBoundingBox() { return new net.minecraft.world.phys.AABB(worldPosition).expandTowards(0,1,0); }
+    @Override public CompoundTag getUpdateTag() {
         var tag=new CompoundTag(); var seed=items.getStackInSlot(0);
-        if (!seed.isEmpty()) tag.put("displaySeed",seed.copyWithCount(1).save(registries));
-        var soil=items.getStackInSlot(1); if (!soil.isEmpty()) tag.put("displaySoil",soil.copyWithCount(1).save(registries)); return tag;
+        if (!seed.isEmpty()) tag.put("displaySeed",seed.copyWithCount(1).save(new CompoundTag()));
+        var soil=items.getStackInSlot(1); if (!soil.isEmpty()) tag.put("displaySoil",soil.copyWithCount(1).save(new CompoundTag())); return tag;
     }
-    @Override public void handleUpdateTag(CompoundTag tag,HolderLookup.Provider registries) { items.setStackInSlot(0,ItemStack.parseOptional(registries,tag.getCompound("displaySeed"))); items.setStackInSlot(1,ItemStack.parseOptional(registries,tag.getCompound("displaySoil"))); }
+    @Override public void handleUpdateTag(CompoundTag tag) { items.setStackInSlot(0,ItemStack.of(tag.getCompound("displaySeed"))); items.setStackInSlot(1,ItemStack.of(tag.getCompound("displaySoil"))); }
     @Override public java.util.List<ItemStack> breakContents() { var drops=super.breakContents(); if (pending!=null) pending.forEach(s->drops.add(s.copy())); return drops; }
-    @Override public net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket getUpdatePacket() { return net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket.create(this); }
-    @Override public void onDataPacket(net.minecraft.network.Connection connection,net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket packet,HolderLookup.Provider registries) { handleUpdateTag(packet.getTag(),registries); }
     public IItemHandler automation(Direction side) {
         return new RangedWrapper(items, side == Direction.DOWN ? 2 : 0, side == Direction.DOWN ? 11 : 2);
     }
@@ -50,7 +49,7 @@ public final class EarlyPlanter extends MachineEntity {
         status = wet ? "watered" : "growing";
         if (boosted || clock.dryReady(dryTicks)) {
             if (pending == null) pending = io.github.sudabake.appliedagristics.logic.Harvests.harvest(server, worldPosition, seed, soil);
-            var trial = new net.neoforged.neoforge.items.ItemStackHandler(9);
+            var trial = new net.minecraftforge.items.ItemStackHandler(9);
             for (int i = 0; i < 9; i++) trial.setStackInSlot(i, items.getStackInSlot(i + 2).copy());
             for (var drop : pending) {
                 var rest = drop.copy();
@@ -63,13 +62,13 @@ public final class EarlyPlanter extends MachineEntity {
         }
         setChanged();
     }
-    @Override protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.saveAdditional(tag, registries);
-        if (pending != null) { var list = new net.minecraft.nbt.ListTag(); for (var stack : pending) list.add(stack.save(registries)); tag.put("pending", list); } tag.put("water", water.writeToNBT(registries, new CompoundTag())); tag.putInt("dry", clock.dry()); tag.putInt("wet", clock.wet());
+    @Override protected void saveAdditional(CompoundTag tag) {
+        super.saveAdditional(tag);
+        if (pending != null) { var list = new net.minecraft.nbt.ListTag(); for (var stack : pending) list.add(stack.save(new CompoundTag())); tag.put("pending", list); } tag.put("water", water.writeToNBT(new CompoundTag())); tag.putInt("dry", clock.dry()); tag.putInt("wet", clock.wet());
     }
-    @Override protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.loadAdditional(tag, registries); water.readFromNBT(registries, tag.getCompound("water")); clock.restore(tag.getInt("dry"), tag.getInt("wet"));
-        pending = tag.contains("pending") ? new java.util.ArrayList<>() : null; if (pending != null) for (var value : tag.getList("pending", 10)) pending.add(ItemStack.parseOptional(registries, (CompoundTag)value));
+    @Override public void load(CompoundTag tag) {
+        super.load(tag); water.readFromNBT(tag.getCompound("water")); clock.restore(tag.getInt("dry"), tag.getInt("wet"));
+        pending = tag.contains("pending") ? new java.util.ArrayList<>() : null; if (pending != null) for (var value : tag.getList("pending", 10)) pending.add(ItemStack.of( (CompoundTag)value));
     }
     @Override public CompoundTag snapshot(int page, String search) {
         var tag = super.snapshot(page, search); tag.putInt("water", water.getFluidAmount());

@@ -13,27 +13,26 @@ import net.minecraft.world.entity.Mob;
 import net.minecraft.world.item.*;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.storage.loot.LootTable;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.event.OnDatapackSyncEvent;
-import net.neoforged.neoforge.network.PacketDistributor;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
+import net.minecraftforge.event.OnDatapackSyncEvent;
 import java.util.*;
 
 /** Enumerate item possibilities, not a random kill. Code-only drops use explicit additions. */
 @EventBusSubscriber(modid = Agristics.ID)
 public final class BioLootCatalog {
-    private static final Map<HolderLookup.Provider, Map<ResourceLocation, List<Item>>> SERVER = new WeakHashMap<>();
+    private static final Map<RegistryAccess, Map<ResourceLocation, List<Item>>> SERVER = new WeakHashMap<>();
     private static volatile Map<ResourceLocation, List<Item>> client = Map.of();
     private BioLootCatalog() {}
     public static List<Item> clientDrops(ResourceLocation entity) { return client.getOrDefault(entity, List.of()); }
     public static Map<ResourceLocation, List<Item>> clientCatalog() { return client; }
     /** Optional client integrations can refresh after server loot data arrives or reloads. */
-    public static final class ClientCatalogUpdated extends net.neoforged.bus.api.Event {}
+    public static final class ClientCatalogUpdated extends net.minecraftforge.eventbus.api.Event {}
     public static List<Item> drops(Level level, ResourceLocation entity) {
         if (entity == null) return List.of();
         return level instanceof ServerLevel server ? catalog(server).getOrDefault(entity, List.of()) : clientDrops(entity);
     }
-    public static List<Item> drops(HolderLookup.Provider registries, ResourceLocation entity) {
+    public static List<Item> drops(RegistryAccess registries, ResourceLocation entity) {
         synchronized (SERVER) { var data = SERVER.get(registries); return data == null ? clientDrops(entity) : data.getOrDefault(entity, List.of()); }
     }
     private static Map<ResourceLocation, List<Item>> catalog(ServerLevel level) {
@@ -45,17 +44,17 @@ public final class BioLootCatalog {
             var id = BuiltInRegistries.ENTITY_TYPE.getKey(type); var items = new TreeMap<String, Item>();
             try {
                 var entity = type.create(level); if (!(entity instanceof Mob mob)) continue;
-                collectTable(level, mob.getLootTable().location(), items, new HashSet<>());
+                collectTable(level, mob.getLootTable(), items, new HashSet<>());
                 // Variant sub-tables, e.g. all sheep wool colors.
                 var prefix = id.getPath().equals("sheep") && id.getNamespace().equals("minecraft") ? "entities/sheep/" : "entities/" + id.getPath() + "/";
-                for (var key : level.getServer().reloadableRegistries().getKeys(Registries.LOOT_TABLE))
+                for (var key : level.getServer().getLootData().getKeys(net.minecraft.world.level.storage.loot.LootDataType.TABLE))
                     if (key.getNamespace().equals(id.getNamespace()) && key.getPath().startsWith(prefix)) collectTable(level, key, items, new HashSet<>());
             } catch (RuntimeException exception) {
                 org.slf4j.LoggerFactory.getLogger("AppliedAgristics").warn("Unable to enumerate biological loot for {}", id, exception);
             }
             // These are created by entity/world code instead of ordinary loot table entries.
-            if (id.toString().equals("minecraft:wither")) add(items, ResourceLocation.parse("minecraft:nether_star"));
-            if (id.toString().equals("minecraft:ender_dragon")) add(items, ResourceLocation.parse("minecraft:dragon_egg"));
+            if (id.toString().equals("minecraft:wither")) add(items, new ResourceLocation("minecraft:nether_star"));
+            if (id.toString().equals("minecraft:ender_dragon")) add(items, new ResourceLocation("minecraft:dragon_egg"));
             List<Item> special = switch (id.toString()) {
                 case "minecraft:zombie" -> List.of(Items.ZOMBIE_HEAD, Items.IRON_SWORD, Items.IRON_SHOVEL);
                 case "minecraft:husk", "minecraft:zombie_villager" -> List.of(Items.IRON_SWORD, Items.IRON_SHOVEL);
@@ -88,14 +87,14 @@ public final class BioLootCatalog {
     }
     private static void collectTable(ServerLevel level, ResourceLocation id, Map<String, Item> output, Set<ResourceLocation> visited) {
         if (!visited.add(id)) return;
-        var table = level.getServer().reloadableRegistries().getLootTable(ResourceKey.create(Registries.LOOT_TABLE, id));
-        var ops = level.getServer().reloadableRegistries().get().createSerializationContext(JsonOps.INSTANCE);
-        LootTable.DIRECT_CODEC.encodeStart(ops, table).result().ifPresent(json -> {
+        var table = level.getServer().getLootData().getLootTable(id);
+        var json = io.github.sudabake.appliedagristics.logic.LootJson.encode(table);
+        {
             collect(level, json, output, visited);
             if (json.toString().contains("minecraft:furnace_smelt")) for (var item : new ArrayList<>(output.values()))
-                level.getRecipeManager().getRecipeFor(net.minecraft.world.item.crafting.RecipeType.SMELTING, new net.minecraft.world.item.crafting.SingleRecipeInput(new ItemStack(item)), level)
-                    .ifPresent(recipe -> add(output, BuiltInRegistries.ITEM.getKey(recipe.value().getResultItem(level.registryAccess()).getItem())));
-        });
+                level.getRecipeManager().getRecipeFor(net.minecraft.world.item.crafting.RecipeType.SMELTING, new net.minecraft.world.SimpleContainer(new ItemStack(item)), level)
+                    .ifPresent(recipe -> add(output, BuiltInRegistries.ITEM.getKey(recipe.getResultItem(level.registryAccess()).getItem())));
+        }
     }
     private static void collect(ServerLevel level, JsonElement json, Map<String, Item> output, Set<ResourceLocation> visited) {
         if (json.isJsonArray()) { for (var value : json.getAsJsonArray()) collect(level, value, output, visited); return; }
@@ -125,14 +124,14 @@ public final class BioLootCatalog {
         tag.put("planting",io.github.sudabake.appliedagristics.logic.PlantingCatalog.serialize(event.getPlayerList().getServer().overworld()));
         var payload = new Messages.BiologicalCatalog(tag);
         if (Boolean.getBoolean("appliedagristics.clientSmoke")) {
-            var buffer=new net.minecraft.network.RegistryFriendlyByteBuf(io.netty.buffer.Unpooled.buffer(),event.getPlayerList().getServer().registryAccess());
+            var buffer=new net.minecraft.network.FriendlyByteBuf(io.netty.buffer.Unpooled.buffer());
             try {
-                Messages.BiologicalCatalog.CODEC.encode(buffer,payload);
+                buffer.writeNbt(payload.data());
                 com.mojang.logging.LogUtils.getLogger().info("CATALOG_PAYLOAD_PROFILE entities={} bytes={}",entities.size(),buffer.readableBytes());
             } finally {buffer.release();}
         }
-        if (event.getPlayer() != null) PacketDistributor.sendToPlayer(event.getPlayer(), payload);
-        else for (var player : event.getPlayerList().getPlayers()) PacketDistributor.sendToPlayer(player, payload);
+        if (event.getPlayer() != null) io.github.sudabake.appliedagristics.network.Messages.sendToPlayer(event.getPlayer(), payload);
+        else for (var player : event.getPlayerList().getPlayers()) io.github.sudabake.appliedagristics.network.Messages.sendToPlayer(player, payload);
     }
     public static void loadClient(CompoundTag tag) {
         var result = new HashMap<ResourceLocation, List<Item>>();
@@ -146,6 +145,6 @@ public final class BioLootCatalog {
         }
         client = Map.copyOf(result);
         io.github.sudabake.appliedagristics.logic.PlantingCatalog.loadClient(tag.getList("planting",Tag.TAG_COMPOUND));
-        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(new ClientCatalogUpdated());
+        net.minecraftforge.common.MinecraftForge.EVENT_BUS.post(new ClientCatalogUpdated());
     }
 }

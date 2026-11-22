@@ -8,12 +8,11 @@ import appeng.core.definitions.*;
 import io.github.sudabake.appliedagristics.*;
 import io.github.sudabake.appliedagristics.block.*;
 import net.minecraft.core.*;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.gametest.framework.*;
 import net.minecraft.world.item.*;
 import net.minecraft.world.level.block.*;
 import net.minecraft.world.phys.*;
-import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+import net.minecraftforge.gametest.PrefixGameTestTemplate;
 import java.util.*;
 
 @PrefixGameTestTemplate(false)
@@ -27,8 +26,8 @@ public final class RevisionGameTests {
         for(var entry:Agristics.ITEMS.getEntries()) {
             var item=entry.get(); if(derived.contains(item)) continue;
             var id=net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(item);
-            var holder=recipes.stream().filter(r->r.id().equals(id)).findFirst().orElseThrow(()->new IllegalStateException("Missing survival recipe: "+id));
-            var recipe=holder.value(); var ingredients=recipe.getIngredients();
+            var holder=recipes.stream().filter(r->r.getId().equals(id)).findFirst().orElseThrow(()->new IllegalStateException("Missing survival recipe: "+id));
+            var recipe=holder; var ingredients=recipe.getIngredients();
             var stacks=new ArrayList<ItemStack>();
             for(var ingredient:ingredients) {
                 h.assertTrue(ingredient.isEmpty() || ingredient.getItems().length>0,"Ingredient or tag resolves for "+id);
@@ -37,12 +36,12 @@ public final class RevisionGameTests {
             int width=3,height=3;
             if(recipe instanceof net.minecraft.world.item.crafting.ShapedRecipe shaped) { width=shaped.getWidth();height=shaped.getHeight(); }
             else while(stacks.size()<9) stacks.add(ItemStack.EMPTY);
-            var input=net.minecraft.world.item.crafting.CraftingInput.of(width,height,stacks);
+            var input=ForgeTestInputs.crafting(width,height,stacks);
             h.assertTrue(recipe.matches(input,level),"Real recipe accepts its ingredients: "+id);
             var actual=level.getRecipeManager().getRecipeFor(net.minecraft.world.item.crafting.RecipeType.CRAFTING,input,level).orElseThrow();
-            h.assertTrue(actual.id().equals(id),"Workbench selects the intended recipe without a collision: "+id);
+            h.assertTrue(actual.getId().equals(id),"Workbench selects the intended recipe without a collision: "+id);
             int expected=item==Agristics.PLANTER_FRAME.get().asItem()?4:1;
-            var result=actual.value().assemble(input,registries);
+            var result=actual.assemble(input,registries);
             h.assertTrue(result.is(item)&&result.getCount()==expected,"Survival result and batch count: "+id);
             checked++;
         }
@@ -57,7 +56,7 @@ public final class RevisionGameTests {
         h.runAtTickTime(100,()->{
             var controller=f.controller(); var crop=Cultivations.seed(seed.toStack(1),h.getLevel(),controller.getBlockPos());
             controller.configure(crop.getId(),true,-1); controller.step();
-            controller.updateWorkVisual(); h.assertTrue(controller.workingVisual() && controller.getUpdateTag(h.getLevel().registryAccess()).getBoolean("working"),"Production synchronizes a working visual");
+            controller.updateWorkVisual(); h.assertTrue(controller.workingVisual() && controller.getUpdateTag().getBoolean("working"),"Production synchronizes a working visual");
             var node=f.access().getMainNode().getNode(); var task=controller.tasks.get(crop.getId()); double progress=task.progress;
             h.assertTrue(node!=null && node.isActive() && task.occupied==1,"Fixture has an active network and working seed");
             var outside=controller.getBlockPos().north();
@@ -84,10 +83,10 @@ public final class RevisionGameTests {
     }
     @GameTest(template="empty",templateNamespace=Agristics.ID)
     public static void ordinaryShellStacksAndDropsInventoryOnce(GameTestHelper h) {
-        var pos=new BlockPos(2,1,2); h.setBlock(pos,Agristics.EARLY.get()); EarlyPlanter machine=h.getBlockEntity(pos);
+        var pos=new BlockPos(2,1,2); h.setBlock(pos,Agristics.EARLY.get()); EarlyPlanter machine = (EarlyPlanter) h.getBlockEntity(pos);
         machine.items.setStackInSlot(0,new ItemStack(Items.WHEAT_SEEDS)); machine.items.setStackInSlot(1,new ItemStack(Blocks.FARMLAND)); machine.items.setStackInSlot(2,new ItemStack(Items.WHEAT,7));
-        var shell=Block.getDrops(machine.getBlockState(),h.getLevel(),machine.getBlockPos(),machine).getFirst();
-        h.assertTrue(!shell.has(DataComponents.BLOCK_ENTITY_DATA) && ItemStack.isSameItemSameComponents(shell,new ItemStack(Agristics.EARLY.get())),"Ordinary machine shell is data-free and stacks with a new shell");
+        var shell=Block.getDrops(machine.getBlockState(),h.getLevel(),machine.getBlockPos(),machine).get(0);
+        h.assertTrue(!(net.minecraft.world.item.BlockItem.getBlockEntityData(shell)!=null) && ItemStack.isSameItemSameTags(shell,new ItemStack(Agristics.EARLY.get())),"Ordinary machine shell is data-free and stacks with a new shell");
         h.getLevel().destroyBlock(machine.getBlockPos(),true);
         var drops=h.getLevel().getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class,new AABB(machine.getBlockPos()).inflate(1));
         int wheat=0,seeds=0,soil=0,shells=0;
@@ -97,34 +96,34 @@ public final class RevisionGameTests {
     }
     @GameTest(template="empty",templateNamespace=Agristics.ID)
     public static void soilPacketAndOpenTrayCollision(GameTestHelper h) {
-        var pos=new BlockPos(1,1,1); h.setBlock(pos,Agristics.EARLY.get()); EarlyPlanter machine=h.getBlockEntity(pos);
-        h.assertTrue(machine.getUpdateTag(h.getLevel().registryAccess()).isEmpty(),"Empty planter has no fixed soil display");
+        var pos=new BlockPos(1,1,1); h.setBlock(pos,Agristics.EARLY.get()); EarlyPlanter machine = (EarlyPlanter) h.getBlockEntity(pos);
+        h.assertTrue(machine.getUpdateTag().isEmpty(),"Empty planter has no fixed soil display");
         h.assertTrue(machine.items.insertItem(1,new ItemStack(Blocks.DIRT),false).isEmpty(),"Soil slot accepts actual dirt for display");
-        var tag=machine.getUpdateTag(h.getLevel().registryAccess());
-        h.assertTrue(ItemStack.parseOptional(h.getLevel().registryAccess(),tag.getCompound("displaySoil")).is(Items.DIRT),"Display packet reflects the actual inserted soil");
+        var tag=machine.getUpdateTag();
+        h.assertTrue(ItemStack.of(tag.getCompound("displaySoil")).is(Items.DIRT),"Display packet reflects the actual inserted soil");
         var shape=machine.getBlockState().getCollisionShape(h.getLevel(),machine.getBlockPos());
         h.assertTrue(shape.max(Direction.Axis.Y)==10.0/16 && shape.toAabbs().stream().noneMatch(box->box.contains(.5,.5,.5))
             && shape.toAabbs().stream().anyMatch(box->box.contains(.02,.5,.5)),"Planter collision follows the new low rim while the central tray remains open");
-        machine.items.setStackInSlot(1,ItemStack.EMPTY); h.assertTrue(machine.getUpdateTag(h.getLevel().registryAccess()).isEmpty(),"Removing soil clears the tray display"); h.succeed();
+        machine.items.setStackInSlot(1,ItemStack.EMPTY); h.assertTrue(machine.getUpdateTag().isEmpty(),"Removing soil clears the tray display"); h.succeed();
     }
     @GameTest(template="empty",templateNamespace=Agristics.ID)
     public static void creativeBreakKeepsPortableStorage(GameTestHelper h) {
-        var pos=new BlockPos(2,1,2); h.setBlock(pos,Agristics.ESSENCE_VAULT.get()); EssenceVault vault=h.getBlockEntity(pos);
-        var crop=Crops.all().getFirst(); vault.storeProduced(AEItemKey.of(new ItemStack(crop.getEssenceItem())),10_000_000_000L,false);
+        var pos=new BlockPos(2,1,2); h.setBlock(pos,Agristics.ESSENCE_VAULT.get()); EssenceVault vault = (EssenceVault) h.getBlockEntity(pos);
+        var crop=Crops.all().get(0); vault.storeProduced(AEItemKey.of(new ItemStack(crop.getEssenceItem())),10_000_000_000L,false);
         var block=Agristics.ESSENCE_VAULT.get(); var state=vault.getBlockState();
-        block.playerWillDestroy(h.getLevel(),vault.getBlockPos(),state,h.makeMockPlayer(net.minecraft.world.level.GameType.CREATIVE));
+        block.playerWillDestroy(h.getLevel(),vault.getBlockPos(),state,ForgeTestInputs.mockPlayer(h, net.minecraft.world.level.GameType.CREATIVE));
         h.getLevel().removeBlock(vault.getBlockPos(),false);
         var drops=h.getLevel().getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class,new AABB(vault.getBlockPos()).inflate(1));
-        h.assertTrue(drops.size()==1 && drops.getFirst().getItem().is(block.asItem()),"Creative break emits exactly one portable storage");
-        var saved=drops.getFirst().getItem().get(DataComponents.BLOCK_ENTITY_DATA);
-        h.assertTrue(saved!=null && saved.copyTag().getList("essences",10).getCompound(0).getLong("count")==10_000_000_000L,"Creative break preserves the full essence count"); h.succeed();
+        h.assertTrue(drops.size()==1 && drops.get(0).getItem().is(block.asItem()),"Creative break emits exactly one portable storage");
+        var saved=net.minecraft.world.item.BlockItem.getBlockEntityData(drops.get(0).getItem());
+        h.assertTrue(saved!=null && saved.getList("essences",10).getCompound(0).getLong("count")==10_000_000_000L,"Creative break preserves the full essence count"); h.succeed();
     }
     @GameTest(template="empty",templateNamespace=Agristics.ID,timeoutTicks=240)
     public static void bulkStoragesReplaceBothFinitePorts(GameTestHelper h) {
         var f=PlanterFixture.install(h.getLevel(),h.absolutePos(new BlockPos(2,1,1)),true);
         h.getLevel().setBlockAndUpdate(f.input().getBlockPos(),Agristics.PLANTER_FRAME.get().defaultBlockState());
         h.getLevel().setBlockAndUpdate(f.output().getBlockPos(),Agristics.PLANTER_FRAME.get().defaultBlockState());
-        f.controller().structure.refresh(); f.access().ensureNode(); var crop=Crops.all().getFirst(); f.seeds().add(AEItemKey.of(new ItemStack(crop.getSeedsItem())),1);
+        f.controller().structure.refresh(); f.access().ensureNode(); var crop=Crops.all().get(0); f.seeds().add(AEItemKey.of(new ItemStack(crop.getSeedsItem())),1);
         h.runAtTickTime(100,()->{
             var machine=f.controller(); h.assertTrue(machine.structure.formed() && machine.getMainNode().isActive(),"Bulk seed bay and essence vault form without redundant finite ports");
             machine.configure(crop.getId(),true,1); for (int i=0;i<40;i++) machine.step();
@@ -138,17 +137,17 @@ public final class RevisionGameTests {
     @GameTest(template="empty",templateNamespace=Agristics.ID,timeoutTicks=240)
     public static void aePatternFillsEightRealPedestalsAndReturnsResult(GameTestHelper h) {
         var pos=new BlockPos(4,1,4); h.setBlock(pos,Agristics.ME_INFUSION.get()); h.setBlock(pos.west(),AEBlocks.CREATIVE_ENERGY_CELL.block()); h.setBlock(pos.west(2),AEBlocks.DRIVE.block());
-        appeng.blockentity.storage.DriveBlockEntity drive=h.getBlockEntity(pos.west(2)); drive.getInternalInventory().setItemDirect(0,AEItems.ITEM_CELL_1K.stack()); MEInfusionAltar altar=h.getBlockEntity(pos);
+        appeng.blockentity.storage.DriveBlockEntity drive = (appeng.blockentity.storage.DriveBlockEntity) h.getBlockEntity(pos.west(2)); drive.getInternalInventory().setItemDirect(0,AEItems.ITEM_CELL_1K.stack()); MEInfusionAltar altar = (MEInfusionAltar) h.getBlockEntity(pos);
         for (var p:altar.pedestalPositions()) h.getLevel().setBlockAndUpdate(p,com.blakebr0.mysticalagriculture.init.ModBlocks.INFUSION_PEDESTAL.get().defaultBlockState());
         h.runAtTickTime(100,()->{
-            var recipe=h.getLevel().getRecipeManager().getAllRecipesFor(com.blakebr0.mysticalagriculture.init.ModRecipeTypes.INFUSION.get()).stream().map(r->r.value()).filter(r->r.getIngredients().size()==8 && !r.getAltarIngredient().isEmpty()).findFirst().orElseThrow();
-            var ingredients=new LinkedHashMap<AEItemKey,Long>(); ingredients.merge(AEItemKey.of(recipe.getAltarIngredient().getItems()[0]),1L,Long::sum);
-            for (var ingredient:recipe.getIngredients()) if (!ingredient.isEmpty()) ingredients.merge(AEItemKey.of(ingredient.getItems()[0]),1L,Long::sum);
+            var recipe=h.getLevel().getRecipeManager().getAllRecipesFor(com.blakebr0.mysticalagriculture.init.ModRecipeTypes.INFUSION.get()).stream().filter(r->r.getIngredients().size()==9 && !r.getIngredients().get(0).isEmpty()).findFirst().orElseThrow();
+            var ingredients=new LinkedHashMap<AEItemKey,Long>(); ingredients.merge(AEItemKey.of(recipe.getIngredients().get(0).getItems()[0]),1L,Long::sum);
+            for (var ingredient:recipe.getIngredients().subList(1, recipe.getIngredients().size())) if (!ingredient.isEmpty()) ingredients.merge(AEItemKey.of(ingredient.getItems()[0]),1L,Long::sum);
             var output=recipe.getResultItem(h.getLevel().registryAccess());
-            var encoded=PatternDetailsHelper.encodeProcessingPattern(ingredients.entrySet().stream().map(e->new GenericStack(e.getKey(),e.getValue())).toList(),List.of(new GenericStack(AEItemKey.of(output),output.getCount())));
+            var encoded=ForgeTestInputs.processingPattern(ingredients.entrySet().stream().map(e->new GenericStack(e.getKey(),e.getValue())).toList(),List.of(new GenericStack(AEItemKey.of(output),output.getCount())));
             var pattern=PatternDetailsHelper.decodePattern(encoded,h.getLevel()); var counters=new KeyCounter[pattern.getInputs().length];
             for (int i=0;i<counters.length;i++) { counters[i]=new KeyCounter(); var input=pattern.getInputs()[i]; var stack=input.getPossibleInputs()[0]; counters[i].add(stack.what(),stack.amount()*input.getMultiplier()); }
-            var missing=altar.pedestalPositions().getFirst(); h.getLevel().removeBlock(missing,false);
+            var missing=altar.pedestalPositions().get(0); h.getLevel().removeBlock(missing,false);
             h.assertTrue(!altar.pushPattern(pattern,counters,Direction.NORTH) && altar.items.getStackInSlot(0).isEmpty(),"Missing real pedestal rejects the whole push without taking materials");
             h.getLevel().setBlockAndUpdate(missing,com.blakebr0.mysticalagriculture.init.ModBlocks.INFUSION_PEDESTAL.get().defaultBlockState());
             h.assertTrue(altar.pushPattern(pattern,counters,Direction.NORTH),"Native AE processing pattern is accepted");

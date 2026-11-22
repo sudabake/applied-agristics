@@ -1,6 +1,6 @@
 package io.github.sudabake.appliedagristics.testing;
 
-import appeng.api.AECapabilities;
+import appeng.capabilities.Capabilities;
 import appeng.api.config.Actionable;
 import appeng.api.networking.security.IActionSource;
 import appeng.api.stacks.AEItemKey;
@@ -12,8 +12,7 @@ import net.minecraft.core.*;
 import net.minecraft.gametest.framework.*;
 import net.minecraft.world.item.*;
 import net.minecraft.world.level.block.Blocks;
-import net.neoforged.neoforge.capabilities.Capabilities;
-import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+import net.minecraftforge.gametest.PrefixGameTestTemplate;
 
 /** Opt-in world tests for real inventories, network boundaries and native altar recipes. */
 @PrefixGameTestTemplate(false)
@@ -23,17 +22,16 @@ public final class MultiblockGameTests {
         var f=PlanterFixture.install(h.getLevel(),h.absolutePos(new BlockPos(2,1,1)),true);
         h.runAtTickTime(100,()-> {
             var level=h.getLevel(); var pos=f.controller().getBlockPos();
-            var crop=Crops.all().getFirst(); var crux=crop.getCruxBlock();
+            var crop=Crops.all().get(0); var crux=crop.getCruxBlock();
             var biomes=new java.util.HashSet<>(crop.getRequiredBiomes());
             var manager=level.getRecipeManager(); var original=new java.util.ArrayList<>(manager.getRecipes());
-            var recipes=new java.util.ArrayList<net.minecraft.world.item.crafting.RecipeHolder<?>>(original);
-            recipes.add(new net.minecraft.world.item.crafting.RecipeHolder<>(net.minecraft.resources.ResourceLocation.parse("appliedagristics:test/no_growth_conditions"),
-                new io.github.sudabake.appliedagristics.logic.PlantingRecipe(net.minecraft.world.item.crafting.Ingredient.of(Items.COOKIE),
+            var recipes=new java.util.ArrayList<net.minecraft.world.item.crafting.Recipe<?>>(original);
+            recipes.add(new io.github.sudabake.appliedagristics.logic.PlantingRecipe(new net.minecraft.resources.ResourceLocation("appliedagristics:test/no_growth_conditions"), net.minecraft.world.item.crafting.Ingredient.of(Items.COOKIE),
                     net.minecraft.world.item.crafting.Ingredient.of(Blocks.DIRT),java.util.List.of(new ItemStack(Items.WHEAT)),
-                    Blocks.WHEAT.defaultBlockState().setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.AGE_7,7),true,200,true)));
+                    Blocks.WHEAT.defaultBlockState().setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.AGE_7,7),true,200,true,java.util.Optional.empty()));
             try {
                 crop.setCruxBlock(()->Blocks.BEDROCK); crop.getRequiredBiomes().clear();
-                crop.addRequiredBiome(net.minecraft.resources.ResourceLocation.parse("appliedagristics:unavailable_biome"));
+                crop.addRequiredBiome(new net.minecraft.resources.ResourceLocation("appliedagristics:unavailable_biome"));
                 manager.replaceRecipes(recipes); io.github.sudabake.appliedagristics.logic.CropSources.invalidate();
                 h.assertTrue(level.getRawBrightness(pos.above(),0)<8,"Opaque shell leaves the native crop check position dark");
                 var cookie=new ItemStack(Items.COOKIE);
@@ -41,7 +39,7 @@ public final class MultiblockGameTests {
                     "Declared loot crop fails native soil and light checks outside the array production path");
                 var seeds=java.util.List.of(new ItemStack(Items.WHEAT_SEEDS),new ItemStack(Items.CARROT),new ItemStack(Items.POTATO),
                     new ItemStack(crop.getSeedsItem()),
-                    io.github.sudabake.appliedagristics.biology.BioData.withIdentity(Agristics.BIO_SEED.get(),net.minecraft.resources.ResourceLocation.parse("minecraft:cow")),cookie);
+                    io.github.sudabake.appliedagristics.biology.BioData.withIdentity(Agristics.BIO_SEED.get(),new net.minecraft.resources.ResourceLocation("minecraft:cow")),cookie);
                 for(var seed:seeds) {
                     var key=AEItemKey.of(seed);f.seeds().add(key,1);
                     var entry=Cultivations.seed(seed,level,pos); var output=AEItemKey.of(entry.essenceStack());
@@ -101,8 +99,8 @@ public final class MultiblockGameTests {
         f.input().items.setStackInSlot(0,new ItemStack(Items.WHEAT_SEEDS));
         h.runAtTickTime(100,()->{
             var a=f.controller(); h.assertTrue(a.structure.formed() && a.getMainNode().isActive(),"Basic structure forms without late seed bay or essence vault");
-            h.assertTrue(h.getLevel().getCapability(AECapabilities.IN_WORLD_GRID_NODE_HOST,a.getBlockPos())==null,"Controller does not connect directly");
-            h.assertTrue(h.getLevel().getCapability(AECapabilities.IN_WORLD_GRID_NODE_HOST,f.input().getBlockPos())==null,"Input port does not connect directly");
+            h.assertTrue(h.getLevel().getBlockEntity(a.getBlockPos()).getCapability(Capabilities.IN_WORLD_GRID_NODE_HOST).isPresent()==false,"Controller does not connect directly");
+            h.assertTrue(h.getLevel().getBlockEntity(f.input().getBlockPos()).getCapability(Capabilities.IN_WORLD_GRID_NODE_HOST).isPresent()==false,"Input port does not connect directly");
             var crop=Cultivations.seed(new ItemStack(Items.WHEAT_SEEDS),h.getLevel(),a.getBlockPos()); a.configure(crop.getId(),true,1); a.step();
             h.assertTrue(f.input().used(AEItemKey.of(new ItemStack(Items.WHEAT_SEEDS)))==1,"Input seed is reserved");
             h.assertTrue(f.input().automation(Direction.DOWN).extractItem(0,64,true).isEmpty(),"Automation cannot steal a working input seed");
@@ -121,11 +119,11 @@ public final class MultiblockGameTests {
         h.getLevel().setBlockAndUpdate(f.input().getBlockPos().north(),Blocks.CHEST.defaultBlockState());
         h.runAtTickTime(100,()->{
             var port=f.output(); port.items.setStackInSlot(0,new ItemStack(Items.WHEAT,12)); port.toggleAutoOutput(); port.step();
-            var chest=h.getLevel().getCapability(Capabilities.ItemHandler.BLOCK,port.getBlockPos().north(),Direction.SOUTH);
+            var chest=h.getLevel().getBlockEntity(port.getBlockPos().north()).getCapability(net.minecraftforge.common.capabilities.ForgeCapabilities.ITEM_HANDLER,Direction.SOUTH).orElse(null);
             h.assertTrue(chest!=null && chest.getStackInSlot(0).is(Items.WHEAT) && chest.getStackInSlot(0).getCount()==12,"Configured auto output pushes to neighboring inventory");
             h.assertTrue(port.items.getSlots()==16 && port.items.getStackInSlot(0).isEmpty(),"Output has sixteen slots and moves actual items once");
             h.assertTrue(port.automation(Direction.NORTH).insertItem(0,new ItemStack(Items.DIRT),true).getCount()==1,"Output rejects external insertion");
-            var save=port.saveWithFullMetadata(h.getLevel().registryAccess()); var restored=new ItemPort(port.getBlockPos(),port.getBlockState(),false); restored.setLevel(h.getLevel()); restored.loadWithComponents(save,h.getLevel().registryAccess());
+            var save=port.saveWithFullMetadata(); var restored=new ItemPort(port.getBlockPos(),port.getBlockState(),false); restored.setLevel(h.getLevel()); restored.load(save);
             h.assertTrue(restored.snapshot(0,"").getBoolean("autoOutput"),"Automatic output survives serialization");
             var input=f.input().automation(Direction.NORTH);
             h.assertTrue(input.insertItem(0,new ItemStack(Items.WHEAT_SEEDS,10),false).isEmpty()
@@ -140,26 +138,26 @@ public final class MultiblockGameTests {
     public static void wrenchRetainsLargeStorageAndReconnects(GameTestHelper h) {
         var f=PlanterFixture.install(h.getLevel(),h.absolutePos(new BlockPos(2,1,1)),true);
         h.runAtTickTime(100,()->{
-            var player=h.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+            var player=h.makeMockSurvivalPlayer();
             player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND,AEItems.CERTUS_QUARTZ_WRENCH.stack());
             var pos=f.output().getBlockPos(); var facing=f.output().outputFace();
             var hit=new net.minecraft.world.phys.BlockHitResult(net.minecraft.world.phys.Vec3.atCenterOf(pos),Direction.NORTH,pos,false);
-            var event=new net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickBlock(player,net.minecraft.world.InteractionHand.MAIN_HAND,pos,hit);
+            var event=new net.minecraftforge.event.entity.player.PlayerInteractEvent.RightClickBlock(player,net.minecraft.world.InteractionHand.MAIN_HAND,pos,hit);
             MachineWrench.wrench(event);
             h.assertTrue(event.isCanceled() && f.output().outputFace()!=facing && f.controller().structure.formed(),"Wrench rotates a formed output port without breaking the array");
-            var essence=AEItemKey.of(new ItemStack(Crops.all().getFirst().getEssenceItem()));
-            f.vault().storeProduced(essence,10_000_000_000L,false); var expected=f.vault().saveWithFullMetadata(h.getLevel().registryAccess()).getList("essences",10);
+            var essence=AEItemKey.of(new ItemStack(Crops.all().get(0).getEssenceItem()));
+            f.vault().storeProduced(essence,10_000_000_000L,false); var expected=f.vault().saveWithFullMetadata().getList("essences",10);
             pos=f.vault().getBlockPos(); player.setShiftKeyDown(true);
             hit=new net.minecraft.world.phys.BlockHitResult(net.minecraft.world.phys.Vec3.atCenterOf(pos),Direction.NORTH,pos,false);
-            MachineWrench.wrench(new net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickBlock(player,net.minecraft.world.InteractionHand.MAIN_HAND,pos,hit));
+            MachineWrench.wrench(new net.minecraftforge.event.entity.player.PlayerInteractEvent.RightClickBlock(player,net.minecraft.world.InteractionHand.MAIN_HAND,pos,hit));
             h.assertTrue(h.getLevel().isEmptyBlock(pos) && !f.controller().structure.formed() && !f.access().connectedStructure(),"Dismantling a member removes network service");
             ItemStack saved=ItemStack.EMPTY; int count=0;
             for (var stack:player.getInventory().items) if (stack.is(Agristics.ESSENCE_VAULT.get().asItem())) { saved=stack; count+=stack.getCount(); }
-            h.assertTrue(count==1 && saved.has(net.minecraft.core.component.DataComponents.BLOCK_ENTITY_DATA),"Dismantling returns exactly one data-bearing block");
+            h.assertTrue(count==1 && (net.minecraft.world.item.BlockItem.getBlockEntityData(saved)!=null),"Dismantling returns exactly one data-bearing block");
             h.getLevel().setBlockAndUpdate(pos,Agristics.ESSENCE_VAULT.get().defaultBlockState());
             h.assertTrue(BlockItem.updateCustomBlockEntityTag(h.getLevel(),player,pos,saved),"Placement restores the saved block data");
             var replacement=(EssenceVault)h.getLevel().getBlockEntity(pos);
-            h.assertTrue(replacement.saveWithFullMetadata(h.getLevel().registryAccess()).getList("essences",10).equals(expected),"Ten billion essence survives wrench removal and replacement exactly");
+            h.assertTrue(replacement.saveWithFullMetadata().getList("essences",10).equals(expected),"Ten billion essence survives wrench removal and replacement exactly");
             f.controller().structure.refresh(); f.access().ensureNode();
             h.assertTrue(f.controller().structure.formed() && f.access().connectedStructure(),"Replacing the member reforms and reconnects the array"); h.succeed();
         });
@@ -200,21 +198,21 @@ public final class MultiblockGameTests {
     @GameTest(template="empty",templateNamespace=Agristics.ID,timeoutTicks=240)
     public static void meInfusionUsesRealPedestalsAndFourCards(GameTestHelper h) {
         var pos=new BlockPos(3,1,3); h.setBlock(pos,Agristics.ME_INFUSION.get()); h.setBlock(pos.west(),AEBlocks.CREATIVE_ENERGY_CELL.block());
-        MEInfusionAltar altar=h.getBlockEntity(pos);
+        MEInfusionAltar altar = (MEInfusionAltar) h.getBlockEntity(pos);
         for (var pedestal:altar.pedestalPositions()) h.getLevel().setBlockAndUpdate(pedestal,com.blakebr0.mysticalagriculture.init.ModBlocks.INFUSION_PEDESTAL.get().defaultBlockState());
         h.runAtTickTime(100,()->{
             var holder=h.getLevel().getRecipeManager().getAllRecipesFor(com.blakebr0.mysticalagriculture.init.ModRecipeTypes.INFUSION.get()).stream()
-                .filter(r->!r.value().getAltarIngredient().isEmpty() && r.value().getAltarIngredient().getItems().length>0 && r.value().getIngredients().size()==8).findFirst().orElseThrow();
-            altar.items.setStackInSlot(0,holder.value().getAltarIngredient().getItems()[0].copyWithCount(1));
+                .filter(r->!r.getIngredients().get(0).isEmpty() && r.getIngredients().get(0).getItems().length>0 && r.getIngredients().size()==9).findFirst().orElseThrow();
+            altar.items.setStackInSlot(0,holder.getIngredients().get(0).getItems()[0].copyWithCount(1));
             for (int i=0;i<8;i++) {
-                var ingredient=holder.value().getIngredients().get(i);
+                var ingredient=holder.getIngredients().get(i+1);
                 var pedestal=(com.blakebr0.mysticalagriculture.tileentity.InfusionPedestalTileEntity)h.getLevel().getBlockEntity(altar.pedestalPositions().get(i));
                 pedestal.getInventory().setStackInSlot(0,ingredient.isEmpty() ? ItemStack.EMPTY : ingredient.getItems()[0].copyWithCount(1));
             }
             for (int i=2;i<6;i++) altar.items.insertItem(i,AEItems.SPEED_CARD.stack(2),false);
             h.assertTrue(altar.accelerationCards()==4 && altar.speed()==16,"Four separate slots accept one speed card each");
             for (int i=0;i<6;i++) altar.step(); h.assertTrue(altar.items.getStackInSlot(1).isEmpty(),"Six accelerated ticks do not finish a 100-tick infusion");
-            altar.step(); h.assertTrue(ItemStack.isSameItemSameComponents(altar.items.getStackInSlot(1),holder.value().getResultItem(h.getLevel().registryAccess())),"Seventh accelerated tick crafts the native infusion result"); h.succeed();
+            altar.step(); h.assertTrue(ItemStack.isSameItemSameTags(altar.items.getStackInSlot(1),holder.getResultItem(h.getLevel().registryAccess())),"Seventh accelerated tick crafts the native infusion result"); h.succeed();
         });
     }
 }

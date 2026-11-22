@@ -2,20 +2,21 @@ package io.github.sudabake.appliedagristics.logic;
 
 import appeng.api.stacks.AEItemKey;
 import java.util.Map;
-import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
 
 /** Keeps unresolvable entries intact until their item/component becomes available again. */
 public final class StoredItemCounts {
     private StoredItemCounts() {}
 
-    public static ListTag load(ListTag entries, Map<AEItemKey, Long> contents,
-            HolderLookup.Provider registries) {
+    public static ListTag load(ListTag entries, Map<AEItemKey, Long> contents) {
         var unresolved = new ListTag();
         for (var raw : entries) {
             var entry = (CompoundTag) raw;
-            var key = AEItemKey.fromTag(registries, entry.getCompound("key"));
+            var keyData = entry.getCompound("key");
+            var key = keyData.contains("tag") && !keyData.contains("tag", Tag.TAG_COMPOUND)
+                ? null : AEItemKey.fromTag(keyData);
             long count = entry.getLong("count");
             long previous = key == null ? 0 : contents.getOrDefault(key, 0L);
             if (key == null || key.toStack(1).isEmpty() || count <= 0 || count > Long.MAX_VALUE - previous) {
@@ -27,12 +28,11 @@ public final class StoredItemCounts {
         return unresolved;
     }
 
-    public static ListTag save(Map<AEItemKey, Long> contents, ListTag unresolved,
-            HolderLookup.Provider registries) {
+    public static ListTag save(Map<AEItemKey, Long> contents, ListTag unresolved) {
         var entries = new ListTag();
         contents.forEach((key, count) -> {
             var entry = new CompoundTag();
-            entry.put("key", key.toTag(registries));
+            entry.put("key", key.toTag());
             entry.putLong("count", count);
             entries.add(entry);
         });

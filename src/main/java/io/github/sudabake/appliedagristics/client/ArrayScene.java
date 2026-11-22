@@ -30,7 +30,7 @@ public final class ArrayScene {
   public void drag(double dx, double dy) {
     if (!Double.isFinite(dx) || !Double.isFinite(dy)) return;
     yaw = (float) ((yaw + dx) % 360);
-    pitch = (float) Math.clamp(pitch + dy, -85, 85);
+    pitch = (float) net.minecraft.util.Mth.clamp(pitch + dy, -85, 85);
     cameraDirty = true;
   }
 

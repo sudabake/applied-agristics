@@ -14,8 +14,8 @@ import net.minecraft.core.NonNullList;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.*;
 import net.minecraft.world.item.crafting.*;
-import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.common.crafting.DataComponentIngredient;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.common.crafting.StrictNBTIngredient;
 import java.util.*;
 
 /** Loaded by JEI only. The server catalog, including modded mobs, owns the variants. */
@@ -31,7 +31,7 @@ public final class AgristicsJei implements IModPlugin {
     private IJeiRuntime runtime;
     private Map<ResourceLocation, List<Item>> loaded = Map.of();
     private List<ItemStack> variants = List.of();
-    private List<RecipeHolder<CraftingRecipe>> crafting = List.of();
+    private List<CraftingRecipe> crafting = List.of();
     private List<Process> processes = List.of();
     private int generation;
     private int plantingVersion=-1;
@@ -39,12 +39,12 @@ public final class AgristicsJei implements IModPlugin {
 
     public AgristicsJei() {
         instance = this;
-        NeoForge.EVENT_BUS.addListener(this::catalogUpdated);
-        NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.client.event.RecipesUpdatedEvent event)->{ loaded=Map.of();refresh(); });
+        MinecraftForge.EVENT_BUS.addListener(this::catalogUpdated);
+        MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.client.event.RecipesUpdatedEvent event)->{ loaded=Map.of();refresh(); });
     }
     public static IJeiRuntime runtime() { return instance == null ? null : instance.runtime; }
     @Override public ResourceLocation getPluginUid() { return id("biology"); }
-    private static ResourceLocation id(String path) { return ResourceLocation.fromNamespaceAndPath(Agristics.ID, path); }
+    private static ResourceLocation id(String path) { return new ResourceLocation(Agristics.ID, path); }
     @Override public void registerItemSubtypes(ISubtypeRegistration registration) {
         var interpreter = new ISubtypeInterpreter<ItemStack>() {
             @Override public Object getSubtypeData(ItemStack stack, UidContext context) { return BioData.identity(stack); }
@@ -105,7 +105,7 @@ public final class AgristicsJei implements IModPlugin {
         for (var type : List.of(SAMPLING, CULTURE)) manager.hideRecipes(type, processes);
         if (!variants.isEmpty()) runtime.getIngredientManager().removeIngredientsAtRuntime(VanillaTypes.ITEM_STACK, variants);
         var newVariants = new ArrayList<ItemStack>();
-        var newCrafting = new ArrayList<RecipeHolder<CraftingRecipe>>();
+        var newCrafting = new ArrayList<CraftingRecipe>();
         var newProcesses = new ArrayList<Process>();
         generation++;
         catalog.keySet().stream().sorted().forEach(entity -> {
@@ -120,9 +120,15 @@ public final class AgristicsJei implements IModPlugin {
                 for (int y = 0; y < 3; y++) {
                     var row = new StringBuilder(); for (int x = 0; x < 3; x++) row.append((mask & 1 << (y * 3 + x)) != 0 ? 'E' : ' '); rows[y] = row.toString();
                 }
-                var pattern = ShapedRecipePattern.of(Map.of('E', DataComponentIngredient.of(true, essence)), rows);
-                newCrafting.add(new RecipeHolder<>(recipeId(entity, "loot/" + i),
-                    new ShapedRecipe("", CraftingBookCategory.MISC, pattern, new ItemStack(drops.get(i)))));
+                int width = 1, height = 1;
+                for (int y = 0; y < 3; y++) for (int x = 0; x < 3; x++) {
+                    if (rows[y].charAt(x) == 'E') { width = Math.max(width, x + 1); height = Math.max(height, y + 1); }
+                }
+                var inputs = NonNullList.withSize(width * height, Ingredient.EMPTY);
+                for (int y = 0; y < height; y++) for (int x = 0; x < width; x++)
+                    if (rows[y].charAt(x) == 'E') inputs.set(y * width + x, StrictNBTIngredient.of(essence));
+                newCrafting.add(new ShapedRecipe(recipeId(entity, "loot/" + i), "", CraftingBookCategory.MISC,
+                        width, height, inputs, new ItemStack(drops.get(i))));
             }
         });
         var plantEntries=new ArrayList<PlantingCatalog.Entry>();

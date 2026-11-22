@@ -67,7 +67,7 @@ public final class EaepClientChecks {
             for(int slot=0;slot<inventory.size();slot++) {
                 var pattern=PatternDetailsHelper.decodePattern(inventory.getStackInSlot(slot),level);
                 if(pattern==null) continue;
-                var expected=AEItemKey.of(BioData.withIdentity(Agristics.BIO_SEED.get(),ResourceLocation.parse("minecraft:cow")));
+                var expected=AEItemKey.of(BioData.withIdentity(Agristics.BIO_SEED.get(),new ResourceLocation("minecraft:cow")));
                 if(!pattern.getPrimaryOutput().what().equals(expected)) throw new IllegalStateException("EAEP changed biological output identity");
                 var counters=new KeyCounter[pattern.getInputs().length];
                 for(int i=0;i<counters.length;i++) {
@@ -83,7 +83,7 @@ public final class EaepClientChecks {
         });
         if(dispatched && ticks%20==0) mc.getSingleplayerServer().execute(()-> {
             var drive=(DriveBlockEntity)mc.getSingleplayerServer().overworld().getBlockEntity(PROVIDER.south());
-            var key=AEItemKey.of(BioData.withIdentity(Agristics.BIO_SEED.get(),ResourceLocation.parse("minecraft:cow")));
+            var key=AEItemKey.of(BioData.withIdentity(Agristics.BIO_SEED.get(),new ResourceLocation("minecraft:cow")));
             var storage=drive.getMainNode().getGrid().getStorageService().getInventory();
             passed=storage.extract(key,1,appeng.api.config.Actionable.SIMULATE,appeng.api.networking.security.IActionSource.ofMachine(drive))==1;
             if(ticks%100==0) {

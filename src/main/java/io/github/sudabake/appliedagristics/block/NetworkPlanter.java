@@ -22,11 +22,11 @@ public final class NetworkPlanter extends GridMachine {
         super.updateWorkVisual();
         if(changed && level!=null && !level.isClientSide) level.sendBlockUpdated(worldPosition,getBlockState(),getBlockState(),2);
     }
-    @Override public CompoundTag getUpdateTag(net.minecraft.core.HolderLookup.Provider registries) {
-        var tag=super.getUpdateTag(registries);tag.putBoolean("poweredVisual",poweredVisual);return tag;
+    @Override public CompoundTag getUpdateTag() {
+        var tag=super.getUpdateTag();tag.putBoolean("poweredVisual",poweredVisual);return tag;
     }
-    @Override public void handleUpdateTag(CompoundTag tag,net.minecraft.core.HolderLookup.Provider registries) {
-        super.handleUpdateTag(tag,registries);poweredVisual=tag.getBoolean("poweredVisual");
+    @Override public void handleUpdateTag(CompoundTag tag) {
+        super.handleUpdateTag(tag);poweredVisual=tag.getBoolean("poweredVisual");
     }
     public final io.github.sudabake.appliedagristics.multiblock.PlanterStructure structure = new io.github.sudabake.appliedagristics.multiblock.PlanterStructure(this);
     @Override protected boolean ownsNode() { return false; }
@@ -183,7 +183,7 @@ public final class NetworkPlanter extends GridMachine {
             }
             if (!task.enabled) { task.status = "disabled"; continue; }
             var inputs=locations.getOrDefault(entry.getKey(),List.of());
-            var crop = inputs.isEmpty()?null:Cultivations.seed(inputs.getFirst().key.toStack(1),(ServerLevel)level,worldPosition);
+            var crop = inputs.isEmpty()?null:Cultivations.seed(inputs.get(0).key.toStack(1),(ServerLevel)level,worldPosition);
             if (crop == null) { task.status = "missing_inputs"; releaseTask(task); continue; }
             reserve(task, locations.getOrDefault(crop.getId(), List.of()));
             if (!task.unresolvedBatch.isEmpty()) { task.status="inventory_recovery"; releaseTask(task); continue; }
@@ -198,7 +198,7 @@ public final class NetworkPlanter extends GridMachine {
             double cost=expectedPower(task.occupied,speed(),duration,batchLimit)*5;
             if (energy.extractAEPower(cost, Actionable.SIMULATE, PowerMultiplier.CONFIG) + 0.000001 < cost) { task.status = "no_power"; continue; }
             double paid = energy.extractAEPower(cost, Actionable.MODULATE, PowerMultiplier.CONFIG);
-            task.progress += work * Math.clamp(paid / cost, 0, 1);
+            task.progress += work * net.minecraft.util.Mth.clamp(paid / cost, 0, 1);
             task.power = paid / 5; task.status = "growing"; running++;
             long cycles = Math.min((long)(task.progress / duration),batchLimit);
             if (cycles > 0) {
@@ -243,23 +243,23 @@ public final class NetworkPlanter extends GridMachine {
         return ProductionMath.limitedPower(occupied,speed,duration,batchLimit,Balance.POWER.get(),
                 (double)Balance.PARALLEL_MAX.get()*Balance.SPEED_MAX.get(),Balance.FULL_POWER.get());
     }
-    @Override protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.saveAdditional(tag, registries); var list = new ListTag();
+    @Override protected void saveAdditional(CompoundTag tag) {
+        super.saveAdditional(tag); var list = new ListTag();
         tag.putBoolean("autoEnableNewSeeds",autoEnableNewSeeds);
         var seen=new ListTag();for(var id:seenSeeds) seen.add(StringTag.valueOf(id.toString()));tag.put("seenSeeds",seen);
         tasks.forEach((id, t) -> {
             var e = new CompoundTag(); e.putString("id", id.toString()); e.putBoolean("enabled", t.enabled); e.putLong("target", t.target); e.putDouble("work", t.progress);
-            e.put("batch",StoredItemCounts.save(t.pending,t.unresolvedBatch,registries));
+            e.put("batch",StoredItemCounts.save(t.pending,t.unresolvedBatch));
             var fractions = new ListTag();
-            t.fractions.forEach((key, amount) -> { var f = new CompoundTag(); f.put("key", key.toTag(registries)); f.putDouble("fraction", amount); fractions.add(f); });
+            t.fractions.forEach((key, amount) -> { var f = new CompoundTag(); f.put("key", key .toTag()); f.putDouble("fraction", amount); fractions.add(f); });
             fractions.addAll(t.unresolvedFractions.copy());
             e.put("fractions",fractions); list.add(e);
         });
         list.addAll(unresolvedTasks.copy());
         tag.put("tasks", list);
     }
-    @Override protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.loadAdditional(tag, registries);
+    @Override public void load(CompoundTag tag) {
+        super.load(tag);
         tasks.clear(); unresolvedTasks=new ListTag();
         autoEnableNewSeeds=tag.getBoolean("autoEnableNewSeeds");seenSeeds.clear();
         for(var raw:tag.getList("seenSeeds",Tag.TAG_STRING)) {var id=ResourceLocation.tryParse(raw.getAsString());if(id!=null) seenSeeds.add(id);}
@@ -272,13 +272,13 @@ public final class NetworkPlanter extends GridMachine {
             t.target=e.contains("target") ? Math.max(-1,e.getLong("target")) : -1;
             double work=e.getDouble("work");
             t.progress=Double.isFinite(work) ? Math.max(0,work) : 0;
-            t.unresolvedBatch=StoredItemCounts.load(e.getList("batch",Tag.TAG_COMPOUND),t.pending,registries);
+            t.unresolvedBatch=StoredItemCounts.load(e.getList("batch",Tag.TAG_COMPOUND),t.pending);
             for (var item : e.getList("fractions",Tag.TAG_COMPOUND)) {
                 var f=(CompoundTag)item;
-                var key=AEItemKey.fromTag(registries,f.getCompound("key"));
+                var key=AEItemKey.fromTag(f.getCompound("key"));
                 double fraction=f.getDouble("fraction");
                 if (key==null || !Double.isFinite(fraction) || t.fractions.containsKey(key)) t.unresolvedFractions.add(f.copy());
-                else t.fractions.put(key,Math.clamp(fraction,0,Math.nextDown(1.0)));
+                else t.fractions.put(key,net.minecraft.util.Mth.clamp(fraction,0,Math.nextDown(1.0)));
             }
             tasks.put(id,t);
         }
@@ -300,7 +300,7 @@ public final class NetworkPlanter extends GridMachine {
         for (var crop : crops.subList(start, Math.min(start + 4, crops.size()))) {
             var t = tasks.getOrDefault(crop.getId(), new Task()); var row = new CompoundTag();
             row.putString("id", crop.getId().toString()); row.putString("name", crop.getDisplayName().getString());
-            row.put("seed", crop.seedStack().save(level.registryAccess())); row.put("output", crop.essenceStack().save(level.registryAccess()));
+            row.put("seed", crop.seedStack().save(new CompoundTag())); row.put("output", crop.essenceStack().save(new CompoundTag()));
             row.putLong("stock", inventory == null ? 0 : inventory.get(AEItemKey.of(crop.essenceStack())));
             String rowStatus=!t.enabled?"disabled":!structure.formed()?"unformed":grid==null || !getMainNode().isActive()?"offline":Set.of("offline","unformed","disabled").contains(t.status)?"waiting":t.status;
             row.putLong("target", t.target); row.putBoolean("enabled", t.enabled); row.putString("status", rowStatus);

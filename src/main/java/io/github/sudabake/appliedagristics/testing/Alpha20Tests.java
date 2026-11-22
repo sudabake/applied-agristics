@@ -13,22 +13,22 @@ import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.item.*;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.material.Fluids;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction;
-import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+import net.minecraftforge.fluids.FluidStack;
+import net.minecraftforge.fluids.capability.IFluidHandler.FluidAction;
+import net.minecraftforge.gametest.PrefixGameTestTemplate;
 
 @PrefixGameTestTemplate(false)
 public final class Alpha20Tests {
     @GameTest(template="empty",templateNamespace=Agristics.ID)
     public static void unboundedStoragePersistsCounts(GameTestHelper h) {
-        var pos=new BlockPos(1,1,1);h.setBlock(pos,Agristics.SEEDS.get());SeedStorage bank=h.getBlockEntity(pos);
+        var pos=new BlockPos(1,1,1);h.setBlock(pos,Agristics.SEEDS.get());SeedStorage bank = (SeedStorage) h.getBlockEntity(pos);
         for(int i=0;i<20;i++) {
             var key=AEItemKey.of(new ItemStack(Crops.all().get(i).getSeedsItem()));
             h.assertTrue(bank.add(key,1000000000L+i)==1000000000L+i,"Seed storage has no sixteen-type cap");
         }
         var wheat=AEItemKey.of(new ItemStack(Items.WHEAT_SEEDS));
         h.assertTrue(bank.add(wheat,10000000000L)==10000000000L,"Seed storage accepts large counts");
-        var save=bank.saveWithFullMetadata(h.getLevel().registryAccess());bank.loadWithComponents(save,h.getLevel().registryAccess());
+        var save=bank.saveWithFullMetadata();bank.load(save);
         for(int i=0;i<20;i++) h.assertTrue(bank.count(AEItemKey.of(new ItemStack(Crops.all().get(i).getSeedsItem())))==1000000000L+i,"Every current count survives saving");
         h.assertTrue(bank.count(wheat)==10000000000L,"Large counts survive saving");h.succeed();
     }
@@ -43,7 +43,7 @@ public final class Alpha20Tests {
                 h.assertTrue(Math.abs(a.tasks.get(crop.getId()).power-Balance.POWER.get())<1e-8,"Power remains the original per-crop cost");
                 h.assertTrue(a.tasks.get(crop.getId()).progress==5,"Multiple species do not grant any production bonus");
             }
-            var player=h.makeMockPlayer(GameType.SURVIVAL);player.getPersistentData().putBoolean("appliedagristics.hideOrdinary",true);
+            var player=h.makeMockSurvivalPlayer();player.getPersistentData().putBoolean("appliedagristics.hideOrdinary",true);
             h.assertTrue(new MachineMenu(1,player.getInventory(),a).search.equals("hide_ordinary"),"Reopening restores the player's crop filter");h.succeed();
         });
     }

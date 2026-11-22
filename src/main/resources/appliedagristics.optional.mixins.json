@@ -2,7 +2,7 @@
   "required": false,
   "minVersion": "0.8",
   "package": "io.github.sudabake.appliedagristics.mixin",
-  "compatibilityLevel": "JAVA_21",
+  "compatibilityLevel": "JAVA_17",
   "mixins": [
     "JdteCropResolverMixin",
     "JdteCropDefinitionMixin",
@@ -10,5 +10,6 @@
   ],
   "injectors": {
     "defaultRequire": 0
-  }
+  },
+  "refmap": "appliedagristics.refmap.json"
 }

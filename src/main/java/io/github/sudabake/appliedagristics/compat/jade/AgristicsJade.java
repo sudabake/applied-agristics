@@ -24,7 +24,7 @@ public final class AgristicsJade implements IWailaPlugin {
     public enum Crop implements IBlockComponentProvider,IServerDataProvider<BlockAccessor> {
         INSTANCE;
         private static final String KEY="appliedagristics:species";
-        @Override public ResourceLocation getUid() { return ResourceLocation.fromNamespaceAndPath(Agristics.ID,"bio_crop_identity"); }
+        @Override public ResourceLocation getUid() { return new ResourceLocation(Agristics.ID,"bio_crop_identity"); }
         @Override public int getDefaultPriority() { return 1000; }
         @Override public void appendServerData(CompoundTag data,BlockAccessor accessor) {
             if(accessor.getBlockEntity() instanceof BioCropEntity crop && crop.identity()!=null) data.putString(KEY,crop.identity().toString());
@@ -37,7 +37,8 @@ public final class AgristicsJade implements IWailaPlugin {
             var id=species(accessor);
             if(id==null || !BuiltInRegistries.ENTITY_TYPE.containsKey(id)) return;
             var name=Component.translatable("gui.appliedagristics.crop_species",BuiltInRegistries.ENTITY_TYPE.get(id).getDescription());
-            if(!tooltip.replace(JadeIds.CORE_OBJECT_NAME,name)) tooltip.add(0,name,JadeIds.CORE_OBJECT_NAME);
+            tooltip.remove(Identifiers.CORE_OBJECT_NAME);
+            tooltip.add(0,name,Identifiers.CORE_OBJECT_NAME);
             // Jade's native CropBlock provider already displays the real AGE_7 progress.
         }
         @Override public IElement getIcon(BlockAccessor accessor,IPluginConfig config,IElement original) {

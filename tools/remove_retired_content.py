@@ -21,8 +21,8 @@ def install():
             for path in (assets / 'textures' / folder).glob(name + '*.png*'):
                 path.unlink()
         for prefix in ('', 'legacy_'):
-            (resources / 'data/appliedagristics/recipe' / (prefix + name + '.json')).unlink(missing_ok=True)
-    (resources / 'data/appliedagristics/recipe/legacy_bio_seed.json').unlink(missing_ok=True)
+            (resources / 'data/appliedagristics/recipes' / (prefix + name + '.json')).unlink(missing_ok=True)
+    (resources / 'data/appliedagristics/recipes/legacy_bio_seed.json').unlink(missing_ok=True)
     (assets / 'textures/mob_effect/nourishment.png').unlink(missing_ok=True)
     guide = assets / 'ae2guide/index.md'
     text = guide.read_text(encoding='utf-8')

@@ -107,10 +107,10 @@ for locale, index in [('zh_cn', 0), ('en_us', 1)]:
 
 # Equipment and consumable recipes are maintained directly in data/appliedagristics/recipe.
 # Never overwrite their survival progression with the old development recipes.
-write(f'data/{NS}/recipe/basic_farmland.json', {'type': 'minecraft:crafting_shapeless', 'category': 'misc',
-    'ingredients': [{'item': 'minecraft:dirt'}, {'item': 'minecraft:wheat_seeds'}], 'result': {'id': 'minecraft:farmland', 'count': 1}})
-write('data/minecraft/tags/block/mineable/pickaxe.json', {'replace': False, 'values': [f'{NS}:{name}' for name in blocks]})
-write('pack.mcmeta', {'pack': {'pack_format': 34, 'description': 'Applied Agristics resources'}})
+write(f'data/{NS}/recipes/basic_farmland.json', {'type': 'minecraft:crafting_shapeless', 'category': 'misc',
+    'ingredients': [{'item': 'minecraft:dirt'}, {'item': 'minecraft:wheat_seeds'}], 'result': {'item': 'minecraft:farmland', 'count': 1}})
+write('data/minecraft/tags/blocks/mineable/pickaxe.json', {'replace': False, 'values': [f'{NS}:{name}' for name in blocks]})
+write('pack.mcmeta', {'pack': {'pack_format': 15, 'description': 'Applied Agristics resources'}})
 
 # AE's own screen loader, generated background, toolbar, slots and upgrade panel.
 write('assets/ae2/screens/appliedagristics_machine_io.json', {
@@ -127,13 +127,13 @@ def nbt_name(name):
     data = name.encode('utf-8')
     return struct.pack('>H', len(data)) + data
 template = b'\x0a\0\0'
-template += b'\x03' + nbt_name('DataVersion') + struct.pack('>i', 3955)
+template += b'\x03' + nbt_name('DataVersion') + struct.pack('>i', 3465)
 template += b'\x09' + nbt_name('size') + b'\x03' + struct.pack('>i', 3) + struct.pack('>iii', 8, 6, 8)
 for name in ['blocks', 'entities']:
     template += b'\x09' + nbt_name(name) + b'\x0a' + struct.pack('>i', 0)
 template += b'\x09' + nbt_name('palette') + b'\x0a' + struct.pack('>i', 1)
 template += b'\x08' + nbt_name('Name') + nbt_name('minecraft:air') + b'\0\0'
-template_path = ROOT / f'data/{NS}/structure/empty.nbt'
+template_path = ROOT / f'data/{NS}/structures/empty.nbt'
 template_path.parent.mkdir(parents=True, exist_ok=True)
 template_path.write_bytes(gzip_bytes(template))
 
@@ -175,8 +175,8 @@ def mask_png(name, layer, seed):
 for name in ['bio_seed','bio_essence']:
     for layer in range(3):mask_png(name,layer,name=='bio_seed')
     write(f'assets/{NS}/models/item/{name}.json', {'parent':'minecraft:item/generated','textures':{f'layer{i}':f'{NS}:item/{name}_{i}' for i in range(3)}})
-(ROOT/f'data/{NS}/recipe/bio_seed.json').unlink(missing_ok=True)
-write(f'data/{NS}/recipe/bio_loot.json', {'type':f'{NS}:bio_loot','category':'misc'})
+(ROOT/f'data/{NS}/recipes/bio_seed.json').unlink(missing_ok=True)
+write(f'data/{NS}/recipes/bio_loot.json', {'type':f'{NS}:bio_loot','category':'misc'})
 from essence_layers import generate as generate_essence
 generate_essence(ROOT, write)
 # Keep the current registration placeholders and retired-recipe policy after the legacy generator.

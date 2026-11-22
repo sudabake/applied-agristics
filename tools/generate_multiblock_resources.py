@@ -61,7 +61,7 @@ for lang,index in (('zh_cn',0),('en_us',1)):
 
 # Superseded crafting entries are kept under build/backups by the transition step, not regenerated.
 for name in LEGACY:
-    path=ROOT/f'data/appliedagristics/recipe/{name}.json'
+    path=ROOT/f'data/appliedagristics/recipes/{name}.json'
     if path.exists(): path.unlink()
 
 style={'includes':['common/common.json','common/player_inventory.json'],
@@ -83,7 +83,7 @@ write(ROOT/'assets/ae2/screens/appliedagristics_vault.json',vault_style)
 (ROOT/'assets/ae2/screens/appliedagristics_port_io.json').unlink(missing_ok=True)
 from install_art_resources import install
 install()
-write(ROOT/'data/minecraft/tags/block/mineable/pickaxe.json',{'replace':False,'values':[
+write(ROOT/'data/minecraft/tags/blocks/mineable/pickaxe.json',{'replace':False,'values':[
     'appliedagristics:'+name for name in ('early_planter','seed_storage','network_planter','me_infusion_altar',*PARTS)]})
 for index,lang in enumerate(('zh_cn','en_us')):
     path=ASSETS/f'lang/{lang}.json';values=json.loads(path.read_text(encoding='utf-8'))

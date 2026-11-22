@@ -14,9 +14,9 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.*;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.*;
-import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.tick.ServerTickEvent;
-import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.gametest.PrefixGameTestTemplate;
 
 /** Real server ticks in a disposable world, using the same harness before and after optimization. */
 @PrefixGameTestTemplate(false)
@@ -27,11 +27,13 @@ public final class PlanterPerformanceTest {
     private static long tickStart;
     private static final List<Long> DURATIONS = new ArrayList<>();
 
-    private static void beforeTick(ServerTickEvent.Pre event) {
+    private static void beforeTick(TickEvent.ServerTickEvent event) {
+        if (event.phase != TickEvent.Phase.START) return;
         tickStart = System.nanoTime();
     }
 
-    private static void afterTick(ServerTickEvent.Post event) {
+    private static void afterTick(TickEvent.ServerTickEvent event) {
+        if (event.phase != TickEvent.Phase.END) return;
         int tick = event.getServer().getTickCount();
         if (tick >= startTick && tick < startTick + MEASURE_TICKS)
             DURATIONS.add(System.nanoTime() - tickStart);
@@ -43,8 +45,8 @@ public final class PlanterPerformanceTest {
         level.random.setSeed(742019L);
         DURATIONS.clear();
         startTick = Integer.MAX_VALUE;
-        NeoForge.EVENT_BUS.addListener(PlanterPerformanceTest::beforeTick);
-        NeoForge.EVENT_BUS.addListener(PlanterPerformanceTest::afterTick);
+        MinecraftForge.EVENT_BUS.addListener(PlanterPerformanceTest::beforeTick);
+        MinecraftForge.EVENT_BUS.addListener(PlanterPerformanceTest::afterTick);
         var fixtures = new ArrayList<PlanterFixture>();
         var seeds = seeds();
         helper.assertTrue(seeds.size() == 30, "The pressure test must contain exactly 30 crop identities");
@@ -116,7 +118,7 @@ public final class PlanterPerformanceTest {
             measurement.put("tick_nanoseconds", List.copyOf(DURATIONS));
             measurement.put("output_deltas", outputs);
             measurement.put("seed_identities", seeds.stream().map(seed -> Cultivations.id(seed, level).toString()).toList());
-            measurement.put("loaded_mods", net.neoforged.fml.ModList.get().getMods().stream()
+            measurement.put("loaded_mods", net.minecraftforge.fml.ModList.get().getMods().stream()
                     .map(mod -> mod.getModId() + "=" + mod.getVersion()).sorted().toList());
             measurement.put("java_version", System.getProperty("java.version"));
             measurement.put("maximum_heap_bytes", Runtime.getRuntime().maxMemory());
@@ -135,7 +137,7 @@ public final class PlanterPerformanceTest {
         for (var fixture : fixtures) {
             var controller = fixture.controller();
             if (System.getProperty("appliedagristics.benchmark").contains("shared"))
-                helper.assertTrue(controller.getMainNode().getGrid() == fixtures.getFirst().controller().getMainNode().getGrid(),
+                helper.assertTrue(controller.getMainNode().getGrid() == fixtures.get(0).controller().getMainNode().getGrid(),
                         "Every array must use the same actual AE grid");
             helper.assertTrue(controller.parallel() == 256 && Math.abs(controller.speed() - 256) < .000001,
                     "Modules must remain fully upgraded");
@@ -158,11 +160,11 @@ public final class PlanterPerformanceTest {
                 var amounts = new KeyCounter();
                 storage.getAvailableStacks(amounts);
                 for (var entry : amounts)
-                    result.merge(((AEItemKey) entry.getKey()).toTag(fixture.controller().getLevel().registryAccess()).toString(),
+                    result.merge(((AEItemKey) entry.getKey()).toTag().toString(),
                             entry.getLongValue(), Long::sum);
             });
             for (var seed : fixture.seeds().keys())
-                result.merge(seed.toTag(fixture.controller().getLevel().registryAccess()).toString(),
+                result.merge(seed.toTag().toString(),
                         fixture.seeds().count(seed), Long::sum);
         }
         return result;
@@ -185,10 +187,10 @@ public final class PlanterPerformanceTest {
                 Items.RED_MUSHROOM, Items.BROWN_MUSHROOM)) seeds.add(new ItemStack(item));
         for (var name : List.of("inferium", "water", "fire", "dirt"))
             seeds.add(new ItemStack(net.minecraft.core.registries.BuiltInRegistries.ITEM.get(
-                    ResourceLocation.parse("mysticalagriculture:" + name + "_seeds"))));
+                    new ResourceLocation("mysticalagriculture:" + name + "_seeds"))));
         for (var name : List.of("cow", "pig", "chicken", "sheep", "zombie", "skeleton",
                 "spider", "witch", "enderman", "slime", "blaze", "ghast"))
-            seeds.add(BioData.withIdentity(Agristics.BIO_SEED.get(), ResourceLocation.parse("minecraft:" + name)));
+            seeds.add(BioData.withIdentity(Agristics.BIO_SEED.get(), new ResourceLocation("minecraft:" + name)));
         return seeds;
     }
 }

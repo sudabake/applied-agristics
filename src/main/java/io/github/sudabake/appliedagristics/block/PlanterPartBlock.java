@@ -27,30 +27,26 @@ public final class PlanterPartBlock extends Block {
         registerDefaultState(stateDefinition.any().setValue(FORMED, false).setValue(FACING, Direction.NORTH).setValue(CELL,0));
     }
     public PlanterLayout.Role role() { return role; }
-    @Override protected boolean skipRendering(BlockState state, BlockState adjacent, Direction side) {
+    @Override public boolean skipRendering(BlockState state, BlockState adjacent, Direction side) {
         return role == PlanterLayout.Role.CHAMBER && adjacent.is(this) || super.skipRendering(state, adjacent, side);
     }
-    @Override protected net.minecraft.world.phys.shapes.VoxelShape getShape(BlockState state,net.minecraft.world.level.BlockGetter level,BlockPos pos,net.minecraft.world.phys.shapes.CollisionContext context) {
+    @Override public net.minecraft.world.phys.shapes.VoxelShape getShape(BlockState state,net.minecraft.world.level.BlockGetter level,BlockPos pos,net.minecraft.world.phys.shapes.CollisionContext context) {
         return MachineShapes.get(net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(this).getPath(),state.getValue(FACING),state.getValue(FORMED));
     }
-    @Override protected java.util.List<net.minecraft.world.item.ItemStack> getDrops(BlockState state, net.minecraft.world.level.storage.loot.LootParams.Builder params) {
+    @Override public java.util.List<net.minecraft.world.item.ItemStack> getDrops(BlockState state, net.minecraft.world.level.storage.loot.LootParams.Builder params) {
         return java.util.List.of(new net.minecraft.world.item.ItemStack(this));
     }
     @Override protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) { builder.add(FORMED, FACING, CELL); }
     @Override public BlockState getStateForPlacement(BlockPlaceContext context) { return defaultBlockState().setValue(FACING, context.getHorizontalDirection().getOpposite()); }
-    @Override protected void onPlace(BlockState state, Level level, BlockPos pos, BlockState previous, boolean moving) {
+    @Override public void onPlace(BlockState state, Level level, BlockPos pos, BlockState previous, boolean moving) {
         super.onPlace(state, level, pos, previous, moving);
         if (!state.is(previous.getBlock())) PlanterStructure.changed(level, pos);
     }
-    @Override protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState next, boolean moving) {
+    @Override public void onRemove(BlockState state, Level level, BlockPos pos, BlockState next, boolean moving) {
         if (!state.is(next.getBlock())) PlanterStructure.changed(level, pos);
         super.onRemove(state, level, pos, next, moving);
     }
-    @Override protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block block, BlockPos source, boolean moving) {
+    @Override public void neighborChanged(BlockState state, Level level, BlockPos pos, Block block, BlockPos source, boolean moving) {
         PlanterStructure.changed(level, source);
-    }
-    @Override protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
-        // Passive casing must also let the held item's placement action continue.
-        return InteractionResult.PASS;
     }
 }

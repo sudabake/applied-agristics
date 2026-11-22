@@ -43,15 +43,15 @@ public final class PlantingCatalog {
     clientVersion++;
   }
 
-  public static List<Entry> clientEntries(HolderLookup.Provider registries) {
+  public static List<Entry> clientEntries(RegistryAccess registries) {
     var entries = new ArrayList<Entry>();
     for (var raw : client) {
       var entry = (CompoundTag) raw;
-      var seed = ItemStack.parseOptional(registries, entry.getCompound("seed"));
+      var seed = ItemStack.of( entry.getCompound("seed"));
       if (seed.isEmpty()) continue;
       var outputs = new ArrayList<ItemStack>();
       for (var output : entry.getList("outputs", Tag.TAG_COMPOUND)) {
-        var stack = ItemStack.parseOptional(registries, (CompoundTag) output);
+        var stack = ItemStack.of( (CompoundTag) output);
         if (!stack.isEmpty()) outputs.add(stack.copyWithCount(1));
       }
       entries.add(new Entry(seed, List.copyOf(outputs)));
@@ -68,9 +68,9 @@ public final class PlantingCatalog {
         candidates.put(AEItemKey.of(stack), stack);
     }
     for (var holder : level.getRecipeManager().getAllRecipesFor(Agristics.PLANTING_TYPE.get()))
-      for (var stack : holder.value().seed().getItems())
+      for (var stack : holder.seed().getItems())
         if (!stack.isEmpty()) candidates.put(AEItemKey.of(stack), stack.copyWithCount(1));
-    if (net.neoforged.fml.ModList.get().isLoaded("botanypots"))
+    if (net.minecraftforge.fml.ModList.get().isLoaded("botanypots"))
       for (var stack : io.github.sudabake.appliedagristics.compat.botany.BotanyCrops.seeds(level))
         candidates.put(AEItemKey.of(stack),stack.copyWithCount(1));
     for(var stack:ImportedPlanting.seeds(level)) candidates.put(AEItemKey.of(stack),stack.copyWithCount(1));
@@ -87,11 +87,8 @@ public final class PlantingCatalog {
       var mature = source == null ? Harvests.mature(seed) : null;
       if (mature != null) {
         var block = mature.getBlock();
-        if (block instanceof StemBlock stem)
-          block =
-              BuiltInRegistries.BLOCK.get(
-                  ((io.github.sudabake.appliedagristics.mixin.StemAccessor) stem).agrFruit());
-        for (var item : BioLootCatalog.possibleTableItems(level, block.getLootTable().location()))
+        if (block instanceof StemBlock stem) block = stem.getFruit();
+        for (var item : BioLootCatalog.possibleTableItems(level, block.getLootTable()))
           add(outputs, new ItemStack(item));
       }
       var crop = Crops.seed(seed);
@@ -107,9 +104,9 @@ public final class PlantingCatalog {
                   com.blakebr0.mysticalagriculture.init.ModItems.FERTILIZED_ESSENCE.get()));
       }
       var entry = new CompoundTag();
-      entry.put("seed", seed.save(level.registryAccess()));
+      entry.put("seed", seed.save(new CompoundTag()));
       var list = new ListTag();
-      for (var stack : outputs.values()) list.add(stack.save(level.registryAccess()));
+      for (var stack : outputs.values()) list.add(stack.save(new CompoundTag()));
       entry.put("outputs", list);
       entries.add(entry);
     }

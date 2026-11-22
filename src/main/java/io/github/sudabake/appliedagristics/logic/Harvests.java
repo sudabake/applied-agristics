@@ -25,7 +25,7 @@ public final class Harvests {
         // Farmer's Delight seedlings transform into a different block before yielding fruit.
         var id = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(block);
         if (id.toString().equals("farmersdelight:budding_tomatoes"))
-            block = net.minecraft.core.registries.BuiltInRegistries.BLOCK.get(net.minecraft.resources.ResourceLocation.parse("farmersdelight:tomatoes"));
+            block = net.minecraft.core.registries.BuiltInRegistries.BLOCK.get(new net.minecraft.resources.ResourceLocation("farmersdelight:tomatoes"));
         var state = block.defaultBlockState();
         if (state.getBlock() instanceof CropBlock crop) return crop.getStateForAge(crop.getMaxAge());
         for (var property : state.getProperties()) if (property instanceof IntegerProperty age && age.getName().equals("age"))
@@ -57,9 +57,9 @@ public final class Harvests {
         if (crop != null) {
             if (crop.getCruxBlock() != null && level.getBlockState(machine.below()).getBlock() != crop.getCruxBlock()
                 && (!(crux.getItem() instanceof BlockItem item) || item.getBlock() != crop.getCruxBlock())) return false;
-            if (ModConfigs.REQUIRES_EFFECTIVE_FARMLAND.get() && crop != ModCrops.INFERIUM && !crop.getTier().isEffectiveFarmland(ground.getBlock())) return false;
+            if (io.github.sudabake.appliedagristics.Balance.REQUIRE_EFFECTIVE_FARMLAND.get() && crop != ModCrops.INFERIUM && !crop.getTier().isEffectiveFarmland(ground.getBlock())) return false;
             if (!crop.getRequiredBiomes().isEmpty()) {
-                var biome = level.getBiome(machine).getKey(); if (biome == null || !crop.getRequiredBiomes().contains(biome.location())) return false;
+                var biome = level.getBiome(machine).unwrapKey().orElse(null); if (biome == null || !crop.getRequiredBiomes().contains(biome.location())) return false;
             }
         }
         return inField(level, machine, mature, soil, () -> mature.canSurvive(level, machine.above()));
@@ -106,7 +106,7 @@ public final class Harvests {
         if (crop != null && (plant.getBlock().getClass() == com.blakebr0.mysticalagriculture.block.MysticalCropBlock.class
                 || plant.getBlock().getClass() == com.blakebr0.mysticalagriculture.block.InferiumCropBlock.class)) {
             var ground = ((BlockItem)soil.getItem()).getBlock();
-            double chance = Math.clamp(crop.getSecondaryChance(ground), 0, 1);
+            double chance = net.minecraft.util.Mth.clamp(crop.getSecondaryChance(ground), 0, 1);
             double yield = 1 + chance;
             if (crop == ModCrops.INFERIUM) {
                 int tier = ((com.blakebr0.mysticalagriculture.api.farmland.IEssenceFarmland)ground).getTier().getValue();
@@ -115,12 +115,11 @@ public final class Harvests {
             expected.put(appeng.api.stacks.AEItemKey.of(new ItemStack(crop.getEssenceItem())), yield * cycles);
             if (ModConfigs.SECONDARY_SEED_DROPS.get()) expected.put(appeng.api.stacks.AEItemKey.of(seed), chance * cycles);
             if (crop != ModCrops.INFERIUM) expected.put(appeng.api.stacks.AEItemKey.of(new ItemStack(com.blakebr0.mysticalagriculture.init.ModItems.FERTILIZED_ESSENCE.get())),
-                Math.clamp(ModConfigs.FERTILIZED_ESSENCE_DROP_CHANCE.get(), 0, 1) * cycles);
+                net.minecraft.util.Mth.clamp(ModConfigs.FERTILIZED_ESSENCE_DROP_CHANCE.get(), 0, 1) * cycles);
         } else {
             if (useCachedLoot(cycles) && plant != null) {
                 var block = plant.getBlock();
-                if (block instanceof StemBlock stem) block = level.registryAccess().registryOrThrow(
-                        net.minecraft.core.registries.Registries.BLOCK).get(((io.github.sudabake.appliedagristics.mixin.StemAccessor) stem).agrFruit());
+                if (block instanceof StemBlock stem) block = stem.getFruit();
                 expected.putAll(HarvestEstimateCache.get(level).expected(level, pos, seed, soil, plant,
                         block.getLootTable(), cycles, () -> nativeHarvest(level, pos, seed, soil)));
             } else {
@@ -164,8 +163,8 @@ public final class Harvests {
         return inField(level, machine, mature, soil, () -> {
             // Stems keep their plant: harvest their fruit, not the broken stem's seeds.
             if (mature.getBlock() instanceof StemBlock stem) {
-                var fruit = ((io.github.sudabake.appliedagristics.mixin.StemAccessor) stem).agrFruit();
-                var block = level.registryAccess().registryOrThrow(net.minecraft.core.registries.Registries.BLOCK).get(fruit);
+                var fruit = stem.getFruit();
+                var block = fruit;
                 return new ArrayList<>(Block.getDrops(block.defaultBlockState(), level, machine.above(), null));
             }
             var drops = new ArrayList<>(Block.getDrops(mature, level, machine.above(), null));
@@ -175,12 +174,12 @@ public final class Harvests {
     }
     public static void reserveSeed(List<ItemStack> drops,ItemStack seed) {
         var reserved=false;
-        for (var drop:drops) if (ItemStack.isSameItemSameComponents(drop,seed)) { drop.shrink(1);reserved=true;break; }
+        for (var drop:drops) if (ItemStack.isSameItemSameTags(drop,seed)) { drop.shrink(1);reserved=true;break; }
         // Native block loot has no copy of a planted stack's name/components. The original
         // seed stays in the machine, so debit one plain seed rather than granting it for free.
         // Never use a different component-bearing variety as the replacement.
-        if(!reserved && !seed.getComponentsPatch().isEmpty())
-            for(var drop:drops) if(drop.is(seed.getItem()) && drop.getComponentsPatch().isEmpty()) {drop.shrink(1);break;}
+        if(!reserved && seed.hasTag())
+            for(var drop:drops) if(drop.is(seed.getItem()) && drop.getTag() == null) {drop.shrink(1);break;}
         drops.removeIf(ItemStack::isEmpty);
     }
     private Harvests() {}

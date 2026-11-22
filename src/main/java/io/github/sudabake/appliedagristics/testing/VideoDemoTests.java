@@ -15,10 +15,10 @@ import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraft.world.item.crafting.RecipeHolder;
+import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
-import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+import net.minecraftforge.gametest.PrefixGameTestTemplate;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -33,11 +33,11 @@ public final class VideoDemoTests {
         int[] counts={11,8,6,16,16,1,0,0};
         int[] inventoryX={8,8,8,8,8,79,79,8};
         int[] inventoryY={136,100,100,116,116,160,160,116};
-        var player=h.makeMockPlayer(GameType.SURVIVAL);
+        var player=h.makeMockSurvivalPlayer();
         var pos=new BlockPos(1,1,1);
         for(int i=0;i<blocks.size();i++) {
             h.setBlock(pos,blocks.get(i));
-            io.github.sudabake.appliedagristics.block.MachineEntity machine=h.getBlockEntity(pos);
+            io.github.sudabake.appliedagristics.block.MachineEntity machine = (io.github.sudabake.appliedagristics.block.MachineEntity) h.getBlockEntity(pos);
             var menu=new MachineMenu(1,player.getInventory(),machine);
             h.assertTrue(menu.slots.size()==counts[i]+36,"Machine and player slot counts stay compatible: "+i);
             for(int slot=0;slot<counts[i];slot++)
@@ -56,8 +56,8 @@ public final class VideoDemoTests {
     public static void shiftClickNeverMergesIntoPlanterOutputs(GameTestHelper h) {
         var pos=new BlockPos(1,1,1);
         h.setBlock(pos,Agristics.EARLY.get());
-        EarlyPlanter planter=h.getBlockEntity(pos);
-        var player=h.makeMockPlayer(GameType.SURVIVAL);
+        EarlyPlanter planter = (EarlyPlanter) h.getBlockEntity(pos);
+        var player=h.makeMockSurvivalPlayer();
         var menu=new MachineMenu(1,player.getInventory(),planter);
         planter.items.setStackInSlot(2,new ItemStack(Items.WHEAT_SEEDS,5));
         player.getInventory().setItem(9,new ItemStack(Items.WHEAT_SEEDS,10));
@@ -85,7 +85,7 @@ public final class VideoDemoTests {
             h.assertTrue(task.occupied==1,"Ordinary storage has a live seed reservation");
             f.input().automation(null).extractItem(0,64,true);
             h.assertTrue(task.enabled && task.occupied==1,"Simulated pipe extraction never pauses production");
-            var player=h.makeMockPlayer(GameType.SURVIVAL);
+            var player=h.makeMockSurvivalPlayer();
             var menu=new MachineMenu(1,player.getInventory(),f.input());
             menu.clicked(0,1,ClickType.PICKUP,player);
             h.assertTrue(!task.enabled && task.occupied==0 && task.target==1234 && menu.getCarried().getCount()==4
@@ -112,7 +112,7 @@ public final class VideoDemoTests {
         h.runAtTickTime(100,()->{
             var id=Cultivations.id(seed.toStack(1),h.getLevel());
             f.controller().configure(id,true,-1);f.controller().step();
-            var player=h.makeMockPlayer(GameType.SURVIVAL);
+            var player=h.makeMockSurvivalPlayer();
             for(int i=0;i<36;i++)player.getInventory().setItem(i,new ItemStack(Items.DIRT,64));
             var menu=new MachineMenu(1,player.getInventory(),f.input());
             h.assertTrue(menu.quickMoveStack(player,0).isEmpty() && f.controller().tasks.get(id).enabled
@@ -139,10 +139,10 @@ public final class VideoDemoTests {
         h.runAtTickTime(100,()->{
             var manager=h.getLevel().getRecipeManager();
             var originals=new ArrayList<>(manager.getRecipes());
-            var recipes=new ArrayList<RecipeHolder<?>>(originals);
-            var recipe=new PlantingRecipe(Ingredient.of(Items.APPLE),Ingredient.of(Blocks.DIRT),
-                List.of(new ItemStack(Items.DIAMOND,2),new ItemStack(Items.APPLE,3)),Blocks.WHEAT.defaultBlockState(),false,200,true);
-            recipes.add(new RecipeHolder<>(ResourceLocation.fromNamespaceAndPath(Agristics.ID,"test/demo_output"),recipe));
+            var recipes=new ArrayList<Recipe<?>>(originals);
+            var recipe=new PlantingRecipe(new ResourceLocation(Agristics.ID,"test/demo_output"), Ingredient.of(Items.APPLE),Ingredient.of(Blocks.DIRT),
+                List.of(new ItemStack(Items.DIAMOND,2),new ItemStack(Items.APPLE,3)),Blocks.WHEAT.defaultBlockState(),false,200,true, java.util.Optional.empty());
+            recipes.add(recipe);
             try {
                 manager.replaceRecipes(recipes);CropSources.invalidate();
                 bank.add(seed,1);

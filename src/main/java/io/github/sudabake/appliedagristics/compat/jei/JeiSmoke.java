@@ -5,12 +5,12 @@ import io.github.sudabake.appliedagristics.biology.*;
 import mezz.jei.api.constants.*;
 import mezz.jei.api.ingredients.subtypes.UidContext;
 import mezz.jei.api.recipe.*;
+import io.github.sudabake.appliedagristics.testing.ForgeTestInputs;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Screenshot;
 import net.minecraft.nbt.*;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.*;
-import net.minecraft.world.item.crafting.CraftingInput;
 import java.util.*;
 
 /** Runs only from the opt-in client smoke test, never during normal play. */
@@ -22,8 +22,8 @@ public final class JeiSmoke {
     private static boolean opened;
     private static boolean openRequested;
     private static int encodingTicks;
-    private static final ResourceLocation COW = ResourceLocation.parse("minecraft:cow");
-    private static final ResourceLocation PIG = ResourceLocation.parse("minecraft:pig");
+    private static final ResourceLocation COW = new ResourceLocation("minecraft:cow");
+    private static final ResourceLocation PIG = new ResourceLocation("minecraft:pig");
     private static void require(boolean condition, String message) { if (!condition) throw new IllegalStateException(message); }
     public static boolean tick() {
         var runtime = AgristicsJei.runtime(); if (runtime == null || BioLootCatalog.clientCatalog().isEmpty()) return false;
@@ -86,7 +86,7 @@ public final class JeiSmoke {
                 openRequested=true;
                 Minecraft.getInstance().getSingleplayerServer().execute(()-> {
                     var mc=Minecraft.getInstance();var player=mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
-                    terminal.onUseWithoutItem(player,net.minecraft.world.phys.Vec3.ZERO);
+                    terminal.onPartActivate(player,net.minecraft.world.InteractionHand.MAIN_HAND,net.minecraft.world.phys.Vec3.ZERO);
                 });
             }
             if(Minecraft.getInstance().player.containerMenu instanceof appeng.menu.me.items.PatternEncodingTermMenu) {opened=true;encodingTicks++;}
@@ -130,8 +130,8 @@ public final class JeiSmoke {
         require(manager.createRecipeLookup(AgristicsJei.STRUCTURE).get().count()==1,"Array structure recipe missing");
         var oakFocus=focus.createFocus(RecipeIngredientRole.INPUT,VanillaTypes.ITEM_STACK,new ItemStack(Items.OAK_SAPLING));
         var oakRecipes=manager.createRecipeLookup(AgristicsJei.PLANTING).limitFocus(List.of(oakFocus)).get().toList();
-        require(oakRecipes.size()==1 && oakRecipes.getFirst().outputs().stream().anyMatch(stack->stack.is(Items.OAK_LOG))
-                && oakRecipes.getFirst().outputs().stream().anyMatch(stack->stack.is(Items.APPLE)),"Tree JEI page must include its complete possible harvest");
+        require(oakRecipes.size()==1 && oakRecipes.get(0).outputs().stream().anyMatch(stack->stack.is(Items.OAK_LOG))
+                && oakRecipes.get(0).outputs().stream().anyMatch(stack->stack.is(Items.APPLE)),"Tree JEI page must include its complete possible harvest");
         require(manager.createRecipeLayoutDrawable(manager.getRecipeCategory(AgristicsJei.STRUCTURE),"agricultural_array",focus.getEmptyFocusGroup()).isPresent(),"Invalid array structure layout");
         var catalog = BioLootCatalog.clientCatalog(); var ingredientManager = runtime.getIngredientManager();
         int equipment=0;
@@ -141,7 +141,7 @@ public final class JeiSmoke {
             var output=focus.createFocus(RecipeIngredientRole.OUTPUT,VanillaTypes.ITEM_STACK,new ItemStack(item));
             var id=net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(item);
             var recipes=manager.createRecipeLookup(RecipeTypes.CRAFTING).limitFocus(List.of(output)).get().toList();
-            require(recipes.stream().anyMatch(r->r.id().equals(id)),"Missing equipment recipe in JEI: "+id);
+            require(recipes.stream().anyMatch(r->r.getId().equals(id)),"Missing equipment recipe in JEI: "+id);
             for(var recipe:recipes) require(manager.createRecipeLayoutDrawable(manager.getRecipeCategory(RecipeTypes.CRAFTING),recipe,focus.getEmptyFocusGroup()).isPresent(),"Invalid equipment recipe layout: "+id);
             equipment++;
         }
@@ -151,14 +151,14 @@ public final class JeiSmoke {
             require(ingredientManager.getAllItemStacks().stream().anyMatch(stack -> stack.is(item.get()) && entity.equals(BioData.identity(stack))), "Missing automatic variant: " + entity + "/" + item.getId());
         for (var item : List.of(Agristics.SAMPLER)) {
             var entries = ingredientManager.getAllItemStacks().stream().filter(stack -> stack.is(item.get())).toList();
-            require(entries.size() == 1 && BioData.identity(entries.getFirst()) == null, "Intermediate must have one generic JEI entry: " + item.getId());
+            require(entries.size() == 1 && BioData.identity(entries.get(0)) == null, "Intermediate must have one generic JEI entry: " + item.getId());
         }
         var helper = ingredientManager.getIngredientHelper(VanillaTypes.ITEM_STACK);
         require(!helper.getUniqueId(BioData.withIdentity(Agristics.BIO_ESSENCE.get(), COW), UidContext.Recipe).equals(helper.getUniqueId(BioData.withIdentity(Agristics.BIO_ESSENCE.get(), PIG), UidContext.Recipe)), "Species subtype collision");
         var cowEssence = focus.createFocus(RecipeIngredientRole.INPUT, VanillaTypes.ITEM_STACK, BioData.withIdentity(Agristics.BIO_ESSENCE.get(), COW));
         var cowLoot = manager.createRecipeLookup(RecipeTypes.CRAFTING).limitFocus(List.of(cowEssence)).get().toList();
         require(cowLoot.size() == catalog.get(COW).stream().filter(i->i!=Items.AIR).count(), "Wrong cow loot count: " + cowLoot.size());
-        for (var recipe : cowLoot) require(catalog.get(COW).contains(recipe.value().getResultItem(Minecraft.getInstance().level.registryAccess()).getItem()), "Cross-species loot");
+        for (var recipe : cowLoot) require(catalog.get(COW).contains(recipe.getResultItem(Minecraft.getInstance().level.registryAccess()).getItem()), "Cross-species loot");
         var seedFocus = focus.createFocus(RecipeIngredientRole.OUTPUT, VanillaTypes.ITEM_STACK, BioData.withIdentity(Agristics.BIO_SEED.get(), COW));
         require(manager.createRecipeLookup(AgristicsJei.CULTURE).limitFocus(List.of(seedFocus)).get().count() == 1, "Seed recipe lookup");
         var wheatFocus=focus.createFocus(RecipeIngredientRole.INPUT,VanillaTypes.ITEM_STACK,new ItemStack(Items.WHEAT_SEEDS));
@@ -172,21 +172,21 @@ public final class JeiSmoke {
         for (var type : List.of(AgristicsJei.SAMPLING,AgristicsJei.CULTURE))
             for (var recipe : manager.createRecipeLookup(type).get().toList()) require(manager.createRecipeLayoutDrawable(manager.getRecipeCategory(type), recipe, emptyFocus).isPresent(), "Invalid process layout");
         var registries = Minecraft.getInstance().level.registryAccess();
-        for (var holder : manager.createRecipeLookup(RecipeTypes.CRAFTING).get().filter(recipe -> recipe.id().getNamespace().equals(Agristics.ID) && recipe.id().getPath().startsWith("jei/")).toList()) {
+        for (var holder : manager.createRecipeLookup(RecipeTypes.CRAFTING).get().filter(recipe -> recipe.getId().getNamespace().equals(Agristics.ID) && recipe.getId().getPath().startsWith("jei/")).toList()) {
             require(manager.createRecipeLayoutDrawable(manager.getRecipeCategory(RecipeTypes.CRAFTING), holder, emptyFocus).isPresent(), "Invalid crafting layout");
-            var stacks = holder.value().getIngredients().stream().map(ingredient -> ingredient.isEmpty() ? ItemStack.EMPTY : ingredient.getItems()[0]).toList();
-            if (holder.value() instanceof net.minecraft.world.item.crafting.ShapedRecipe shaped) {
-                var input = CraftingInput.of(shaped.getWidth(), shaped.getHeight(), stacks);
-                var actual = new BioLootRecipe(net.minecraft.world.item.crafting.CraftingBookCategory.MISC);
-                require(actual.matches(input, Minecraft.getInstance().level) && ItemStack.isSameItemSameComponents(actual.assemble(input, registries), shaped.getResultItem(registries)), "JEI pattern differs from real loot recipe");
+            var stacks = holder.getIngredients().stream().map(ingredient -> ingredient.isEmpty() ? ItemStack.EMPTY : ingredient.getItems()[0]).toList();
+            if (holder instanceof net.minecraft.world.item.crafting.ShapedRecipe shaped) {
+                var input = ForgeTestInputs.crafting(shaped.getWidth(), shaped.getHeight(), stacks);
+                var actual = new BioLootRecipe(holder.getId(), net.minecraft.world.item.crafting.CraftingBookCategory.MISC);
+                require(actual.matches(input, Minecraft.getInstance().level) && ItemStack.isSameItemSameTags(actual.assemble(input, registries), shaped.getResultItem(registries)), "JEI pattern differs from real loot recipe");
             }
         }
         var altered = new LinkedHashMap<>(catalog); altered.put(COW, List.of(Items.AIR,Items.DIAMOND));
         BioLootCatalog.loadClient(encode(altered));
         var updated = manager.createRecipeLookup(RecipeTypes.CRAFTING).limitFocus(List.of(cowEssence)).get().toList();
-        require(updated.size() == 1 && updated.getFirst().value().getResultItem(registries).is(Items.DIAMOND), "Stale catalog recipes after reload");
-        require(BioLootCatalog.clientDrops(COW).getFirst()==Items.AIR,"Client must retain disabled pattern slots");
-        require(updated.getFirst().value() instanceof net.minecraft.world.item.crafting.ShapedRecipe shaped && shaped.getWidth()==1 && shaped.getHeight()==3,"JEI must keep diamond in the second, vertical pattern slot");
+        require(updated.size() == 1 && updated.get(0).getResultItem(registries).is(Items.DIAMOND), "Stale catalog recipes after reload");
+        require(BioLootCatalog.clientDrops(COW).get(0)==Items.AIR,"Client must retain disabled pattern slots");
+        require(updated.get(0) instanceof net.minecraft.world.item.crafting.ShapedRecipe shaped && shaped.getWidth()==1 && shaped.getHeight()==3,"JEI must keep diamond in the second, vertical pattern slot");
         require(manager.createRecipeLookup(AgristicsJei.CULTURE).limitFocus(List.of(seedFocus)).get().count() == 1, "Duplicate process recipes after reload");
         BioLootCatalog.loadClient(encode(catalog));
         require(manager.createRecipeLookup(RecipeTypes.CRAFTING).limitFocus(List.of(cowEssence)).get().count() == catalog.get(COW).stream().filter(i->i!=Items.AIR).count(), "Catalog restoration");

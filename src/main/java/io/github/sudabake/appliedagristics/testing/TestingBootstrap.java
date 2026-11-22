@@ -1,16 +1,16 @@
 package io.github.sudabake.appliedagristics.testing;
 
 import io.github.sudabake.appliedagristics.Agristics;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.event.RegisterGameTestsEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
+import net.minecraftforge.event.RegisterGameTestsEvent;
 
 /** Development classpath only: this package is excluded from the distributed JAR. */
 @EventBusSubscriber(modid=Agristics.ID,bus=EventBusSubscriber.Bus.MOD)
 public final class TestingBootstrap {
     @SubscribeEvent public static void register(RegisterGameTestsEvent event) {
         if(!Boolean.getBoolean("appliedagristics.tests")) return;
-        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(TestingBootstrap::releaseTestStructures);
+        net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(TestingBootstrap::releaseTestStructures);
         if (Boolean.getBoolean("appliedagristics.storageRepro")) {
             event.register(OutputAndStorageTests.class);
             return;
@@ -40,10 +40,10 @@ public final class TestingBootstrap {
         event.register(PlantingCompatibilityTests.class);
     }
 
-    private static void releaseTestStructures(net.neoforged.neoforge.event.server.ServerStoppingEvent event) {
+    private static void releaseTestStructures(net.minecraftforge.event.server.ServerStoppingEvent event) {
         // Release the disposable fixtures before chunk unloading begins.
         for(var level:event.getServer().getAllLevels())
             io.github.sudabake.appliedagristics.multiblock.PlanterStructure.levelUnloaded(
-                new net.neoforged.neoforge.event.level.LevelEvent.Unload(level));
+                new net.minecraftforge.event.level.LevelEvent.Unload(level));
     }
 }

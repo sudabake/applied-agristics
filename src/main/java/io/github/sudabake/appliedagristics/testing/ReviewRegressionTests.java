@@ -12,20 +12,19 @@ import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.EncoderException;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
-import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraft.world.item.crafting.RecipeHolder;
+import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.level.block.Blocks;
-import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+import net.minecraftforge.gametest.PrefixGameTestTemplate;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -93,7 +92,7 @@ public final class ReviewRegressionTests {
     public static void conversionOnlyConsumesNewDifferentKeySeeds(GameTestHelper h) {
         var fixture = PlanterFixture.install(h.getLevel(), h.absolutePos(new BlockPos(2, 1, 1)), true);
         fixture.modules(0, 1, true);
-        var mystical = Crops.all().getFirst();
+        var mystical = Crops.all().get(0);
         var seed = AEItemKey.of(new ItemStack(mystical.getSeedsItem()));
         var product = AEItemKey.of(new ItemStack(mystical.getEssenceItem()));
         fixture.seeds().add(seed, 1);
@@ -120,10 +119,10 @@ public final class ReviewRegressionTests {
     private static void withRecipe(GameTestHelper h, Item seed, List<ItemStack> outputs, Runnable check) {
         var manager = h.getLevel().getRecipeManager();
         var originals = new ArrayList<>(manager.getRecipes());
-        var recipes = new ArrayList<RecipeHolder<?>>(originals);
-        var recipe = new PlantingRecipe(Ingredient.of(seed), Ingredient.of(Blocks.DIRT), outputs,
-                Blocks.WHEAT.defaultBlockState(), false, 200, true);
-        recipes.add(new RecipeHolder<>(ResourceLocation.fromNamespaceAndPath(Agristics.ID, "test/review_conversion"), recipe));
+        var recipes = new ArrayList<Recipe<?>>(originals);
+        var recipe = new PlantingRecipe(new ResourceLocation(Agristics.ID, "test/review_conversion"), Ingredient.of(seed), Ingredient.of(Blocks.DIRT), outputs,
+                Blocks.WHEAT.defaultBlockState(), false, 200, true, java.util.Optional.empty());
+        recipes.add(recipe);
         try {
             manager.replaceRecipes(recipes);
             CropSources.invalidate();
@@ -137,10 +136,10 @@ public final class ReviewRegressionTests {
     @GameTest(template = "empty", templateNamespace = Agristics.ID, timeoutTicks = 240)
     public static void longVariantControlsRoundTripAndKeepSavedIds(GameTestHelper h) {
         var fixture = PlanterFixture.install(h.getLevel(), h.absolutePos(new BlockPos(2, 1, 1)), true);
-        var item = BuiltInRegistries.ITEM.get(ResourceLocation.parse("mysticalagriculture:quartz_enriched_iron_seeds"));
+        var item = BuiltInRegistries.ITEM.get(new ResourceLocation("mysticalagriculture:quartz_enriched_iron_seeds"));
         h.assertTrue(item != Items.AIR, "Long-named MA seed is registered");
         var seed = new ItemStack(item);
-        seed.set(DataComponents.CUSTOM_NAME, Component.literal("Review variety"));
+        seed.setHoverName(Component.literal("Review variety"));
         var id = Cultivations.id(seed, h.getLevel());
         h.assertTrue(id.toString().length() > 128, "Actual generated variant ID exceeds the former protocol limit");
         fixture.seeds().add(AEItemKey.of(seed), 1);
@@ -151,14 +150,14 @@ public final class ReviewRegressionTests {
                 var decoded = roundTrip(h, packet);
                 h.assertTrue(decoded.pos().equals(packet.pos()) && decoded.containerId()==packet.containerId() && decoded.sessionToken()==packet.sessionToken() && decoded.action() == action
                                 && decoded.id().equals(id.toString()) && decoded.value() == packet.value()
-                                && ItemStack.isSameItemSameComponents(decoded.seed(), seed),
+                                && ItemStack.isSameItemSameTags(decoded.seed(), seed),
                         "Actual control codec preserves long identity, action, target and components");
-                controller.configure(ResourceLocation.parse(decoded.id()), action == 1, decoded.value());
+                controller.configure(new ResourceLocation(decoded.id()), action == 1, decoded.value());
                 var task = controller.tasks.get(id);
                 h.assertTrue(task != null && task.enabled == (action == 1) && task.target == 123456,
                         "Decoded controls configure the existing variant task");
             }
-            var tasks = controller.saveWithFullMetadata(h.getLevel().registryAccess()).getList("tasks", 10);
+            var tasks = controller.saveWithFullMetadata().getList("tasks", 10);
             h.assertTrue(tasks.size() == 1 && tasks.getCompound(0).getString("id").equals(id.toString()),
                     "Save identity remains unchanged rather than truncated or replaced");
             h.succeed();
@@ -166,10 +165,10 @@ public final class ReviewRegressionTests {
     }
 
     private static Messages.Control roundTrip(GameTestHelper h, Messages.Control packet) {
-        var buffer = new RegistryFriendlyByteBuf(Unpooled.buffer(), h.getLevel().registryAccess());
+        var buffer = new FriendlyByteBuf(Unpooled.buffer());
         try {
-            Messages.Control.CODEC.encode(buffer, packet);
-            var decoded = Messages.Control.CODEC.decode(buffer);
+            packet.write(buffer);
+            var decoded = Messages.Control.read(buffer);
             h.assertTrue(!buffer.isReadable(), "Control codec consumes the entire packet");
             return decoded;
         } finally {
@@ -184,11 +183,11 @@ public final class ReviewRegressionTests {
             h.assertTrue(roundTrip(h, packet).id().equals(id), "Empty, ordinary and maximum-length IDs round-trip");
         }
         var oversized = "a".repeat(Messages.Control.MAX_ID_LENGTH + 1);
-        var buffer = new RegistryFriendlyByteBuf(Unpooled.buffer(), h.getLevel().registryAccess());
+        var buffer = new FriendlyByteBuf(Unpooled.buffer());
         try {
             boolean rejected = false;
             try {
-                Messages.Control.CODEC.encode(buffer, new Messages.Control(BlockPos.ZERO, 7, 123L, 1, oversized, -1, ItemStack.EMPTY));
+                new Messages.Control(BlockPos.ZERO, 7, 123L, 1, oversized, -1, ItemStack.EMPTY).write(buffer);
             } catch (EncoderException expected) {
                 rejected = true;
             }
@@ -201,7 +200,7 @@ public final class ReviewRegressionTests {
             buffer.writeUtf(oversized, Messages.Control.MAX_ID_LENGTH + 1);
             rejected = false;
             try {
-                Messages.Control.CODEC.decode(buffer);
+                Messages.Control.read(buffer);
             } catch (DecoderException expected) {
                 rejected = true;
             }

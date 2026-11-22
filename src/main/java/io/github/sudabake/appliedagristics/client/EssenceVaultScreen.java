@@ -9,7 +9,6 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 /** Read-only list; extraction is available through the connected AE network. */
 public final class EssenceVaultScreen extends AEBaseScreen<MachineMenu> {
@@ -23,7 +22,7 @@ public final class EssenceVaultScreen extends AEBaseScreen<MachineMenu> {
             }
         });
         addToLeftToolbar(new appeng.client.gui.widgets.IconButton(b -> switchToScreen(new VaultPriorityScreen(this))) {
-            @Override protected appeng.client.gui.Icon getIcon() { return appeng.client.gui.Icon.PRIORITY; }
+            @Override protected appeng.client.gui.Icon getIcon() { return appeng.client.gui.Icon.SORT_BY_AMOUNT; }
             @Override public java.util.List<Component> getTooltipMessage() { return java.util.List.of(Component.translatable("gui.ae2.Priority")); }
         });
     }
@@ -35,7 +34,7 @@ public final class EssenceVaultScreen extends AEBaseScreen<MachineMenu> {
         super.drawFG(graphics,offsetX,offsetY,mouseX,mouseY);
         var rows=menu.state.getList("rows",10);
         for (int i=0;i<rows.size();i++) {
-            var row=rows.getCompound(i); var stack=ItemStack.parseOptional(minecraft.level.registryAccess(),row.getCompound("item")); int y=22+i*17;
+            var row=rows.getCompound(i); var stack=ItemStack.of(row.getCompound("item")); int y=22+i*17;
             graphics.renderItem(stack,9,y);
             graphics.drawString(font,font.plainSubstrByWidth(stack.getHoverName().getString(),89),29,y+1,0x404054,false);
             String count=Long.toString(row.getLong("count")); graphics.drawString(font,count,29,y+9,0x404054,false);
@@ -49,11 +48,11 @@ public final class EssenceVaultScreen extends AEBaseScreen<MachineMenu> {
         }
     }
     @Override protected void updateBeforeRender() { super.updateBeforeRender(); recoveryWarning.setVisibility(menu.state.getInt("unresolved")>0); setTextContent("state",Component.translatable("gui.appliedagristics.vault_readonly",menu.state.getInt("types"))); }
-    @Override public boolean mouseScrolled(double x,double y,double horizontal,double vertical) {
+    @Override public boolean mouseScrolled(double x,double y,double vertical) {
         if (x>=leftPos && x<leftPos+176 && y>=topPos+22 && y<topPos+98) {
-            menu.page=Math.clamp(menu.page-(int)Math.signum(vertical),0,Math.max(0,menu.state.getInt("pages")-1));
-            PacketDistributor.sendToServer(new Messages.Control(menu.machine.getBlockPos(), menu.containerId, menu.sessionToken,4,"",menu.page,ItemStack.EMPTY)); return true;
+            menu.page=net.minecraft.util.Mth.clamp(menu.page-(int)Math.signum(vertical),0,Math.max(0,menu.state.getInt("pages")-1));
+            io.github.sudabake.appliedagristics.network.Messages.sendToServer(new Messages.Control(menu.machine.getBlockPos(), menu.containerId, menu.sessionToken,4,"",menu.page,ItemStack.EMPTY)); return true;
         }
-        return super.mouseScrolled(x,y,horizontal,vertical);
+        return super.mouseScrolled(x,y,vertical);
     }
 }

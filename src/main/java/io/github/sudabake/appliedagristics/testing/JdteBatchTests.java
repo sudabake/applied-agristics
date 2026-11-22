@@ -3,7 +3,6 @@ package io.github.sudabake.appliedagristics.testing;
 import io.github.sudabake.appliedagristics.*;
 import io.github.sudabake.appliedagristics.biology.BioData;
 import io.github.sudabake.appliedagristics.compat.jdte.JdteBiologicalCrops;
-import java.lang.reflect.Method;
 import java.util.*;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -11,12 +10,12 @@ import net.minecraft.gametest.framework.*;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.*;
 import net.minecraft.world.level.block.Blocks;
-import net.neoforged.fml.ModList;
-import net.neoforged.neoforge.energy.IEnergyStorage;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
-import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
-import net.neoforged.neoforge.items.*;
+import net.minecraftforge.fml.ModList;
+import net.minecraftforge.energy.IEnergyStorage;
+import net.minecraftforge.fluids.FluidStack;
+import net.minecraftforge.fluids.capability.IFluidHandler;
+import net.minecraftforge.gametest.PrefixGameTestTemplate;
+import net.minecraftforge.items.*;
 
 @PrefixGameTestTemplate(false)
 public final class JdteBatchTests {
@@ -37,34 +36,46 @@ public final class JdteBatchTests {
   }
 
   private static Object host(GameTestHelper h, String name, int x) {
-    var block = BuiltInRegistries.BLOCK.get(ResourceLocation.parse("jdte:" + name));
+    var block = BuiltInRegistries.BLOCK.get(new ResourceLocation("jdte:" + name));
     h.assertTrue(block != Blocks.AIR, "Real JDTE greenhouse is registered");
     var pos = new BlockPos(x, 1, 1);
     h.setBlock(pos, block);
     return h.getBlockEntity(pos);
   }
 
-  private static Object definition(ItemStack seed) throws ReflectiveOperationException {
+  static Object definition(GameTestHelper h, ItemStack seed) throws ReflectiveOperationException {
     return Class.forName("com.jdte.common.recipes.GreenhouseCropResolver")
-        .getMethod("findGeneric", ItemStack.class).invoke(null, seed);
+        .getMethod("find", net.minecraft.world.level.Level.class, ItemStack.class).invoke(null, h.getLevel(), seed);
   }
 
-  private static Object plan(Object host, GameTestHelper h, ItemStack seed, Object definition, int count)
-      throws ReflectiveOperationException {
-    Method planner = Arrays.stream(host.getClass().getDeclaredMethods())
-        .filter(method -> method.getName().equals("planDrops")).findFirst().orElseThrow();
-    var ledgerType = planner.getParameterTypes()[planner.getParameterCount() - 1];
-    var capture = ledgerType.getDeclaredMethod("capture", IItemHandler.class);
+  private static Object ledger(Object host) throws ReflectiveOperationException {
+    var type = Class.forName("com.jdte.common.blockentities.GreenhouseCapacityLedger");
+    var capture = type.getDeclaredMethod("capture", IItemHandler.class);
     capture.setAccessible(true);
-    var ledger = capture.invoke(null, field(host, "internalOutputHandler"));
-    return planner.getParameterCount() == 5
-        ? call(host, "planDrops", h.getLevel(), seed, definition, count, ledger)
-        : call(host, "planDrops", h.getLevel(), seed, definition, count, 0, ledger);
+    return capture.invoke(null, field(host, "internalOutputHandler"));
+  }
+
+  private static List<ItemStack> drainOutput(Object host) throws ReflectiveOperationException {
+    var output = (IItemHandlerModifiable) field(host, "internalOutputHandler");
+    var drops = new ArrayList<ItemStack>();
+    for (int slot = 0; slot < output.getSlots(); slot++) {
+      var stack = output.getStackInSlot(slot);
+      if (!stack.isEmpty()) drops.add(stack.copy());
+      output.setStackInSlot(slot, ItemStack.EMPTY);
+    }
+    return drops;
+  }
+
+  private static int produce(Object host, GameTestHelper h, ItemStack seed, Object definition, int count)
+      throws ReflectiveOperationException {
+    return (int) (host.getClass().getSimpleName().equals("GreenhouseBE")
+        ? call(host, "generateAndStoreDrops", h.getLevel(), seed, definition, count, ledger(host))
+        : call(host, "generateAndStoreDrops", h.getLevel(), seed, definition, count, 0, ledger(host)));
   }
 
   @SuppressWarnings("unchecked")
-  private static List<ItemStack> drops(Object plan) throws ReflectiveOperationException {
-    return (List<ItemStack>) call(plan, "drops");
+  static List<ItemStack> sample(GameTestHelper h, Object definition) throws ReflectiveOperationException {
+    return (List<ItemStack>) call(host(h, "greenhouse", 1), "generateSingleHarvest", h.getLevel(), definition, ItemStack.EMPTY);
   }
 
   private static int count(List<ItemStack> drops, net.minecraft.world.item.Item item) {
@@ -81,17 +92,17 @@ public final class JdteBatchTests {
         var machine = host(h, name, x++);
         h.assertTrue(machine instanceof JdteBiologicalCrops.BatchHost, "Native sampler hook is applied");
         for (var species : List.of("minecraft:cow", "minecraft:chicken")) {
-          var identity = ResourceLocation.parse(species);
+          var identity = new ResourceLocation(species);
           var seed = BioData.withIdentity(Agristics.BIO_SEED.get(), identity);
-          var definition = definition(seed);
+          var definition = definition(h, seed);
           h.assertTrue(definition instanceof JdteBiologicalCrops.Definition
               && call(definition, "harvestGenerator") == null,
               "Biological definitions use the batch path instead of the dynamic callback quota");
           for (double probability : new double[] {0, 1}) {
             Balance.FALLBACK_SEED_CHANCE.set(probability);
-            var plan = plan(machine, h, seed, definition, 512);
-            var drops = drops(plan);
-            h.assertTrue((int) call(plan, "harvests") == 512
+            int harvests = produce(machine, h, seed, definition, 512);
+            var drops = drainOutput(machine);
+            h.assertTrue(harvests == 512
                 && count(drops, Agristics.BIO_ESSENCE.get()) == 512
                 && count(drops, Agristics.BIO_SEED.get()) == (probability == 0 ? 0 : 512)
                 && drops.stream().allMatch(stack -> identity.equals(BioData.identity(stack))),
@@ -108,9 +119,10 @@ public final class JdteBatchTests {
               values[i] = List.of(BioData.withIdentity(Agristics.BIO_ESSENCE.get(), identity).copyWithCount(7));
           }
           var explicit = type.getConstructor(types).newInstance(values);
-          var plan = plan(machine, h, seed, explicit, 128);
-          h.assertTrue(count(drops(plan), Agristics.BIO_ESSENCE.get()) == 896
-              && count(drops(plan), Agristics.BIO_SEED.get()) == 0,
+          h.assertTrue(produce(machine, h, seed, explicit, 128) == 128, "Explicit batch settles completely");
+          var explicitDrops = drainOutput(machine);
+          h.assertTrue(count(explicitDrops, Agristics.BIO_ESSENCE.get()) == 896
+              && count(explicitDrops, Agristics.BIO_SEED.get()) == 0,
               "Unmarked explicit recipes retain their exact outputs without injected bonus seeds");
         }
       }
@@ -122,9 +134,9 @@ public final class JdteBatchTests {
 
   private static void settle(Object host, Object definition) throws ReflectiveOperationException {
     if (host.getClass().getSimpleName().equals("GreenhouseBE"))
-      call(host, "settleSlot", 0, definition, 65536, 512, new int[] {0});
+      call(host, "settleSlot", 0, definition, 65536, 512, ledger(host), new int[] {0});
     else call(host, "settleSlot", 0, definition, 65536, 512, 9,
-        call(host, "currentProductionSettings"), List.of(host), new int[] {0});
+        call(host, "currentProductionSettings"), List.of(host), new int[] {0}, ledger(host));
   }
 
   @GameTest(template = "empty", templateNamespace = Agristics.ID)
@@ -136,14 +148,14 @@ public final class JdteBatchTests {
       int x = 1;
       for (var name : List.of("greenhouse", "large_greenhouse")) {
         var machine = host(h, name, x++);
-        var seed = BioData.withIdentity(Agristics.BIO_SEED.get(), ResourceLocation.parse("minecraft:cow"));
-        var definition = definition(seed);
+        var seed = BioData.withIdentity(Agristics.BIO_SEED.get(), new ResourceLocation("minecraft:cow"));
+        var definition = definition(h, seed);
         var inventory = (IItemHandlerModifiable) field(machine, "itemHandler");
         inventory.setStackInSlot(0, seed.copyWithCount(64));
         var outputs = (IItemHandler) field(machine, "internalOutputHandler");
         var energy = (IEnergyStorage) call(machine, "getEnergyStorage");
         var tank = (IFluidHandler) call(machine, "getFluidTank");
-        var fluid = BuiltInRegistries.FLUID.get(ResourceLocation.parse("justdirethings:time_fluid_source"));
+        var fluid = BuiltInRegistries.FLUID.get(new ResourceLocation("justdirethings:time_fluid"));
         energy.receiveEnergy(Integer.MAX_VALUE, false);
         tank.fill(new FluidStack(fluid, 64000), IFluidHandler.FluidAction.EXECUTE);
         int power = energy.getEnergyStored(), water = tank.getFluidInTank(0).getAmount();
@@ -158,10 +170,10 @@ public final class JdteBatchTests {
             && water - tank.getFluidInTank(0).getAmount() == (name.equals("greenhouse")
                 ? 512 * fluidCost : (512 * fluidCost + 8) / 9)
             && inventory.getStackInSlot(0).getCount() == 64,
-            "Real settlement exceeds a zero dynamic quota and pays native costs only for produced harvests");
+            "Real settlement settles a full batch and pays native costs only for produced harvests");
         var entity = (net.minecraft.world.level.block.entity.BlockEntity) machine;
-        var saved = entity.saveWithFullMetadata(h.getLevel().registryAccess());
-        entity.loadWithComponents(saved, h.getLevel().registryAccess());
+        var saved = entity.saveWithFullMetadata();
+        entity.load(saved);
         h.assertTrue(inventory.getStackInSlot(0).getCount() == 64
             && BioData.identity(inventory.getStackInSlot(0)).equals(BioData.identity(seed))
             && energy.getEnergyStored() == power - 512 * powerCost,

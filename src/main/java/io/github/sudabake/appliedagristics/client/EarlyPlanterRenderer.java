@@ -14,7 +14,7 @@ import net.minecraft.world.level.block.Blocks;
 
 /** Mature display only. No random ticks, entities, growth animation or harvest simulation. */
 public final class EarlyPlanterRenderer implements BlockEntityRenderer<EarlyPlanter> {
-    public static final ModelResourceLocation BIO_MODEL=ModelResourceLocation.standalone(ResourceLocation.fromNamespaceAndPath(Agristics.ID,"block/bio_plant"));
+    public static final ResourceLocation BIO_MODEL = new ResourceLocation(Agristics.ID, "block/bio_plant");
     private final net.minecraft.client.renderer.block.BlockRenderDispatcher renderer;
     public EarlyPlanterRenderer(BlockEntityRendererProvider.Context context) { renderer=context.getBlockRenderDispatcher(); }
     @Override public void render(EarlyPlanter machine,float partial,PoseStack pose,MultiBufferSource buffers,int light,int overlay) {
@@ -37,5 +37,4 @@ public final class EarlyPlanterRenderer implements BlockEntityRenderer<EarlyPlan
         } else renderer.renderSingleBlock(state,pose,buffers,light,overlay);
         pose.popPose();
     }
-    @Override public net.minecraft.world.phys.AABB getRenderBoundingBox(EarlyPlanter machine) { return new net.minecraft.world.phys.AABB(machine.getBlockPos()).expandTowards(0,1,0); }
 }

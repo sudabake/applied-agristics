@@ -9,8 +9,8 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.capabilities.Capabilities;
-import net.neoforged.neoforge.items.IItemHandler;
+import net.minecraftforge.common.capabilities.ForgeCapabilities;
+import net.minecraftforge.items.IItemHandler;
 
 /** Native AE processing IO, acceleration slots and result delivery shared by the two processors. */
 public abstract class AEProcessingMachine extends GridMachine
@@ -70,7 +70,7 @@ public abstract class AEProcessingMachine extends GridMachine
       // All faces accept input. Bit 2 enables output on the selected face.
       sides[side] = (mode & 2) == 0 ? 1 : 3;
       setChanged();
-      invalidateCapabilities();
+
     }
   }
 
@@ -166,7 +166,7 @@ public abstract class AEProcessingMachine extends GridMachine
       if (sides[side.ordinal()] != 2 && sides[side.ordinal()] != 3) continue;
       var pos = worldPosition.relative(side);
       if (!level.hasChunkAt(pos)) continue;
-      var target = level.getCapability(Capabilities.ItemHandler.BLOCK, pos, side.getOpposite());
+      var target = level.getBlockEntity(pos) == null ? null : level.getBlockEntity(pos).getCapability(ForgeCapabilities.ITEM_HANDLER, side.getOpposite()).orElse(null);
       if (target == null) continue;
       for (int slot = 0; slot < target.getSlots(); slot++) {
         var stack = items.getStackInSlot(outputSlot);
@@ -179,21 +179,21 @@ public abstract class AEProcessingMachine extends GridMachine
   }
 
   @Override
-  protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-    super.saveAdditional(tag, registries);
+  protected void saveAdditional(CompoundTag tag) {
+    super.saveAdditional(tag);
     tag.putBoolean("autoOutput", autoOutput);
     tag.putBoolean("craftingDelivery", craftingDelivery);
     tag.putIntArray("sides", sides);
   }
 
   @Override
-  protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-    super.loadAdditional(tag, registries);
+  public void load(CompoundTag tag) {
+    super.load(tag);
     autoOutput = tag.getBoolean("autoOutput");
     craftingDelivery = tag.getBoolean("craftingDelivery");
     var modes = tag.getIntArray("sides");
     if (modes.length == 6)
-      for (int side = 0; side < 6; side++) sides[side] = (Math.clamp(modes[side], 0, 3) & 2) == 0 ? 1 : 3;
+      for (int side = 0; side < 6; side++) sides[side] = (net.minecraft.util.Mth.clamp(modes[side], 0, 3) & 2) == 0 ? 1 : 3;
   }
 
   @Override

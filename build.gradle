@@ -1,29 +1,40 @@
 plugins {
     id 'java-library'
-    id 'net.neoforged.moddev' version '2.0.148'
+    id 'net.neoforged.moddev.legacyforge' version '2.0.148'
 }
 version = mod_version
 group = 'io.github.sudabake.appliedagristics'
 base { archivesName = 'applied-agristics' }
-java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+java.toolchain.languageVersion = JavaLanguageVersion.of(17)
 repositories {
+    maven { url = 'https://repo.spongepowered.org/repository/maven-public/' }
     mavenCentral { content { excludeGroup 'maven.modrinth' } }
     maven { url = 'https://maven.blamejared.com'; content { includeGroupByRegex 'mezz\\.jei.*' } }
     maven { url = 'https://api.modrinth.com/maven'; content { includeGroup 'maven.modrinth' } }
 }
-neoForge {
-    version = neo_version
+legacyForge {
+    version = "1.20.1-${forge_version}"
     runs {
         client {
             client()
             if (project.hasProperty('clientDirectory')) gameDirectory = file(project.property('clientDirectory'))
             if (project.hasProperty('clientSmoke')) systemProperty 'appliedagristics.clientSmoke', 'true'
+            if (project.hasProperty('machineModelChecks')) systemProperty 'appliedagristics.machineModelChecksAfterSmoke', 'true'
+            if (project.hasProperty('storageReload')) systemProperty 'appliedagristics.storageReload', project.property('storageReload')
+            if (project.hasProperty('eaepSmoke')) {
+                systemProperty 'appliedagristics.eaepSmoke', 'true'
+            }
+            if (project.hasProperty('eaepOnly')) systemProperty 'appliedagristics.eaepOnly', 'true'
         }
-        server { server(); programArgument '--nogui' }
+        server {
+            server()
+            if (project.hasProperty('serverDirectory')) gameDirectory = file(project.property('serverDirectory'))
+            programArgument '--nogui'
+        }
         gameTestServer {
             if (project.hasProperty('gameTestDirectory')) gameDirectory = file(project.property('gameTestDirectory'))
             type = 'gameTestServer'
-            systemProperty 'neoforge.enabledGameTestNamespaces', 'appliedagristics'
+            systemProperty 'forge.enabledGameTestNamespaces', 'appliedagristics'
             systemProperty 'appliedagristics.tests', 'true'
             if (project.hasProperty('storageRepro')) systemProperty 'appliedagristics.storageRepro', 'true'
             if (project.hasProperty('planterBenchmark')) {
@@ -33,45 +44,70 @@ neoForge {
     }
     mods { appliedagristics { sourceSet(sourceSets.main) } }
 }
+def referenceMods = providers.gradleProperty('referenceMods').map { file(it) }
+def runtimeFixtures = providers.gradleProperty('runtimeFixtures').map { file(it) }
+if (referenceMods.isPresent()) {
+    repositories.ivy {
+        url = referenceMods.get().toURI()
+        patternLayout { artifact '[artifact].[ext]' }
+        metadataSources { artifact() }
+        content { includeGroup 'agr.port.fixture' }
+    }
+}
+if (runtimeFixtures.isPresent()) {
+    repositories.ivy {
+        url = runtimeFixtures.get().toURI()
+        patternLayout { artifact '[artifact].[ext]' }
+        metadataSources { artifact() }
+        content { includeGroup 'agr.port.runtime' }
+    }
+}
+def modDependency = { String name, String coordinates ->
+    def local = referenceMods.map { new File(it, name) }
+    local.isPresent() && local.get().isFile() ? "agr.port.fixture:${name - '.jar'}:1" : coordinates
+}
+
 dependencies {
-    compileOnly "mezz.jei:jei-1.21.1-common-api:${jei_version}"
-    compileOnly "mezz.jei:jei-1.21.1-neoforge-api:${jei_version}"
-    compileOnly "maven.modrinth:botany-pots:21.1.44"
-    compileOnly "maven.modrinth:bookshelf-lib:21.1.81"
-    compileOnly "maven.modrinth:jade:15.10.6+neoforge"
-    if (project.hasProperty('jadeTests')) runtimeOnly "maven.modrinth:jade:15.10.6+neoforge"
-    if (project.hasProperty('jdteJar')) runtimeOnly files(project.property('jdteJar'))
-    if (project.hasProperty('justDireThingsJar')) runtimeOnly files(project.property('justDireThingsJar'))
-    if (project.hasProperty('curiosJar')) runtimeOnly files(project.property('curiosJar'))
+    compileOnly "mezz.jei:jei-1.20.1-common-api:${jei_version}"
+    compileOnly "mezz.jei:jei-1.20.1-forge-api:${jei_version}"
+    modCompileOnly modDependency('BotanyPots-Forge-1.20.1-13.0.0.jar', 'maven.modrinth:botany-pots:GHNPFUnp')
+    modCompileOnly modDependency('Bookshelf-Forge-1.20.1-20.2.15.jar', 'maven.modrinth:bookshelf-lib:7eS5OIHj')
+    modCompileOnly modDependency('Jade-1.20.1-Forge-11.13.3.jar', 'maven.modrinth:jade:xJQHCmWJ')
+    if (runtimeFixtures.isPresent()) {
+        fileTree(runtimeFixtures.get()).matching { include '*.jar' }.files.sort().each { jar ->
+            modRuntimeOnly "agr.port.runtime:${jar.name - '.jar'}:1"
+        }
+    }
+    if (project.hasProperty('jadeTests'))
+        modRuntimeOnly modDependency('Jade-1.20.1-Forge-11.13.3.jar', 'maven.modrinth:jade:xJQHCmWJ')
     if (project.hasProperty('botanyTests')) {
-        runtimeOnly "maven.modrinth:botany-pots:21.1.44"
-        runtimeOnly "maven.modrinth:bookshelf-lib:21.1.81"
-        if (project.hasProperty('prickleJar')) runtimeOnly files(project.property('prickleJar'))
-        else runtimeOnly "maven.modrinth:prickle:21.1.11"
+        modRuntimeOnly modDependency('BotanyPots-Forge-1.20.1-13.0.0.jar', 'maven.modrinth:botany-pots:GHNPFUnp')
+        modRuntimeOnly modDependency('Bookshelf-Forge-1.20.1-20.2.15.jar', 'maven.modrinth:bookshelf-lib:7eS5OIHj')
     }
-    if (project.hasProperty('botanyTreesJar')) runtimeOnly files(project.property('botanyTreesJar'))
-    if (project.hasProperty('performanceReferenceJar')) runtimeOnly files(project.property('performanceReferenceJar'))
-    if (project.hasProperty('compatReferenceJars')) runtimeOnly files(project.property('compatReferenceJars').split(';'))
-    if (project.hasProperty('compatReferenceJarsFile')) runtimeOnly files(file(project.property('compatReferenceJarsFile')).readLines('UTF-8').findAll { !it.isBlank() })
-    if (project.hasProperty('jeiTests')) {
-        if (project.hasProperty('jeiJar')) runtimeOnly files(project.property('jeiJar'))
-        else runtimeOnly "mezz.jei:jei-1.21.1-neoforge:${jei_version}"
-    }
-    if (project.hasProperty('compatTests')) runtimeOnly "maven.modrinth:farmers-delight:1.21.1-1.2.11"
-    implementation "maven.modrinth:ae2:${ae2_version}"
-    implementation "maven.modrinth:mystical-agriculture:${ma_version}"
-    implementation "maven.modrinth:cucumber:${cucumber_version}"
-    implementation "maven.modrinth:guideme:${guideme_version}"
+    if (project.hasProperty('jeiTests'))
+        modRuntimeOnly modDependency("jei-1.20.1-forge-${jei_version}.jar", "mezz.jei:jei-1.20.1-forge:${jei_version}")
+    if (project.hasProperty('compatTests')) modRuntimeOnly "maven.modrinth:farmers-delight:1.20.1-1.2.7"
+    modImplementation modDependency('appliedenergistics2-forge-15.4.10.jar', "maven.modrinth:ae2:${ae2_version}")
+    modImplementation modDependency('MysticalAgriculture-1.20.1-7.0.24.jar', "maven.modrinth:mystical-agriculture:${ma_version}")
+    modImplementation modDependency('Cucumber-1.20.1-7.0.16.jar', "maven.modrinth:cucumber:${cucumber_version}")
+    modImplementation modDependency('guideme-20.1.15.jar', "maven.modrinth:guideme:${guideme_version}")
+    modCompileOnly modDependency('Mekanism-1.20.1-10.4.16.80.jar', 'maven.modrinth:mekanism:uxe1WQp4')
+    modCompileOnly "maven.modrinth:immersiveengineering:WUzj4tgJ"
+    modCompileOnly "maven.modrinth:mekanismmoremachine:4jmSX8kC"
+    annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
     testImplementation platform('org.junit:junit-bom:5.11.4')
     testImplementation 'org.junit.jupiter:junit-jupiter'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
-tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.compilerArgs += ['-Xmaxerrs', '800']
+}
 tasks.named('test') { useJUnitPlatform() }
 processResources {
-    def metadata = [version: project.version, neo_min_version: project.findProperty('neo_min_version') ?: '21.1.241', guideme_min_version: project.findProperty('guideme_min_version') ?: '21.1.17']
+    def metadata = [version: project.version, forge_version: forge_version]
     inputs.properties(metadata)
-    filesMatching('META-INF/neoforge.mods.toml') { expand metadata }
+    filesMatching('META-INF/mods.toml') { expand metadata }
 }
 tasks.named('processResources') {
     // Copy tasks can retain deleted input files; rebuild only this derived output directory.
@@ -84,17 +120,27 @@ tasks.named('processResources') {
         project.delete(destinationDir)
     }
 }
+mixin {
+    add sourceSets.main, 'appliedagristics.refmap.json'
+    config 'appliedagristics.mixins.json'
+    config 'appliedagristics.optional.mixins.json'
+}
+
 jar {
+    manifest.attributes('MixinConfigs': 'appliedagristics.mixins.json,appliedagristics.optional.mixins.json')
     archiveFileName = "applied-agristics-${release_name}.jar"
     exclude 'io/github/sudabake/appliedagristics/testing/**'
     exclude 'io/github/sudabake/appliedagristics/compat/jei/JeiSmoke*'
-    exclude 'data/appliedagristics/structure/empty.nbt'
+    exclude 'data/appliedagristics/structures/empty.nbt'
     exclude '**/.gitkeep'
     from('LICENSE', 'COPYING', 'THIRD_PARTY_NOTICES.md')
     from('third_party/jdte/LICENSE.txt') { into 'licenses/jdte' }
     from('third_party/mysticalagriculture/LICENSE.txt') { into 'licenses/mysticalagriculture' }
     from('third_party/ae2/LICENSE.txt') { into 'licenses/ae2' }
     from('third_party/appliedgenerators/LICENSE.txt') { into 'licenses/appliedgenerators' }
+}
+tasks.named('reobfJar') {
+    archiveFileName = "applied-agristics-${release_name}.jar"
 }
 tasks.named('runGameTestServer').configure {
     doLast {

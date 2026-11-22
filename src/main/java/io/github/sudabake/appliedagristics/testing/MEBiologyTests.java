@@ -14,7 +14,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.*;
 import net.minecraft.world.item.crafting.*;
 import net.minecraft.world.level.block.Blocks;
-import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+import net.minecraftforge.gametest.PrefixGameTestTemplate;
 
 @PrefixGameTestTemplate(false)
 public final class MEBiologyTests {
@@ -22,26 +22,26 @@ public final class MEBiologyTests {
   public static void retiredContentIsUnregistered(GameTestHelper h) {
     for (var name : List.of("seed_storage_tier1", "seed_storage_tier2", "cell_cultivator",
         "biological_altar", "culture_capsule", "mature_culture", "bio_extract", "condensed_bio_essence")) {
-      var id = ResourceLocation.fromNamespaceAndPath(Agristics.ID, name);
+      var id = new ResourceLocation(Agristics.ID, name);
       h.assertTrue(!net.minecraft.core.registries.BuiltInRegistries.ITEM.containsKey(id)
           && !net.minecraft.core.registries.BuiltInRegistries.BLOCK.containsKey(id),
           "Retired content has no registry entry: " + name);
     }
     h.assertTrue(!net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.containsKey(
-            ResourceLocation.fromNamespaceAndPath(Agristics.ID, "thrown_culture"))
+            new ResourceLocation(Agristics.ID, "thrown_culture"))
         && !net.minecraft.core.registries.BuiltInRegistries.MOB_EFFECT.containsKey(
-            ResourceLocation.fromNamespaceAndPath(Agristics.ID, "nourishment"))
+            new ResourceLocation(Agristics.ID, "nourishment"))
         && !net.minecraft.core.registries.BuiltInRegistries.RECIPE_SERIALIZER.containsKey(
-            ResourceLocation.fromNamespaceAndPath(Agristics.ID, "bio_seed")),
+            new ResourceLocation(Agristics.ID, "bio_seed")),
         "Retired projectile, effect and recipe serializer are unregistered");
     h.assertTrue(h.getLevel().getRecipeManager().getRecipes().stream()
-        .noneMatch(recipe -> recipe.id().getNamespace().equals(Agristics.ID)
-            && recipe.id().getPath().startsWith("legacy_")), "No migration recipes remain");
+        .noneMatch(recipe -> recipe.getId().getNamespace().equals(Agristics.ID)
+            && recipe.getId().getPath().startsWith("legacy_")), "No migration recipes remain");
     h.succeed();
   }
 
-  private static final ResourceLocation COW = ResourceLocation.parse("minecraft:cow"),
-      PIG = ResourceLocation.parse("minecraft:pig");
+  private static final ResourceLocation COW = new ResourceLocation("minecraft:cow"),
+      PIG = new ResourceLocation("minecraft:pig");
 
   private static MEBioCultivator install(GameTestHelper h, PlanterFixture fixture) {
     var pos = fixture.power().above();
@@ -77,8 +77,8 @@ public final class MEBiologyTests {
               "Full output prevents paid work and consumes no input");
           machine.items.setStackInSlot(3, ItemStack.EMPTY);
           for (int i = 0; i < 37; i++) machine.step();
-          var saved = machine.saveWithFullMetadata(h.getLevel().registryAccess());
-          machine.loadWithComponents(saved, h.getLevel().registryAccess());
+          var saved = machine.saveWithFullMetadata();
+          machine.load(saved);
           h.assertTrue(
               machine.snapshot(0, "").getInt("progress") == 37, "Paid progress survives a reload");
           for (int i = 37; i < Balance.ME_BIO_TICKS.get(); i++) machine.step();
@@ -92,13 +92,7 @@ public final class MEBiologyTests {
           h.assertTrue(
               machine.items.getStackInSlot(3).getCount() == 1, "Completed batch is not repeated");
           h.assertTrue(
-              machine
-                      .getLevel()
-                      .getCapability(
-                          net.neoforged.neoforge.capabilities.Capabilities.FluidHandler.BLOCK,
-                          machine.getBlockPos(),
-                          Direction.UP)
-                  == null,
+              !machine.getCapability(net.minecraftforge.common.capabilities.ForgeCapabilities.FLUID_HANDLER, Direction.UP).isPresent(),
               "Fresh processor has no water port");
           for (int i = 4; i < 8; i++) {
             machine.items.setStackInSlot(i, appeng.core.definitions.AEItems.SPEED_CARD.stack());
@@ -130,7 +124,7 @@ public final class MEBiologyTests {
           var stacks = inputs(COW);
           var output = BioData.withIdentity(Agristics.BIO_SEED.get(), COW);
           var encoded =
-              PatternDetailsHelper.encodeProcessingPattern(
+              ForgeTestInputs.processingPattern(
                   stacks.stream().map(GenericStack::fromItemStack).toList(),
                   List.of(GenericStack.fromItemStack(output)));
           var pattern = PatternDetailsHelper.decodePattern(encoded, h.getLevel());
@@ -141,7 +135,7 @@ public final class MEBiologyTests {
           }
           var wrong =
               PatternDetailsHelper.decodePattern(
-                  PatternDetailsHelper.encodeProcessingPattern(
+                  ForgeTestInputs.processingPattern(
                       stacks.stream().map(GenericStack::fromItemStack).toList(),
                       List.of(
                           GenericStack.fromItemStack(
@@ -174,8 +168,8 @@ public final class MEBiologyTests {
           f.seeds().add(key, 1);
           f.controller().step();
           h.assertTrue(!task.enabled, "A manually paused existing species remains paused");
-          var save = f.controller().saveWithFullMetadata(h.getLevel().registryAccess());
-          f.controller().loadWithComponents(save, h.getLevel().registryAccess());
+          var save = f.controller().saveWithFullMetadata();
+          f.controller().load(save);
           f.controller().step();
           h.assertTrue(
               !f.controller().tasks.get(id).enabled
@@ -188,7 +182,7 @@ public final class MEBiologyTests {
   @GameTest(template = "empty", templateNamespace = Agristics.ID)
   public static void nutrientReturnsBucket(GameTestHelper h) {
     var input =
-        CraftingInput.of(
+        ForgeTestInputs.crafting(
             3,
             1,
             List.of(
@@ -200,8 +194,7 @@ public final class MEBiologyTests {
         h.getLevel()
             .getRecipeManager()
             .getRecipeFor(RecipeType.CRAFTING, input, h.getLevel())
-            .orElseThrow()
-            .value();
+            .orElseThrow();
     h.assertTrue(
         recipe.assemble(input, h.getLevel().registryAccess()).is(Agristics.NUTRIENT.get()),
         "Water bucket, bone meal and Inferium produce nutrient reagent");
@@ -241,8 +234,8 @@ public final class MEBiologyTests {
           h.assertTrue(
               f.seeds().count(key) == 18 && cell.getAvailableStacks().get(key) == 0,
               "Auto collection excludes its own contents and conserves amounts");
-          var saved = f.seeds().saveWithFullMetadata(h.getLevel().registryAccess());
-          f.seeds().loadWithComponents(saved, h.getLevel().registryAccess());
+          var saved = f.seeds().saveWithFullMetadata();
+          f.seeds().load(saved);
           h.assertTrue(
               f.seeds().snapshot(0, "").getBoolean("autoCollect"),
               "Auto collection preference survives saves");
@@ -258,7 +251,7 @@ public final class MEBiologyTests {
         () -> {
           var bank = f.seeds();
           var vanilla = AEItemKey.of(new ItemStack(Items.WHEAT_SEEDS));
-          var mystical = AEItemKey.of(new ItemStack(Crops.all().getFirst().getSeedsItem()));
+          var mystical = AEItemKey.of(new ItemStack(Crops.all().get(0).getSeedsItem()));
           var bio = AEItemKey.of(BioData.withIdentity(Agristics.BIO_SEED.get(), COW));
           bank.setCollectFilter(1);
           h.assertTrue(
@@ -272,8 +265,8 @@ public final class MEBiologyTests {
           h.assertTrue(
               bank.add(bio, 4) == 4 && bank.add(vanilla, 1) == 0,
               "Biological filter accepts component-bearing biological seeds");
-          var save = bank.saveWithFullMetadata(h.getLevel().registryAccess());
-          bank.loadWithComponents(save, h.getLevel().registryAccess());
+          var save = bank.saveWithFullMetadata();
+          bank.load(save);
           h.assertTrue(
               bank.count(vanilla) == 3
                   && bank.count(mystical) == 2
@@ -317,10 +310,10 @@ public final class MEBiologyTests {
     boolean wheat = false;
     for (var raw : rows) {
       var row = (CompoundTag) raw;
-      var seed = ItemStack.parseOptional(h.getLevel().registryAccess(), row.getCompound("seed"));
+      var seed = ItemStack.of(row.getCompound("seed"));
       var outputs = new ArrayList<ItemStack>();
       for (var output : row.getList("outputs", Tag.TAG_COMPOUND))
-        outputs.add(ItemStack.parseOptional(h.getLevel().registryAccess(), (CompoundTag) output));
+        outputs.add(ItemStack.of((CompoundTag) output));
       h.assertTrue(
           outputs.stream().allMatch(stack -> stack.getCount() == 1),
           "Informational output icons do not advertise batch amounts");

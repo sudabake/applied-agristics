@@ -10,5 +10,4 @@ public final class MEInfusionRenderer implements BlockEntityRenderer<MEInfusionA
     private final com.blakebr0.mysticalagriculture.client.tesr.InfusionAltarRenderer nativeRenderer;
     public MEInfusionRenderer(BlockEntityRendererProvider.Context context) { nativeRenderer=new com.blakebr0.mysticalagriculture.client.tesr.InfusionAltarRenderer(context); }
     @Override public void render(MEInfusionAltar altar,float partial,PoseStack pose,MultiBufferSource buffer,int light,int overlay) { nativeRenderer.render(altar.visualView(),partial,pose,buffer,light,overlay); }
-    @Override public net.minecraft.world.phys.AABB getRenderBoundingBox(MEInfusionAltar altar) { return new net.minecraft.world.phys.AABB(altar.getBlockPos()).inflate(4); }
 }

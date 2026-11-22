@@ -1,1 +1,17 @@
-{"required":true,"minVersion":"0.8","package":"io.github.sudabake.appliedagristics.mixin","compatibilityLevel":"JAVA_21","mixins":["FieldViewMixin","StemAccessor","BiologicalTransferMixin","SaplingAccessor","TreeGrowerAccessor"],"injectors":{"defaultRequire":1}}
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "io.github.sudabake.appliedagristics.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "mixins": [
+    "FieldViewMixin",
+    "BiologicalTransferMixin",
+    "SaplingAccessor",
+    "TreeGrowerAccessor",
+    "MegaTreeGrowerAccessor"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "refmap": "appliedagristics.refmap.json"
+}

@@ -4,6 +4,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.*;
 import java.util.List;
+import net.minecraft.world.level.Level;
 
 public class BioItem extends Item {
     public BioItem(Properties properties) { super(properties); }
@@ -17,7 +18,7 @@ public class BioItem extends Item {
         var name = entity.<Component>map(type -> type.getDescription()).orElse(Component.literal(id.toString()));
         return Component.translatable("gui.appliedagristics.bio_name", baseName, name);
     }
-    @Override public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> lines, TooltipFlag flag) {
+    @Override public void appendHoverText(ItemStack stack, Level level, List<Component> lines, TooltipFlag flag) {
         var id = BioData.identity(stack);
         if (id != null && flag.isAdvanced()) lines.add(Component.translatable("gui.appliedagristics.bio_identity", id.toString()).withStyle(net.minecraft.ChatFormatting.DARK_GRAY));
     }

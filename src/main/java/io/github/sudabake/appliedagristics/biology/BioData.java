@@ -9,17 +9,21 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
+import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 
 /** Biological identity belongs to a stack, never to its translated display name. */
 @EventBusSubscriber(modid = Agristics.ID)
 public final class BioData {
+    private static final String IDENTITY = "appliedagristics:bio_identity";
     private BioData() {}
-    public static ResourceLocation identity(ItemStack stack) { return stack.get(Agristics.BIO_ID.get()); }
+    public static ResourceLocation identity(ItemStack stack) {
+        var tag = stack.getTag();
+        return tag != null && tag.contains(IDENTITY, 8) ? ResourceLocation.tryParse(tag.getString(IDENTITY)) : null;
+    }
     public static boolean seed(ItemStack stack) { return stack.is(Agristics.BIO_SEED.get()) && identified(stack); }
-    public static ResourceLocation cropId(ResourceLocation entity) { return ResourceLocation.fromNamespaceAndPath(Agristics.ID, "bio/" + entity.getNamespace() + "/" + entity.getPath()); }
+    public static ResourceLocation cropId(ResourceLocation entity) { return new ResourceLocation(Agristics.ID, "bio/" + entity.getNamespace() + "/" + entity.getPath()); }
     public static ResourceLocation entityId(ResourceLocation crop) {
         if (!crop.getNamespace().equals(Agristics.ID) || !crop.getPath().startsWith("bio/")) return null;
         var parts = crop.getPath().substring(4).split("/", 2); return parts.length == 2 ? ResourceLocation.tryParse(parts[0] + ":" + parts[1]) : null;
@@ -29,12 +33,12 @@ public final class BioData {
         return id != null && BuiltInRegistries.ENTITY_TYPE.containsKey(id);
     }
     public static ItemStack withIdentity(net.minecraft.world.level.ItemLike item, ResourceLocation id) {
-        var stack = new ItemStack(item); stack.set(Agristics.BIO_ID.get(), id); return stack;
+        var stack = new ItemStack(item); stack.getOrCreateTag().putString(IDENTITY, id.toString()); return stack;
     }
     public static InteractionResult sample(Player player, InteractionHand hand, Entity target) {
         var held = player.getItemInHand(hand);
         if (!held.is(Agristics.SAMPLER.get())) return InteractionResult.PASS;
-        if (target instanceof net.neoforged.neoforge.entity.PartEntity<?> part) target = part.getParent();
+        if (target instanceof net.minecraftforge.entity.PartEntity<?> part) target = part.getParent();
         if (!(target instanceof Mob) || !target.isAlive() || identity(held) != null || player.isSpectator()) return InteractionResult.PASS;
         return giveSample(player,hand,BuiltInRegistries.ENTITY_TYPE.getKey(target.getType()));
     }
@@ -56,7 +60,7 @@ public final class BioData {
             || !level.mayInteract(player,pos)) return InteractionResult.PASS;
         if(level.isClientSide) return InteractionResult.SUCCESS;
         // Read only the configured identity: never tick, spawn, or reroll the cage.
-        var data=spawner.saveWithoutMetadata(level.registryAccess());
+        var data=spawner.saveWithoutMetadata();
         var id=ResourceLocation.tryParse(data.getCompound("SpawnData").getCompound("entity").getString("id"));
         if(id==null || !BuiltInRegistries.ENTITY_TYPE.containsKey(id)) {
             player.displayClientMessage(net.minecraft.network.chat.Component.translatable("gui.appliedagristics.unknown_spawner"),true);

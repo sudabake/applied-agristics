@@ -10,7 +10,7 @@ import io.github.sudabake.appliedagristics.menu.MachineMenu;
 public final class VaultPriorityScreen extends AESubScreen<MachineMenu, EssenceVaultScreen> {
     public VaultPriorityScreen(EssenceVaultScreen parent) {
         super(parent,"/screens/appliedagristics_vault_priority.json");
-        widgets.add("back",new TabButton(Icon.BACK,menu.machine.getDisplayName(),b->returnToParent()));
+        widgets.add("back",new TabButton(Icon.ARROW_LEFT,menu.machine.getDisplayName(),b->returnToParent()));
         var priority=widgets.addNumberEntryWidget("priority",NumberEntryType.UNITLESS);
         priority.setTextFieldStyle(style.getWidget("priorityInput"));
         priority.setMinValue(Integer.MIN_VALUE);
@@ -19,5 +19,4 @@ public final class VaultPriorityScreen extends AESubScreen<MachineMenu, EssenceV
         priority.setOnChange(()->priority.getIntValue().ifPresent(value->AltarScreen.send(menu,13,value)));
         priority.setOnConfirm(()->{ priority.getIntValue().ifPresent(value->AltarScreen.send(menu,13,value)); returnToParent(); });
     }
-    @Override protected boolean shouldAddToolbar() { return false; }
 }

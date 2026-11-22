@@ -19,14 +19,14 @@ def install():
     states={'variants':{f'facing={f}':{'model':'appliedagristics:block/me_bio_cultivator','y':angle} for f,angle in [('north',0),('east',90),('south',180),('west',270)]}}
     item={'parent':'appliedagristics:block/me_bio_cultivator','display':{'gui':{'rotation':[30,225,0],'scale':[.625,.625,.625]}}}
     write(A/'blockstates/me_bio_cultivator.json',states);write(A/'models/item/me_bio_cultivator.json',item)
-    recipe=RES/'data/appliedagristics/recipe'
+    recipe=RES/'data/appliedagristics/recipes'
     for name in ('cell_cultivator','biological_altar','bio_infusion','culture_capsule','condensed_bio_essence'):(recipe/f'{name}.json').unlink(missing_ok=True)
     write(recipe/'me_bio_cultivator.json',{'type':'minecraft:crafting_shaped','category':'misc','pattern':['GIG','ICI','RPR'],
         'key':{'G':{'item':'minecraft:glass'},'I':{'item':'minecraft:iron_ingot'},'C':{'item':'mysticalagriculture:inferium_essence'},'R':{'item':'minecraft:redstone'},'P':{'item':'ae2:engineering_processor'}},
-        'result':{'id':'appliedagristics:me_bio_cultivator','count':1}})
+        'result':{'item':'appliedagristics:me_bio_cultivator','count':1}})
     write(recipe/'culture_nutrient.json',{'type':'minecraft:crafting_shapeless','category':'misc',
         'ingredients':[{'item':'minecraft:water_bucket'},{'item':'minecraft:bone_meal'},{'item':'mysticalagriculture:inferium_essence'}],
-        'result':{'id':'appliedagristics:culture_nutrient','count':1}})
+        'result':{'item':'appliedagristics:culture_nutrient','count':1}})
     style=json.loads((RES/'assets/ae2/screens/appliedagristics_me_infusion.json').read_text(encoding='utf-8'))
     style['slots']['MACHINE_INPUT']={'left':18,'top':40,'grid':'HORIZONTAL'}
     style['text']['dialog_title']['text']={'translate':'block.appliedagristics.me_bio_cultivator'}
@@ -77,7 +77,7 @@ def install():
         for key in list(data):
             if key.startswith(('gui.appliedagristics.culture_capsule','gui.appliedagristics.culture_cells','jei.appliedagristics.extraction','jei.appliedagristics.bio_infusion','jei.appliedagristics.ritual_help','jei.appliedagristics.throw_help','jei.appliedagristics.nourishment_help','status.appliedagristics.bio_ritual','status.appliedagristics.add_seed','status.appliedagristics.missing_ground_materials')):data.pop(key)
         write(path,data)
-    tag=RES/'data/minecraft/tags/block/mineable/pickaxe.json';data=json.loads(tag.read_text(encoding='utf-8'));data['values']=list(dict.fromkeys([*data['values'],'appliedagristics:me_bio_cultivator']));write(tag,data)
+    tag=RES/'data/minecraft/tags/blocks/mineable/pickaxe.json';data=json.loads(tag.read_text(encoding='utf-8'));data['values']=list(dict.fromkeys([*data['values'],'appliedagristics:me_bio_cultivator']));write(tag,data)
     path=A/'ae2guide/index.md';text=path.read_text(encoding='utf-8')
     text=text.replace('  - appliedagristics:cell_cultivator\n','  - appliedagristics:me_bio_cultivator\n').replace('  - appliedagristics:biological_altar\n','')
     text=re.sub(r'基础种植机和细胞培养器可在前期制作[^\n]*','基础种植机可在前期制作。ME 生物培养器连接 AE 网络，消耗已采样棉签、营养试剂和空白生物种子，直接产出对应物种的种子。基础加工 10 秒，可装四张独立 AE 加速卡。',text)

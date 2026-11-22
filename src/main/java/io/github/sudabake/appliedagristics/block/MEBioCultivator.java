@@ -46,7 +46,7 @@ public final class MEBioCultivator extends AEProcessingMachine {
   private boolean sameWork() {
     if (work.size() != 3 || !ready()) return false;
     for (int slot = 0; slot < 3; slot++)
-      if (!ItemStack.isSameItemSameComponents(work.get(slot), items.getStackInSlot(slot)))
+      if (!ItemStack.isSameItemSameTags(work.get(slot), items.getStackInSlot(slot)))
         return false;
     return true;
   }
@@ -84,7 +84,7 @@ public final class MEBioCultivator extends AEProcessingMachine {
     var output = result();
     var existing = items.getStackInSlot(3);
     if (!existing.isEmpty()
-        && (!ItemStack.isSameItemSameComponents(existing, output)
+        && (!ItemStack.isSameItemSameTags(existing, output)
             || existing.getCount() >= existing.getMaxStackSize())) {
       status = "output_full";
       return;
@@ -98,7 +98,7 @@ public final class MEBioCultivator extends AEProcessingMachine {
         return;
       }
       double paid = energy.extractAEPower(cost, Actionable.MODULATE, PowerMultiplier.CONFIG);
-      progress += workTicks * Math.clamp(paid / cost, 0, 1);
+      progress += workTicks * net.minecraft.util.Mth.clamp(paid / cost, 0, 1);
       status = "culturing";
       setChanged();
     }
@@ -128,7 +128,7 @@ public final class MEBioCultivator extends AEProcessingMachine {
       appeng.api.crafting.IPatternDetails pattern, KeyCounter[] inputs, Direction side) {
     if (!acceptsPlans()
         || pattern == null
-        || pattern.getOutputs().size() != 1)
+        || pattern.getOutputs().length != 1)
       return false;
     var arranged = new ItemStack[] {ItemStack.EMPTY, ItemStack.EMPTY, ItemStack.EMPTY};
     for (var counter : inputs)
@@ -153,22 +153,22 @@ public final class MEBioCultivator extends AEProcessingMachine {
   }
 
   @Override
-  protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-    super.saveAdditional(tag, registries);
+  protected void saveAdditional(CompoundTag tag) {
+    super.saveAdditional(tag);
     tag.putDouble("bioProgress", progress);
     var saved = new ListTag();
-    for (var stack : work) saved.add(stack.saveOptional(registries));
+    for (var stack : work) saved.add(stack.save(new CompoundTag()));
     tag.put("bioWork", saved);
   }
 
   @Override
-  protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-    super.loadAdditional(tag, registries);
+  public void load(CompoundTag tag) {
+    super.load(tag);
     double value = tag.getDouble("bioProgress");
-    progress = Double.isFinite(value) ? Math.clamp(value, 0, Balance.ME_BIO_TICKS.get()) : 0;
+    progress = Double.isFinite(value) ? net.minecraft.util.Mth.clamp(value, 0, Balance.ME_BIO_TICKS.get()) : 0;
     var loaded = new ArrayList<ItemStack>();
     for (var raw : tag.getList("bioWork", Tag.TAG_COMPOUND))
-      loaded.add(ItemStack.parseOptional(registries, (CompoundTag) raw));
+      loaded.add(ItemStack.of( (CompoundTag) raw));
     work = List.copyOf(loaded);
   }
 

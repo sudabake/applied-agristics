@@ -9,7 +9,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.*;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.*;
-import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+import net.minecraftforge.gametest.PrefixGameTestTemplate;
 
 @PrefixGameTestTemplate(false)
 public final class PlantingCompatibilityTests {
@@ -25,7 +25,7 @@ public final class PlantingCompatibilityTests {
         var pos=h.absolutePos(new BlockPos(1,1,1));
         var before=h.getLevel().getBlockState(pos);
         for(var name:names) {
-            var item=BuiltInRegistries.ITEM.getOptional(ResourceLocation.parse(name)).orElse(null);
+            var item=BuiltInRegistries.ITEM.getOptional(new ResourceLocation(name)).orElse(null);
             if(item==null) continue;
             var seed=new ItemStack(item);
             var source=CropSources.find(h.getLevel(),seed);
@@ -53,31 +53,30 @@ public final class PlantingCompatibilityTests {
     public static void allLoadedExternalPlantingInputsReachSharedCatalogAndSeedRecognition(GameTestHelper h) {
         var seeds=ImportedPlanting.seeds(h.getLevel());
         var allInputs=new ArrayList<>(seeds);
-        var ops=h.getLevel().registryAccess().createSerializationContext(com.mojang.serialization.JsonOps.INSTANCE);
-        for(var holder:h.getLevel().getRecipeManager().getRecipes()) {
-            var type=BuiltInRegistries.RECIPE_SERIALIZER.getKey(holder.value().getSerializer()).toString();
-            if(!type.equals("immersiveengineering:cloche") && !type.equals("mekmm:planting")) continue;
-            var json=net.minecraft.world.item.crafting.Recipe.CODEC.encodeStart(ops,holder.value()).getOrThrow().getAsJsonObject();
-            var input=net.minecraft.world.item.crafting.Ingredient.CODEC_NONEMPTY.parse(ops,
-                    json.get(type.equals("mekmm:planting")?"item_input":"input")).getOrThrow();
-            allInputs.addAll(Arrays.asList(input.getItems()));
+        for (var recipe : h.getLevel().getRecipeManager().getRecipes()) {
+            var serializer = BuiltInRegistries.RECIPE_SERIALIZER.getKey(recipe.getSerializer());
+            if (serializer == null) continue;
+            if (serializer.toString().equals("immersiveengineering:cloche")) {
+                allInputs.addAll(Arrays.asList(((blusunrize.immersiveengineering.api.crafting.ClocheRecipe) recipe).seed.getItems()));
+            } else if (serializer.toString().equals("mekmm:planting")) {
+                allInputs.addAll(((com.jerry.mekmm.api.recipes.PlantingRecipe) recipe).getItemInput().getRepresentations());
+            }
         }
         var catalog=PlantingCatalog.serialize(h.getLevel());
         var listed=new HashSet<AEItemKey>();
-        for(var raw:catalog) listed.add(AEItemKey.of(ItemStack.parseOptional(h.getLevel().registryAccess(),
-                ((net.minecraft.nbt.CompoundTag)raw).getCompound("seed"))));
+        for(var raw:catalog) listed.add(AEItemKey.of(ItemStack.of(((net.minecraft.nbt.CompoundTag)raw).getCompound("seed"))));
         for(var seed:allInputs) {
             h.assertTrue(Harvests.seed(seed,h.getLevel()),"Every loaded external recipe input is accepted: "+seed);
             h.assertTrue(listed.contains(AEItemKey.of(seed)),"JEI lists every recognized external recipe input: "+seed);
         }
-        if(net.neoforged.fml.ModList.get().isLoaded("immersiveengineering")) {
-            var hemp=new ItemStack(BuiltInRegistries.ITEM.get(ResourceLocation.parse("immersiveengineering:seed")));
+        if(net.minecraftforge.fml.ModList.get().isLoaded("immersiveengineering")) {
+            var hemp=new ItemStack(BuiltInRegistries.ITEM.get(new ResourceLocation("immersiveengineering:seed")));
             var imported=ImportedPlanting.find(h.getLevel(),hemp);
             h.assertTrue(imported!=null && imported.ticks()==800
                     && BuiltInRegistries.ITEM.getKey(imported.product().getItem()).toString().equals("immersiveengineering:hemp_fiber"),
                     "The live cloche recipe retains its actual input, output and processing time");
         }
-        if(net.neoforged.fml.ModList.get().isLoaded("mekmm")) {
+        if(net.minecraftforge.fml.ModList.get().isLoaded("mekmm")) {
             var imported=ImportedPlanting.find(h.getLevel(),new ItemStack(Items.OAK_SAPLING));
             h.assertTrue(imported!=null && imported.product().is(Items.OAK_LOG)
                     && CropSources.find(h.getLevel(),new ItemStack(Items.OAK_SAPLING)).ticks()==2400,

@@ -26,8 +26,8 @@ public final class NativeSeedYield {
         String key=BuiltInRegistries.ITEM.getKey(seed.getItem())+"/"+plant;
         synchronized(CACHE) {
             return CACHE.computeIfAbsent(level,k->new HashMap<>()).computeIfAbsent(key,k->{
-                var table=level.getServer().reloadableRegistries().getLootTable(plant.getBlock().getLootTable());
-                var json=LootTable.DIRECT_CODEC.encodeStart(level.registryAccess().createSerializationContext(JsonOps.INSTANCE),table).result();
+                var table=level.getServer().getLootData().getLootTable(plant.getBlock().getLootTable());
+                var json=java.util.Optional.of(LootJson.encode(table));
                 if (json.isEmpty()) return true;
                 var matches=new ArrayList<Boolean>();
                 collect(level,json.get(),BuiltInRegistries.ITEM.getKey(seed.getItem()).toString(),matches,new HashSet<>(),false);
@@ -35,7 +35,7 @@ public final class NativeSeedYield {
                 if (matches.size()>1) return true;
                 // A single unmodified one-seed drop is entirely reserved for replanting.
                 // Any count-changing function is treated conservatively as capable of surplus.
-                return matches.getFirst();
+                return matches.get(0);
             });
         }
     }
@@ -45,11 +45,11 @@ public final class NativeSeedYield {
         var object=element.getAsJsonObject(); String type=object.has("type") && object.get("type").isJsonPrimitive() ? object.get("type").getAsString() : "";
         boolean variable=inherited || increases(object.get("functions")) || object.has("rolls") && maximum(object.get("rolls"))>1;
         if (type.equals("minecraft:item") && object.has("name") && object.get("name").getAsString().equals(seed)) matches.add(variable);
-        if (type.equals("minecraft:loot_table") && object.has("value") && object.get("value").isJsonPrimitive()) {
-            String id=object.get("value").getAsString();
+        if (type.equals("minecraft:loot_table") && (object.has("name") || object.has("value")) && object.get("value").isJsonPrimitive()) {
+            String id=object.get(object.has("name") ? "name" : "value").getAsString();
             if (seen.add(id)) {
-                var key=net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.LOOT_TABLE,net.minecraft.resources.ResourceLocation.parse(id));
-                LootTable.DIRECT_CODEC.encodeStart(level.registryAccess().createSerializationContext(JsonOps.INSTANCE),level.getServer().reloadableRegistries().getLootTable(key)).result()
+                var key=new net.minecraft.resources.ResourceLocation(id);
+                java.util.Optional.of(LootJson.encode(level.getServer().getLootData().getLootTable(key)))
                     .ifPresent(e->collect(level,e,seed,matches,seen,true));
             }
         }

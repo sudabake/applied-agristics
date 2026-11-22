@@ -15,7 +15,7 @@ def collision_shapes(names, selection_boxes=None):
     for index,name in enumerate(names):
         data=json.loads((ASSETS/f'models/block/{name}.json').read_text(encoding='utf-8'))
         elements=data.get('elements',[{'from':[0,0,0],'to':[16,16,16]}])
-        if data.get('loader') == 'neoforge:composite':
+        if data.get('loader') == 'forge:composite':
             # Selection follows the housing, tank and pipes, excluding the internal cell meshes.
             elements=[element for child in data['children'].values() for element in child.get('elements',[])]
         if selection_boxes and name in selection_boxes:

@@ -8,21 +8,20 @@ import appeng.core.definitions.AEBlocks;
 import io.github.sudabake.appliedagristics.*;
 import io.github.sudabake.appliedagristics.block.*;
 import net.minecraft.core.*;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.gametest.framework.*;
 import net.minecraft.world.item.*;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.material.Fluids;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction;
-import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+import net.minecraftforge.fluids.FluidStack;
+import net.minecraftforge.fluids.capability.IFluidHandler.FluidAction;
+import net.minecraftforge.gametest.PrefixGameTestTemplate;
 
 @PrefixGameTestTemplate(false)
 public final class AgristicsGameTests {
     @GameTest(template = "empty", templateNamespace = Agristics.ID)
     public static void earlyWaterAndPersistence(GameTestHelper h) {
         var pos = new BlockPos(1, 1, 1); h.setBlock(pos, Agristics.EARLY.get());
-        EarlyPlanter be = h.getBlockEntity(pos); var crop = Crops.all().getFirst();
+        EarlyPlanter be = (EarlyPlanter) h.getBlockEntity(pos); var crop = Crops.all().get(0);
         be.items.setStackInSlot(0, new ItemStack(crop.getSeedsItem())); be.items.setStackInSlot(1, new ItemStack(Blocks.FARMLAND));
         for (int i = 0; i < 9; i++) be.step();
         h.assertTrue(be.items.getStackInSlot(2).isEmpty(), "Dry cycle does not finish before ten seconds"); be.step();
@@ -34,13 +33,13 @@ public final class AgristicsGameTests {
         for (int slot = 2; slot < 11; slot++) be.items.setStackInSlot(slot, new ItemStack(crop.getEssenceItem(), 64));
         for (int i = 0; i < 10; i++) be.step();
         h.assertTrue(be.water.getFluidAmount() == 100 && be.items.getStackInSlot(2).getCount() == 64, "Blocked output must not consume water or produce");
-        var drop = new ItemStack(Agristics.EARLY.get()); be.saveToItem(drop, h.getLevel().registryAccess());
+        var drop = new ItemStack(Agristics.EARLY.get()); be.saveToItem(drop);
         var restored = new EarlyPlanter(be.getBlockPos(), be.getBlockState()); restored.setLevel(h.getLevel());
-        restored.loadWithComponents(drop.get(DataComponents.BLOCK_ENTITY_DATA).copyTag(), h.getLevel().registryAccess());
+        restored.load(net.minecraft.world.item.BlockItem.getBlockEntityData(drop));
         h.assertTrue(restored.items.getStackInSlot(2).getCount() == 64 && restored.water.getFluidAmount() == 100, "Saved machine retains inventory and water");
         h.assertTrue(be.items.getStackInSlot(0).getCount() == 1, "Seed is preserved");
-        var saved = drop.get(DataComponents.BLOCK_ENTITY_DATA).copyTag();
-        h.assertTrue(saved.getList("pending", 10).equals(restored.saveWithFullMetadata(h.getLevel().registryAccess()).getList("pending", 10)), "Blocked random harvest survives save/load without rerolling");
+        var saved = net.minecraft.world.item.BlockItem.getBlockEntityData(drop);
+        h.assertTrue(saved.getList("pending", 10).equals(restored.saveWithFullMetadata().getList("pending", 10)), "Blocked random harvest survives save/load without rerolling");
         h.assertTrue(restored.items.getSlots() == 11, "Basic planter contains exactly two inputs and nine outputs");
         var bottom = restored.automation(Direction.DOWN);
         h.assertTrue(bottom.getSlots() == 9 && bottom.extractItem(8, 1, true).getCount() == 1,
@@ -51,7 +50,7 @@ public final class AgristicsGameTests {
     }
     @GameTest(template = "empty", templateNamespace = Agristics.ID)
     public static void nativeHarvestRules(GameTestHelper h) {
-        var pos = new BlockPos(1, 1, 1); h.setBlock(pos, Agristics.EARLY.get()); EarlyPlanter be = h.getBlockEntity(pos);
+        var pos = new BlockPos(1, 1, 1); h.setBlock(pos, Agristics.EARLY.get()); EarlyPlanter be = (EarlyPlanter) h.getBlockEntity(pos);
         for (var seed : java.util.List.of(Items.WHEAT_SEEDS, Items.CARROT, Items.POTATO, Items.BEETROOT_SEEDS, Items.MELON_SEEDS, Items.PUMPKIN_SEEDS)) {
             for (int i = 0; i < 11; i++) be.items.setStackInSlot(i, ItemStack.EMPTY);
             be.items.setStackInSlot(0, new ItemStack(seed)); be.items.setStackInSlot(1, new ItemStack(Blocks.FARMLAND));
@@ -59,9 +58,9 @@ public final class AgristicsGameTests {
             int count = 0; for (int i = 2; i < 11; i++) count += be.items.getStackInSlot(i).getCount();
             h.assertTrue(count > 0 && be.items.getStackInSlot(0).getCount() == 1, "Native seed harvest/replant: " + seed);
         }
-        if (net.neoforged.fml.ModList.get().isLoaded("farmersdelight")) {
+        if (net.minecraftforge.fml.ModList.get().isLoaded("farmersdelight")) {
             for (var id : java.util.List.of("cabbage_seeds", "tomato_seeds", "onion")) {
-                var seed = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("farmersdelight", id));
+                var seed = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(new net.minecraft.resources.ResourceLocation("farmersdelight", id));
                 h.assertTrue(seed != Items.AIR, "Compatibility fixture seed exists: " + id);
                 for (int i = 0; i < 11; i++) be.items.setStackInSlot(i, ItemStack.EMPTY);
                 be.items.setStackInSlot(0, new ItemStack(seed)); be.items.setStackInSlot(1, new ItemStack(Blocks.FARMLAND));
@@ -71,7 +70,7 @@ public final class AgristicsGameTests {
             }
             org.slf4j.LoggerFactory.getLogger("AppliedAgristicsTests").info("FARMERS_DELIGHT_COMPAT_PASSED crops=3");
         }
-        if (net.neoforged.fml.ModList.get().isLoaded("mysticalagradditions")) {
+        if (net.minecraftforge.fml.ModList.get().isLoaded("mysticalagradditions")) {
             var star = Crops.all().stream().filter(c -> c.getId().getPath().equals("nether_star")).findFirst().orElseThrow();
             for (int i = 0; i < 12; i++) be.items.setStackInSlot(i, ItemStack.EMPTY);
             be.items.setStackInSlot(0, new ItemStack(star.getSeedsItem())); be.items.setStackInSlot(1, io.github.sudabake.appliedagristics.logic.Harvests.networkSoil());
@@ -113,8 +112,8 @@ public final class AgristicsGameTests {
     }
     @GameTest(template = "empty", templateNamespace = Agristics.ID)
     public static void basicCruxAndLargeBatches(GameTestHelper h) {
-        var pos = new BlockPos(1, 1, 1); h.setBlock(pos, Agristics.EARLY.get()); EarlyPlanter early = h.getBlockEntity(pos);
-        var crop = Crops.all().getFirst(); var original = crop.getCruxBlock();
+        var pos = new BlockPos(1, 1, 1); h.setBlock(pos, Agristics.EARLY.get()); EarlyPlanter early = (EarlyPlanter) h.getBlockEntity(pos);
+        var crop = Crops.all().get(0); var original = crop.getCruxBlock();
         try {
             crop.setCruxBlock(() -> Blocks.DIAMOND_BLOCK);
             var seed = new ItemStack(crop.getSeedsItem()); var soil = io.github.sudabake.appliedagristics.logic.Harvests.networkSoil();
@@ -135,22 +134,22 @@ public final class AgristicsGameTests {
     public static void craftingProgressionAndSafeMachineUpgrade(GameTestHelper h) {
         var recipes = h.getLevel().getRecipeManager().getAllRecipesFor(net.minecraft.world.item.crafting.RecipeType.CRAFTING);
         for (var id : java.util.List.of("early_planter", "seed_storage", "network_planter")) {
-            var recipe = recipes.stream().filter(r -> r.id().toString().equals(Agristics.ID + ":" + id)).findFirst().orElseThrow().value();
+            var recipe = recipes.stream().filter(r -> r.getId().toString().equals(Agristics.ID + ":" + id)).findFirst().orElseThrow();
             h.assertTrue(!recipe.isIncomplete(), "All progression ingredients are registered: " + id);
         }
         for (var id : java.util.List.of("compact_altar", "essence_cell", "awakening_upgrade", "speed_upgrade", "parallel_upgrade", "seed_conversion_upgrade"))
-            h.assertTrue(recipes.stream().noneMatch(r -> r.id().toString().equals(Agristics.ID + ":" + id)), "Retired item has no new crafting recipe: " + id);
-        var recipe = (net.minecraft.world.item.crafting.ShapedRecipe)recipes.stream().filter(r -> r.id().toString().equals(Agristics.ID + ":network_planter")).findFirst().orElseThrow().value();
+            h.assertTrue(recipes.stream().noneMatch(r -> r.getId().toString().equals(Agristics.ID + ":" + id)), "Retired item has no new crafting recipe: " + id);
+        var recipe = (net.minecraft.world.item.crafting.ShapedRecipe)recipes.stream().filter(r -> r.getId().toString().equals(Agristics.ID + ":network_planter")).findFirst().orElseThrow();
         var stacks = new java.util.ArrayList<ItemStack>(); for (var ingredient : recipe.getIngredients()) stacks.add(ingredient.getItems()[0].copyWithCount(1));
         int machineSlot = -1; for (int i = 0; i < stacks.size(); i++) if (stacks.get(i).is(Agristics.EARLY.get().asItem())) machineSlot = i;
         h.assertTrue(machineSlot >= 0, "ME recipe uses the basic planter");
         var machineItem = stacks.get(machineSlot); var early = new EarlyPlanter(h.absolutePos(new BlockPos(1, 1, 1)), Agristics.EARLY.get().defaultBlockState()); early.setLevel(h.getLevel());
-        early.saveToItem(machineItem, h.getLevel().registryAccess());
-        var input = net.minecraft.world.item.crafting.CraftingInput.of(recipe.getWidth(), recipe.getHeight(), stacks);
+        early.saveToItem(machineItem);
+        var input = ForgeTestInputs.crafting(recipe.getWidth(), recipe.getHeight(), stacks);
         h.assertTrue(recipe.matches(input, h.getLevel()), "An empty placed-and-retrieved basic planter can be upgraded");
-        early.items.setStackInSlot(0, new ItemStack(Items.WHEAT_SEEDS)); early.saveToItem(machineItem, h.getLevel().registryAccess());
+        early.items.setStackInSlot(0, new ItemStack(Items.WHEAT_SEEDS)); early.saveToItem(machineItem);
         h.assertTrue(!recipe.matches(input, h.getLevel()), "Crafting cannot destroy seeds inside a basic planter");
-        early.items.setStackInSlot(0, ItemStack.EMPTY); early.water.fill(new FluidStack(Fluids.WATER, 100), FluidAction.EXECUTE); early.saveToItem(machineItem, h.getLevel().registryAccess());
+        early.items.setStackInSlot(0, ItemStack.EMPTY); early.water.fill(new FluidStack(Fluids.WATER, 100), FluidAction.EXECUTE); early.saveToItem(machineItem);
         h.assertTrue(!recipe.matches(input, h.getLevel()), "Crafting cannot destroy stored water");
         h.succeed();
     }

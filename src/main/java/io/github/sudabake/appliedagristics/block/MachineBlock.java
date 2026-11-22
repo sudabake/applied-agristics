@@ -1,6 +1,5 @@
 package io.github.sudabake.appliedagristics.block;
 
-import com.mojang.serialization.MapCodec;
 import io.github.sudabake.appliedagristics.Agristics;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -9,6 +8,7 @@ import net.minecraft.world.*;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.level.*;
 import net.minecraft.world.level.block.*;
 import net.minecraft.world.level.block.entity.*;
@@ -16,10 +16,10 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.loot.LootParams;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 import net.minecraft.world.phys.BlockHitResult;
-import net.neoforged.neoforge.fluids.FluidUtil;
+import net.minecraftforge.fluids.FluidUtil;
 import java.util.List;
 
-@net.neoforged.fml.common.EventBusSubscriber(modid = Agristics.ID)
+@net.minecraftforge.fml.common.Mod.EventBusSubscriber(modid = Agristics.ID)
 public class MachineBlock extends BaseEntityBlock {
     public enum Kind {
         EARLY(0), SEEDS(1), NETWORK(2), ACCESS(5), ME_INFUSION(6), INPUT_PORT(7), OUTPUT_PORT(8), ESSENCE_VAULT(9), ME_BIO(11);
@@ -50,8 +50,7 @@ public class MachineBlock extends BaseEntityBlock {
     }
     public Kind kind() { return kind; }
     public boolean preservesContents() { return kind==Kind.SEEDS || kind==Kind.ESSENCE_VAULT; }
-    @Override protected MapCodec<? extends BaseEntityBlock> codec() { return simpleCodec(p -> create(kind, p)); }
-    @Override protected RenderShape getRenderShape(BlockState state) { return RenderShape.MODEL; }
+    @Override public RenderShape getRenderShape(BlockState state) { return RenderShape.MODEL; }
     @Override public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
         return switch (kind) { case EARLY -> new EarlyPlanter(pos, state); case SEEDS -> new SeedStorage(pos, state); case NETWORK -> new NetworkPlanter(pos, state); case ACCESS -> new NetworkAccess(pos,state); case ME_INFUSION -> new MEInfusionAltar(pos,state); case INPUT_PORT -> new ItemPort(pos,state,true); case OUTPUT_PORT -> new ItemPort(pos,state,false); case ESSENCE_VAULT -> new EssenceVault(pos,state); case ME_BIO -> new MEBioCultivator(pos,state); };
     }
@@ -64,32 +63,33 @@ public class MachineBlock extends BaseEntityBlock {
             }
         };
     }
-    @Override protected net.minecraft.world.phys.shapes.VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, net.minecraft.world.phys.shapes.CollisionContext context) {
+    @Override public net.minecraft.world.phys.shapes.VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, net.minecraft.world.phys.shapes.CollisionContext context) {
         return MachineShapes.get(net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(this).getPath(),PlanterOrientation.facing(state),state.getValue(PlanterPartBlock.FORMED));
     }
-    @Override protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
+    @Override public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
+        var stack = player.getItemInHand(hand);
         if ((kind==Kind.ME_INFUSION || kind==Kind.ME_BIO) && stack.is(appeng.core.definitions.AEItems.SPEED_CARD.asItem())) {
             if (level.getBlockEntity(pos) instanceof AEProcessingMachine altar && altar.insertAcceleration(stack,level.isClientSide)) {
-                if (!level.isClientSide) stack.consume(1,player);
+                if (!level.isClientSide) { if (!player.getAbilities().instabuild) stack.shrink(1); }
             }
-            return ItemInteractionResult.sidedSuccess(level.isClientSide);
+            return InteractionResult.sidedSuccess(level.isClientSide);
         }
-        if (kind == Kind.EARLY && FluidUtil.interactWithFluidHandler(player, hand, level, pos, hit.getDirection())) return ItemInteractionResult.sidedSuccess(level.isClientSide);
-        return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        if (kind == Kind.EARLY && FluidUtil.interactWithFluidHandler(player, hand, level, pos, hit.getDirection())) return InteractionResult.sidedSuccess(level.isClientSide);
+        return useWithoutItem(state,level,pos,player,hit);
     }
-    @net.neoforged.bus.api.SubscribeEvent(priority = net.neoforged.bus.api.EventPriority.LOWEST)
-    public static void allowAccelerationInteraction(net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickBlock event) {
+    @net.minecraftforge.eventbus.api.SubscribeEvent(priority = net.minecraftforge.eventbus.api.EventPriority.LOWEST)
+    public static void allowAccelerationInteraction(net.minecraftforge.event.entity.player.PlayerInteractEvent.RightClickBlock event) {
         var player = event.getEntity();
         if (!player.isSecondaryUseActive() || player.isSpectator() || !player.mayBuild()
-            || event.getUseBlock() == net.neoforged.neoforge.common.util.TriState.FALSE
+            || event.getUseBlock() == net.minecraftforge.eventbus.api.Event.Result.DENY
             || !event.getItemStack().is(appeng.core.definitions.AEItems.SPEED_CARD.asItem())
             || !event.getLevel().mayInteract(player, event.getPos())) return;
         if (event.getLevel().getBlockEntity(event.getPos()) instanceof AEProcessingMachine) {
             // Sneaking normally skips useItemOn. Keep the existing insertion and slot limits.
-            event.setUseBlock(net.neoforged.neoforge.common.util.TriState.TRUE);
+            event.setUseBlock(net.minecraftforge.eventbus.api.Event.Result.ALLOW);
         }
     }
-    @Override protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
+    private InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
         if (kind==Kind.ACCESS) return InteractionResult.PASS;
         if (!level.isClientSide && player instanceof ServerPlayer server && level.getBlockEntity(pos) instanceof MachineEntity machine) machine.open(server);
         return InteractionResult.sidedSuccess(level.isClientSide);
@@ -98,32 +98,32 @@ public class MachineBlock extends BaseEntityBlock {
         super.setPlacedBy(level, pos, state, placer, stack);
         if (placer instanceof Player player && level.getBlockEntity(pos) instanceof GridMachine grid) grid.getMainNode().setOwningPlayer(player);
     }
-    @Override protected List<ItemStack> getDrops(BlockState state, LootParams.Builder params) {
+    @Override public List<ItemStack> getDrops(BlockState state, LootParams.Builder params) {
         var stack = new ItemStack(kind==Kind.SEEDS ? Agristics.SEEDS.get() : this);
-        if (preservesContents() && params.getOptionalParameter(LootContextParams.BLOCK_ENTITY) instanceof MachineEntity be) be.saveToItem(stack, params.getLevel().registryAccess());
+        if (preservesContents() && params.getOptionalParameter(LootContextParams.BLOCK_ENTITY) instanceof MachineEntity be) BlockItem.setBlockEntityData(stack, be.getType(), be.saveWithoutMetadata());
         return List.of(stack);
     }
-    @Override public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
+    @Override public void playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
         // Creative breaking skips normal loot; keep the two portable storages intact there too.
         if (!level.isClientSide && player.isCreative() && preservesContents() && level.getBlockEntity(pos) instanceof MachineEntity machine) {
             var stack=new ItemStack(kind==Kind.SEEDS ? Agristics.SEEDS.get() : this);
-            machine.saveToItem(stack,level.registryAccess());
+            BlockItem.setBlockEntityData(stack, machine.getType(), machine.saveWithoutMetadata());
             Block.popResource(level,pos,stack);
         }
-        return super.playerWillDestroy(level,pos,state,player);
+        super.playerWillDestroy(level,pos,state,player);
     }
-    @Override protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState replacement, boolean moving) {
+    @Override public void onRemove(BlockState state, Level level, BlockPos pos, BlockState replacement, boolean moving) {
         if (!state.is(replacement.getBlock()) && !level.isClientSide && !preservesContents() && level.getBlockEntity(pos) instanceof MachineEntity machine)
             machine.dropContents();
         if (!state.is(replacement.getBlock())) io.github.sudabake.appliedagristics.multiblock.PlanterStructure.changed(level,pos);
         if (!state.is(replacement.getBlock()) && level.getBlockEntity(pos) instanceof GridMachine grid) grid.release();
         super.onRemove(state, level, pos, replacement, moving);
     }
-    @Override protected void onPlace(BlockState state, Level level, BlockPos pos, BlockState previous, boolean moving) {
+    @Override public void onPlace(BlockState state, Level level, BlockPos pos, BlockState previous, boolean moving) {
         super.onPlace(state,level,pos,previous,moving);
         if (!state.is(previous.getBlock())) io.github.sudabake.appliedagristics.multiblock.PlanterStructure.changed(level,pos);
     }
-    @Override protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block block, BlockPos source, boolean moving) {
+    @Override public void neighborChanged(BlockState state, Level level, BlockPos pos, Block block, BlockPos source, boolean moving) {
         io.github.sudabake.appliedagristics.multiblock.PlanterStructure.changed(level,source);
     }
 }

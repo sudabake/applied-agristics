@@ -16,13 +16,13 @@ public final class BioCropEntity extends BlockEntity {
         identity=id; setChanged();
         if (level!=null && !level.isClientSide) level.sendBlockUpdated(worldPosition,getBlockState(),getBlockState(),2);
     }
-    @Override protected void saveAdditional(CompoundTag tag,HolderLookup.Provider registries) {
-        super.saveAdditional(tag,registries); if (identity!=null) tag.putString("identity",identity.toString());
+    @Override protected void saveAdditional(CompoundTag tag) {
+        super.saveAdditional(tag); if (identity!=null) tag.putString("identity",identity.toString());
     }
-    @Override protected void loadAdditional(CompoundTag tag,HolderLookup.Provider registries) {
-        super.loadAdditional(tag,registries); identity=ResourceLocation.tryParse(tag.getString("identity"));
+    @Override public void load(CompoundTag tag) {
+        super.load(tag); identity=ResourceLocation.tryParse(tag.getString("identity"));
     }
-    @Override public CompoundTag getUpdateTag(HolderLookup.Provider registries) { return saveWithoutMetadata(registries); }
+    @Override public CompoundTag getUpdateTag() { return saveWithoutMetadata(); }
     @Override public net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket getUpdatePacket() {
         return net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket.create(this);
     }

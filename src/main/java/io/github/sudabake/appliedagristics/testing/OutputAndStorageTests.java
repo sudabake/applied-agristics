@@ -13,8 +13,7 @@ import net.minecraft.gametest.framework.*;
 import net.minecraft.world.item.*;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
-import net.neoforged.neoforge.capabilities.Capabilities;
-import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+import net.minecraftforge.gametest.PrefixGameTestTemplate;
 
 @PrefixGameTestTemplate(false)
 public final class OutputAndStorageTests {
@@ -28,7 +27,7 @@ public final class OutputAndStorageTests {
             var wheat=AEItemKey.of(new ItemStack(Items.WHEAT));
             h.assertTrue(port.insertLocal(wheat,1024,false)==1024,"The finite buffer accepts all sixteen stacks");
             port.toggleAutoOutput();
-            var chest=h.getLevel().getCapability(Capabilities.ItemHandler.BLOCK,chestPos,port.outputFace().getOpposite());
+            var chest=h.getLevel().getBlockEntity(chestPos).getCapability(net.minecraftforge.common.capabilities.ForgeCapabilities.ITEM_HANDLER,port.outputFace().getOpposite()).orElse(null);
             h.assertTrue(port.count(wheat)==0,"Enabling export flushes every stack without a 64-item budget");
             h.assertTrue(port.insertLocal(wheat,128,true)==128 && port.count(wheat)==0,
                     "Simulated harvest insertion has no output side effects");
@@ -47,10 +46,10 @@ public final class OutputAndStorageTests {
                         && pipe.extractItem(0,64,true).getCount()==7,
                         "All faces reject input and expose output to pipes");
             }
-            var player=h.makeMockPlayer(GameType.SURVIVAL);
+            var player=h.makeMockSurvivalPlayer();
             var menu=new MachineMenu(1,player.getInventory(),port);
             player.getInventory().setItem(9,new ItemStack(Items.WHEAT,5));
-            h.assertTrue(!menu.slots.getFirst().mayPlace(new ItemStack(Items.WHEAT))
+            h.assertTrue(!menu.slots.get(0).mayPlace(new ItemStack(Items.WHEAT))
                     && menu.quickMoveStack(player,16).isEmpty() && port.count(wheat)==7,
                     "Manual placement and shift-click cannot insert into output slots");
             h.assertTrue(port.automation(Direction.UP).extractItem(0,64,false).getCount()==7 && port.count(wheat)==0,
@@ -73,7 +72,7 @@ public final class OutputAndStorageTests {
             altar.toggleAutoOutput();
             altar.items.setStackInSlot(1,new ItemStack(Items.DIAMOND,12));
             altar.step();
-            var chest=h.getLevel().getCapability(Capabilities.ItemHandler.BLOCK,pos.north(),Direction.SOUTH);
+            var chest=h.getLevel().getBlockEntity(pos.north()).getCapability(net.minecraftforge.common.capabilities.ForgeCapabilities.ITEM_HANDLER,Direction.SOUTH).orElse(null);
             var diamond=AEItemKey.of(new ItemStack(Items.DIAMOND));
             h.assertTrue(chest.getStackInSlot(0).getCount()==12 && altar.items.getStackInSlot(1).isEmpty()
                     && altar.getMainNode().getGrid().getStorageService().getInventory().getAvailableStacks().get(diamond)==0,
@@ -140,9 +139,9 @@ public final class OutputAndStorageTests {
     private static long listedCount(PlanterFixture fixture,AEItemKey key) {
         long count=fixture.seeds().count(key)-fixture.seeds().used(key)+fixture.output().count(key);
         var registries=fixture.controller().getLevel().registryAccess();
-        for(var raw:fixture.vault().saveWithFullMetadata(registries).getList("essences",10)) {
+        for(var raw:fixture.vault().saveWithFullMetadata().getList("essences",10)) {
             var entry=(net.minecraft.nbt.CompoundTag)raw;
-            if(key.equals(AEItemKey.fromTag(registries,entry.getCompound("key")))) count+=entry.getLong("count");
+            if(key.equals(AEItemKey.fromTag(entry.getCompound("key")))) count+=entry.getLong("count");
         }
         return count;
     }

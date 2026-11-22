@@ -14,8 +14,8 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.*;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.BlockHitResult;
-import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
-import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+import net.minecraftforge.event.entity.player.PlayerInteractEvent;
+import net.minecraftforge.gametest.PrefixGameTestTemplate;
 
 @PrefixGameTestTemplate(false)
 public final class CultivationRevisionTests {
@@ -48,12 +48,12 @@ public final class CultivationRevisionTests {
     @GameTest(template="empty",templateNamespace=Agristics.ID,timeoutTicks=240)
     public static void formedRotationPreservesNetworkClaimsAndDirections(GameTestHelper h) {
         var f=PlanterFixture.install(h.getLevel(),h.absolutePos(new BlockPos(2,1,1)),true);
-        var seed=AEItemKey.of(BioData.withIdentity(Agristics.BIO_SEED.get(),ResourceLocation.parse("minecraft:cow")));
+        var seed=AEItemKey.of(BioData.withIdentity(Agristics.BIO_SEED.get(),new ResourceLocation("minecraft:cow")));
         f.seeds().add(seed,1);
         h.runAtTickTime(100,()-> {
             var a=f.controller();var id=Cultivations.id(seed.toStack(1),h.getLevel());a.configure(id,true,-1);a.step();
             var task=a.tasks.get(id);double progress=task.progress;var node=a.getMainNode().getNode();
-            var player=h.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+            var player=h.makeMockSurvivalPlayer();
             player.setItemInHand(InteractionHand.MAIN_HAND,AEItems.CERTUS_QUARTZ_WRENCH.stack());
             for(var part:List.of(f.access(),f.input(),f.output(),f.seeds(),f.vault())) {
                 var pos=part.getBlockPos();var start=PlanterOrientation.facing(part.getBlockState());
@@ -93,15 +93,15 @@ public final class CultivationRevisionTests {
             var before=stack.copy();var batch=Harvests.networkBatch(h.getLevel(),h.absolutePos(BlockPos.ZERO),stack,64,new HashMap<>());
             long logs=batch.getOrDefault(AEItemKey.of(source.product()),0L);
             h.assertTrue(logs>=64 && logs<=256,"Tree harvest yields one to four logs per completed cycle");
-            h.assertTrue(batch.getOrDefault(AEItemKey.of(stack),0L)<=64 && ItemStack.isSameItemSameComponents(stack,before),"Retained saplings are untouched and never duplicated into every harvest");
-            var encoded=stack.save(h.getLevel().registryAccess());
-            h.assertTrue(Harvests.seed(ItemStack.parseOptional(h.getLevel().registryAccess(),(net.minecraft.nbt.CompoundTag)encoded),h.getLevel()),"Tree seed recognition survives serialization");
+            h.assertTrue(batch.getOrDefault(AEItemKey.of(stack),0L)<=64 && ItemStack.isSameItemSameTags(stack,before),"Retained saplings are untouched and never duplicated into every harvest");
+            var encoded=stack.save(new net.minecraft.nbt.CompoundTag());
+            h.assertTrue(Harvests.seed(ItemStack.of((net.minecraft.nbt.CompoundTag)encoded),h.getLevel()),"Tree seed recognition survives serialization");
         }
         var oak=CropSources.find(h.getLevel(),new ItemStack(Items.OAK_SAPLING));
         h.assertTrue(oak.previewOutputs(h.getLevel()).stream().anyMatch(stack->stack.is(Items.APPLE)),"Rare apple output appears without rolling a harvest");
         var catalog=PlantingCatalog.serialize(h.getLevel());
         var entry=catalog.stream().map(net.minecraft.nbt.CompoundTag.class::cast).filter(tag->
-                ItemStack.parseOptional(h.getLevel().registryAccess(),tag.getCompound("seed")).is(Items.OAK_SAPLING)).findFirst().orElseThrow();
+                ItemStack.of(tag.getCompound("seed")).is(Items.OAK_SAPLING)).findFirst().orElseThrow();
         h.assertTrue(entry.getList("outputs",10).size()>=3,"JEI lists saplings, logs and apples from the same definition");
         h.succeed();
     }
@@ -116,7 +116,7 @@ public final class CultivationRevisionTests {
             var seed=new ItemStack(item);
             h.assertTrue(Harvests.seed(seed,h.getLevel()) && Cultivations.seed(seed,h.getLevel(),h.absolutePos(BlockPos.ZERO))!=null,"Native planting entry resolves for "+item);
         }
-        if (!net.neoforged.fml.ModList.get().isLoaded("botanypots"))
+        if (!net.minecraftforge.fml.ModList.get().isLoaded("botanypots"))
             for(var item:List.of(Items.SUGAR_CANE,Items.CACTUS,Items.BAMBOO,Items.KELP,Items.GLOW_BERRIES,Items.BROWN_MUSHROOM,Items.RED_MUSHROOM)) {
                 var seed=new ItemStack(item);var drops=Harvests.networkBatch(h.getLevel(),h.absolutePos(BlockPos.ZERO),seed,64,new HashMap<>());
                 h.assertTrue(drops.size()==1 && drops.get(AEItemKey.of(seed))==64,"Declared self-propagating plants yield net produce once without extra fallback seeds");
@@ -147,16 +147,16 @@ public final class CultivationRevisionTests {
 
     @GameTest(template="empty",templateNamespace=Agristics.ID)
     public static void basicTreeHarvestRetainsSeedAndBlockedOutput(GameTestHelper h) {
-        var pos=new BlockPos(1,1,1);h.setBlock(pos,Agristics.EARLY.get());EarlyPlanter machine=h.getBlockEntity(pos);
+        var pos=new BlockPos(1,1,1);h.setBlock(pos,Agristics.EARLY.get());EarlyPlanter machine = (EarlyPlanter) h.getBlockEntity(pos);
         machine.items.setStackInSlot(0,new ItemStack(Items.OAK_SAPLING));
         machine.items.setStackInSlot(1,new ItemStack(Blocks.FARMLAND));
         for(int slot=2;slot<11;slot++) machine.items.setStackInSlot(slot,new ItemStack(Items.STONE,64));
         for(int step=0;step<121;step++) machine.step();
         h.assertTrue(machine.items.getStackInSlot(0).is(Items.OAK_SAPLING) && machine.items.getStackInSlot(0).getCount()==1,
                 "A blocked basic tree harvest retains the planted sapling");
-        var saved=machine.saveWithFullMetadata(h.getLevel().registryAccess());
+        var saved=machine.saveWithFullMetadata();
         var pending=saved.getList("pending",10).copy();machine.step();
-        h.assertTrue(machine.saveWithFullMetadata(h.getLevel().registryAccess()).getList("pending",10).equals(pending),"Blocked output does not reroll or mutate the paid harvest");
+        h.assertTrue(machine.saveWithFullMetadata().getList("pending",10).equals(pending),"Blocked output does not reroll or mutate the paid harvest");
         for(int slot=2;slot<11;slot++) machine.items.setStackInSlot(slot,ItemStack.EMPTY);
         machine.step();int logs=0;
         for(int slot=2;slot<11;slot++) if(machine.items.getStackInSlot(slot).is(Items.OAK_LOG)) logs+=machine.items.getStackInSlot(slot).getCount();

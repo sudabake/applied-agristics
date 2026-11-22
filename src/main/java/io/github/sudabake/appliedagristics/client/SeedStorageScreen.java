@@ -11,7 +11,6 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
  * AE storage UI. Clicking a displayed seed withdraws one free stack; management lives in its
@@ -19,7 +18,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
  */
 public final class SeedStorageScreen extends AEBaseScreen<MachineMenu> {
   private boolean dragging;
-  private final AE2Button[] withdraw = new AE2Button[12];
+  private final MachineTextButton[] withdraw = new MachineTextButton[12];
   private final IconButton recoveryWarning;
 
   public SeedStorageScreen(MachineMenu menu, Inventory inventory, Component title) {
@@ -27,11 +26,11 @@ public final class SeedStorageScreen extends AEBaseScreen<MachineMenu> {
         menu, inventory, title, StyleManager.loadStyleDoc("/screens/appliedagristics_seeds.json"));
     for (int i = 0; i < withdraw.length; i++) {
       final int index = i;
-      withdraw[i] = new AE2Button(Component.literal("↑"), button -> {
+      withdraw[i] = new MachineTextButton(Component.literal("↑"), button -> {
         var row = row(index);
         if (row == null) return;
-        var seed = ItemStack.parseOptional(minecraft.level.registryAccess(), row.getCompound("seed"));
-        PacketDistributor.sendToServer(new Messages.Control(menu.machine.getBlockPos(),
+        var seed = ItemStack.of( row.getCompound("seed"));
+        io.github.sudabake.appliedagristics.network.Messages.sendToServer(new Messages.Control(menu.machine.getBlockPos(),
             menu.containerId, menu.sessionToken, 3, "", 0, seed));
       });
       withdraw[i].setTooltip(net.minecraft.client.gui.components.Tooltip.create(
@@ -56,14 +55,14 @@ public final class SeedStorageScreen extends AEBaseScreen<MachineMenu> {
             });
     widgets.add(
         "collect",
-        new AE2Button(
+        new MachineTextButton(
             Component.translatable("gui.appliedagristics.collect"),
             button -> AltarScreen.send(menu, 0, 0)));
     addToLeftToolbar(
         new IconButton(button -> switchToScreen(new SeedStorageSettingsScreen(this))) {
           @Override
           protected Icon getIcon() {
-            return Icon.COG;
+            return Icon.WRENCH;
           }
 
           @Override
@@ -102,7 +101,7 @@ public final class SeedStorageScreen extends AEBaseScreen<MachineMenu> {
       if (row == null) continue;
       int x = 8 + i % 3 * 100, y = 60 + i / 3 * 22;
       var stack =
-          ItemStack.parseOptional(minecraft.level.registryAccess(), row.getCompound("seed"));
+          ItemStack.of( row.getCompound("seed"));
       graphics.renderItem(stack, x + 2, y);
       graphics.drawString(
           font,
@@ -149,7 +148,7 @@ public final class SeedStorageScreen extends AEBaseScreen<MachineMenu> {
       int x = leftPos + 8 + i % 3 * 100, y = topPos + 60 + i / 3 * 22;
       if (row == null || mouseX < x || mouseX >= x + 76 || mouseY < y || mouseY >= y + 21) continue;
       var stack =
-          ItemStack.parseOptional(minecraft.level.registryAccess(), row.getCompound("seed"));
+          ItemStack.of( row.getCompound("seed"));
       drawTooltipWithHeader(
           graphics,
           mouseX,
@@ -174,7 +173,7 @@ public final class SeedStorageScreen extends AEBaseScreen<MachineMenu> {
 
   private void scrollTo(double localY) {
     menu.page =
-        Math.clamp(
+        net.minecraft.util.Mth.clamp(
             (int) Math.round((localY - 60) / 86 * (Math.max(1, menu.state.getInt("pages")) - 1)),
             0,
             Math.max(0, menu.state.getInt("pages") - 1));
@@ -200,16 +199,16 @@ public final class SeedStorageScreen extends AEBaseScreen<MachineMenu> {
   }
 
   @Override
-  public boolean mouseScrolled(double x, double y, double horizontal, double vertical) {
+  public boolean mouseScrolled(double x, double y, double vertical) {
     if (x >= leftPos && x < leftPos + 320 && y >= topPos + 48 && y < topPos + 148) {
       menu.page =
-          Math.clamp(
+          net.minecraft.util.Mth.clamp(
               menu.page - (int) Math.signum(vertical),
               0,
               Math.max(0, menu.state.getInt("pages") - 1));
       AltarScreen.send(menu, 4, menu.page);
       return true;
     }
-    return super.mouseScrolled(x, y, horizontal, vertical);
+    return super.mouseScrolled(x, y, vertical);
   }
 }

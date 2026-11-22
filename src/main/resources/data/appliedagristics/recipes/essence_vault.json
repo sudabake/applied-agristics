@@ -9,5 +9,5 @@
     "F": {"item": "appliedagristics:planter_frame"},
     "G": {"item": "ae2:quartz_glass"}
   },
-  "result": {"id": "appliedagristics:essence_vault", "count": 1}
+  "result": {"item": "appliedagristics:essence_vault", "count": 1}
 }

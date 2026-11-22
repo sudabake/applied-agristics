@@ -17,7 +17,7 @@ import net.minecraft.world.item.crafting.*;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.*;
 import net.minecraft.world.phys.BlockHitResult;
-import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+import net.minecraftforge.gametest.PrefixGameTestTemplate;
 import java.util.*;
 
 @PrefixGameTestTemplate(false)
@@ -34,7 +34,7 @@ public final class WordUpdateTests {
             h.assertTrue(f.input().automation(Direction.UP).extractItem(0,64,true).isEmpty(),"Active finite seeds cannot be extracted");
             var pos=a.getBlockPos().west();h.getLevel().setBlockAndUpdate(pos,Agristics.SEEDS.get().defaultBlockState());
             a.structure.refresh();a.step();
-            h.assertTrue(a.seedStores().size()==1 && a.seedStores().getFirst() instanceof SeedStorage,"An installed ME seed store takes precedence even when empty");
+            h.assertTrue(a.seedStores().size()==1 && a.seedStores().get(0) instanceof SeedStorage,"An installed ME seed store takes precedence even when empty");
             h.assertTrue(f.input().used(seed)==0 && f.input().automation(Direction.DOWN).extractItem(0,64,true).getCount()==64,"Switching source releases every old finite claim");
             var bank=(SeedStorage)h.getLevel().getBlockEntity(pos);bank.add(seed,16);
             h.runAtTickTime(130,()->{
@@ -49,28 +49,35 @@ public final class WordUpdateTests {
     }
     @GameTest(template="empty",templateNamespace=Agristics.ID)
     public static void vaultPriorityIsMountedAndPersisted(GameTestHelper h) {
-        var pos=new BlockPos(1,1,1);h.setBlock(pos,Agristics.ESSENCE_VAULT.get());EssenceVault vault=h.getBlockEntity(pos);
-        var key=AEItemKey.of(new ItemStack(Crops.all().getFirst().getEssenceItem()));vault.storeProduced(key,100,false);vault.setPriority(-1234);
+        var pos=new BlockPos(1,1,1);h.setBlock(pos,Agristics.ESSENCE_VAULT.get());EssenceVault vault = (EssenceVault) h.getBlockEntity(pos);
+        var key=AEItemKey.of(new ItemStack(Crops.all().get(0).getEssenceItem()));vault.storeProduced(key,100,false);vault.setPriority(-1234);
         int[] mounted={0};
         vault.mountInventories((storage,priority)->{
             mounted[0]++;h.assertTrue(priority==-1234,"Real AE mount receives the configured priority");
             h.assertTrue(storage.insert(key,1,Actionable.SIMULATE,IActionSource.empty())==0,"Priority cannot allow AE insertion");
         });
-        var saved=vault.saveWithFullMetadata(h.getLevel().registryAccess());var copy=new EssenceVault(vault.getBlockPos(),vault.getBlockState());copy.setLevel(h.getLevel());copy.loadWithComponents(saved,h.getLevel().registryAccess());
+        var saved=vault.saveWithFullMetadata();var copy=new EssenceVault(vault.getBlockPos(),vault.getBlockState());copy.setLevel(h.getLevel());copy.load(saved);
         h.assertTrue(mounted[0]==1 && copy.getPriority()==-1234 && copy.snapshot(0,"").getInt("priority")==-1234,"Priority survives save and screen synchronization");h.succeed();
     }
     @GameTest(template="empty",templateNamespace=Agristics.ID)
     public static void fieldPlantingPreservesSpeciesAndDrops(GameTestHelper h) {
         var soil=h.absolutePos(new BlockPos(2,1,2));h.getLevel().setBlockAndUpdate(soil,Blocks.FARMLAND.defaultBlockState());
-        var cow=ResourceLocation.parse("minecraft:cow");var player=h.makeMockPlayer(GameType.SURVIVAL);player.setPos(soil.getCenter());
+        h.getLevel().setBlockAndUpdate(soil.above().north(), Blocks.GLOWSTONE.defaultBlockState());
+        h.runAfterDelay(10, () -> verifyFieldPlanting(h, soil));
+    }
+    private static void verifyFieldPlanting(GameTestHelper h, BlockPos soil) {
+        var cow=new ResourceLocation("minecraft:cow");var player = ForgeTestInputs.mockPlayer(h, net.minecraft.world.level.GameType.SURVIVAL);
+        player.setPos(soil.getCenter().add(1.5, 0.5, 0));
         player.setItemInHand(InteractionHand.MAIN_HAND,BioData.withIdentity(Agristics.BIO_SEED.get(),cow).copyWithCount(2));
         var hit=new BlockHitResult(soil.getCenter(),Direction.UP,soil,false);
         var result=player.getMainHandItem().useOn(new UseOnContext(player,InteractionHand.MAIN_HAND,hit));var pos=soil.above();
-        h.assertTrue(result.consumesAction() && player.getMainHandItem().getCount()==1 && h.getLevel().getBlockState(pos).is(Agristics.BIO_CROP.get()),"Ordinary item use plants one identified seed on farmland");
+        h.assertTrue(result.consumesAction() && player.getMainHandItem().getCount()==1 && h.getLevel().getBlockState(pos).is(Agristics.BIO_CROP.get()),"Ordinary item use plants one identified seed on farmland: result=" + result
+            + ", count=" + player.getMainHandItem().getCount() + ", state=" + h.getLevel().getBlockState(pos)
+            + ", light=" + h.getLevel().getRawBrightness(pos, 0));
         var crop=(BioCropEntity)h.getLevel().getBlockEntity(pos);h.assertTrue(cow.equals(crop.identity()),"Placement transfers species to plant");
-        var saved=crop.saveWithFullMetadata(h.getLevel().registryAccess());crop.loadWithComponents(saved,h.getLevel().registryAccess());
+        var saved=crop.saveWithFullMetadata();crop.load(saved);
         var immature=Block.getDrops(crop.getBlockState(),h.getLevel(),pos,crop);
-        h.assertTrue(immature.size()==1 && cow.equals(BioData.identity(immature.getFirst())) && immature.getFirst().is(Agristics.BIO_SEED.get()),"Immature plant returns only its own species seed");
+        h.assertTrue(immature.size()==1 && cow.equals(BioData.identity(immature.get(0))) && immature.get(0).is(Agristics.BIO_SEED.get()),"Immature plant returns only its own species seed");
         h.getLevel().setBlockAndUpdate(pos,Agristics.BIO_CROP.get().getStateForAge(7));crop=(BioCropEntity)h.getLevel().getBlockEntity(pos);
         h.assertTrue(cow.equals(crop.identity()),"Changing age preserves block entity identity");
         var drops=Block.getDrops(crop.getBlockState(),h.getLevel(),pos,crop);
@@ -80,10 +87,10 @@ public final class WordUpdateTests {
     @GameTest(template="empty",templateNamespace=Agristics.ID)
     public static void requestedRecipesMatchActualGrids(GameTestHelper h) {
         var manager=h.getLevel().getRecipeManager();
-        var sampler=CraftingInput.of(2,2,List.of(ItemStack.EMPTY,new ItemStack(Items.WHITE_WOOL),new ItemStack(Items.STICK),ItemStack.EMPTY));
-        var sampleRecipe=manager.getRecipeFor(RecipeType.CRAFTING,sampler,h.getLevel()).orElseThrow().value();
+        var sampler=ForgeTestInputs.crafting(2,2,List.of(ItemStack.EMPTY,new ItemStack(Items.WHITE_WOOL),new ItemStack(Items.STICK),ItemStack.EMPTY));
+        var sampleRecipe=manager.getRecipeFor(RecipeType.CRAFTING,sampler,h.getLevel()).orElseThrow();
         h.assertTrue(sampleRecipe.assemble(sampler,h.getLevel().registryAccess()).is(Agristics.SAMPLER.get()),"Diagonal wool/stick pattern makes sampler");
-        var storage=CraftingInput.of(1,3,List.of(new ItemStack(Items.HOPPER),new ItemStack(Agristics.PLANTER_FRAME.get()),new ItemStack(Items.CHEST)));
-        h.assertTrue(manager.getRecipeFor(RecipeType.CRAFTING,storage,h.getLevel()).orElseThrow().value().assemble(storage,h.getLevel().registryAccess()).is(Agristics.INPUT_PORT.get().asItem()),"Hopper/frame/chest produces finite seed storage");h.succeed();
+        var storage=ForgeTestInputs.crafting(1,3,List.of(new ItemStack(Items.HOPPER),new ItemStack(Agristics.PLANTER_FRAME.get()),new ItemStack(Items.CHEST)));
+        h.assertTrue(manager.getRecipeFor(RecipeType.CRAFTING,storage,h.getLevel()).orElseThrow().assemble(storage,h.getLevel().registryAccess()).is(Agristics.INPUT_PORT.get().asItem()),"Hopper/frame/chest produces finite seed storage");h.succeed();
     }
 }

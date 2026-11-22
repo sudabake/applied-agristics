@@ -52,22 +52,22 @@ public final class EssenceVault extends GridMachine implements IStorageProvider 
     }
     private void changed(AEItemKey key,long delta) { storedItemsChanged(key,delta); }
     @Override public void step() { status=structure==null || !structure.formed() ? "unformed" : getMainNode().isActive() ? "online" : "offline"; }
-    @Override protected void saveAdditional(CompoundTag tag,HolderLookup.Provider registries) {
-        super.saveAdditional(tag,registries);
+    @Override protected void saveAdditional(CompoundTag tag) {
+        super.saveAdditional(tag);
         tag.putInt("priority",priority);
-        tag.put("essences",StoredItemCounts.save(contents,unresolved,registries));
+        tag.put("essences",StoredItemCounts.save(contents,unresolved));
     }
-    @Override protected void loadAdditional(CompoundTag tag,HolderLookup.Provider registries) {
-        super.loadAdditional(tag,registries);
+    @Override public void load(CompoundTag tag) {
+        super.load(tag);
         priority=tag.getInt("priority");
         contents.clear();
-        unresolved=StoredItemCounts.load(tag.getList("essences",Tag.TAG_COMPOUND),contents,registries);
+        unresolved=StoredItemCounts.load(tag.getList("essences",Tag.TAG_COMPOUND),contents);
         if (structure != null) structure.refreshOutputOrder();
     }
     @Override public CompoundTag snapshot(int offset,String search) {
         var tag=super.snapshot(offset,search); tag.putInt("unresolved",unresolved.size()); var entries=List.copyOf(contents.entrySet());
-        int start=Math.clamp(offset,0,Math.max(0,entries.size()-4)); var rows=new ListTag();
-        for (var entry:entries.subList(start,Math.min(start+4,entries.size()))) { var row=new CompoundTag(); row.put("item",entry.getKey().toStack(1).save(level.registryAccess())); row.putLong("count",entry.getValue()); rows.add(row); }
+        int start=net.minecraft.util.Mth.clamp(offset,0,Math.max(0,entries.size()-4)); var rows=new ListTag();
+        for (var entry:entries.subList(start,Math.min(start+4,entries.size()))) { var row=new CompoundTag(); row.put("item",entry.getKey().toStack(1).save(new CompoundTag())); row.putLong("count",entry.getValue()); rows.add(row); }
         tag.put("rows",rows); tag.putInt("pages",Math.max(1,entries.size()-3)); tag.putInt("types",contents.size()); tag.putInt("priority",priority); return tag;
     }
 }

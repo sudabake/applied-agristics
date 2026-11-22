@@ -9,7 +9,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.BlockHitResult;
-import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+import net.minecraftforge.gametest.PrefixGameTestTemplate;
 import java.util.List;
 
 @PrefixGameTestTemplate(false)
@@ -34,14 +34,14 @@ public final class InteractionRevisionTests {
     }
     @GameTest(template="empty",templateNamespace=Agristics.ID)
     public static void passivePartsPassInteractionBeforeAndAfterFormation(GameTestHelper h) {
-        var player=h.makeMockPlayer(GameType.SURVIVAL);var menu=player.containerMenu;
+        var player=h.makeMockSurvivalPlayer();var menu=player.containerMenu;
         var relative=new BlockPos(2,1,2);var pos=h.absolutePos(relative);
         var hit=new BlockHitResult(pos.getCenter(),Direction.NORTH,pos,false);
         for (var block:List.of(Agristics.PLANTER_FRAME.get(),Agristics.CULTIVATION_CHAMBER.get(),Agristics.SPEED_MODULE.get(),Agristics.PARALLEL_MODULE.get(),Agristics.CONVERSION_MODULE.get(),Agristics.NETWORK_ACCESS.get())) {
             for (boolean formed:new boolean[]{false,true}) {
                 var state=block.defaultBlockState().setValue(PlanterPartBlock.FORMED,formed);h.setBlock(relative,state);
-                h.assertTrue(state.useWithoutItem(h.getLevel(),player,hit)==InteractionResult.PASS,"Passive part passes empty-hand interaction: "+block+" formed="+formed);
-                h.assertTrue(state.useItemOn(new ItemStack(Blocks.DIRT),h.getLevel(),player,InteractionHand.MAIN_HAND,hit)==ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION,"Passive part does not consume the held block's placement action");
+                h.assertTrue(state.use(h.getLevel(),player,net.minecraft.world.InteractionHand.MAIN_HAND,hit)==InteractionResult.PASS,"Passive part passes empty-hand interaction: "+block+" formed="+formed);
+                h.assertTrue(state.use(h.getLevel(),player,InteractionHand.MAIN_HAND,hit)==InteractionResult.PASS,"Passive part does not consume the held block's placement action");
                 h.assertTrue(player.containerMenu==menu,"Passive part never opens a machine menu");
             }
         }
@@ -52,7 +52,7 @@ public final class InteractionRevisionTests {
             var member=origin.offset(x,y,z);var state=h.getLevel().getBlockState(member);
             if (state.getBlock() instanceof PlanterPartBlock || state.is(Agristics.NETWORK_ACCESS.get())) {
                 var memberHit=new BlockHitResult(member.getCenter(),Direction.NORTH,member,false);
-                h.assertTrue(state.useWithoutItem(h.getLevel(),player,memberHit)==InteractionResult.PASS && player.containerMenu==menu,"Real formed casing does not redirect to the controller");
+                h.assertTrue(state.use(h.getLevel(),player,net.minecraft.world.InteractionHand.MAIN_HAND,memberHit)==InteractionResult.PASS && player.containerMenu==menu,"Real formed casing does not redirect to the controller");
             }
         }
         h.succeed();

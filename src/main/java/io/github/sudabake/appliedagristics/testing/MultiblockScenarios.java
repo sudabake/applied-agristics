@@ -23,7 +23,7 @@ public final class MultiblockScenarios {
             h.assertTrue(planter.getMainNode().isActive(),"Formed structure connects through network access");
             h.assertTrue(planter.snapshot(0,"").getList("rows",10).isEmpty(),"No ghost crops without owned seeds");
             var inputs=new ArrayList<>(List.of(Items.WHEAT_SEEDS,Items.CARROT,Items.POTATO,Items.BEETROOT_SEEDS,Items.MELON_SEEDS,Items.PUMPKIN_SEEDS));
-            if (net.neoforged.fml.ModList.get().isLoaded("farmersdelight")) for (var name:List.of("cabbage_seeds","tomato_seeds","onion")) inputs.add(net.minecraft.core.registries.BuiltInRegistries.ITEM.get(ResourceLocation.parse("farmersdelight:"+name)));
+            if (net.minecraftforge.fml.ModList.get().isLoaded("farmersdelight")) for (var name:List.of("cabbage_seeds","tomato_seeds","onion")) inputs.add(net.minecraft.core.registries.BuiltInRegistries.ITEM.get(new ResourceLocation("farmersdelight:"+name)));
             for (var item:inputs) seeds.add(AEItemKey.of(new ItemStack(item)),1);
             var rows=planter.snapshot(0,"").getList("rows",10); var next=planter.snapshot(1,"").getList("rows",10);
             h.assertTrue(rows.size()==4 && rows.getCompound(1).getString("id").equals(next.getCompound(0).getString("id")),"Owned list scrolls by one row");
@@ -50,10 +50,10 @@ public final class MultiblockScenarios {
             a.configure(crop.getId(),false,2); h.assertTrue(inventory.getAvailableStacks().get(seed)==1,"Stopping returns the seed to available stock");
             h.assertTrue(inventory.insert(essence,1,Actionable.MODULATE,source)==0,"AE cannot deposit into output-only essence storage");
             f.vault().storeProduced(essence,10_000_000_000L,false);
-            var saved=f.vault().saveWithFullMetadata(h.getLevel().registryAccess()); var restored=new EssenceVault(f.vault().getBlockPos(),f.vault().getBlockState()); restored.setLevel(h.getLevel()); restored.loadWithComponents(saved,h.getLevel().registryAccess());
-            h.assertTrue(restored.saveWithFullMetadata(h.getLevel().registryAccess()).getList("essences",10).equals(saved.getList("essences",10)),"Large essence counts survive serialization");
+            var saved=f.vault().saveWithFullMetadata(); var restored=new EssenceVault(f.vault().getBlockPos(),f.vault().getBlockState()); restored.setLevel(h.getLevel()); restored.load(saved);
+            h.assertTrue(restored.saveWithFullMetadata().getList("essences",10).equals(saved.getList("essences",10)),"Large essence counts survive serialization");
             var drops=net.minecraft.world.level.block.Block.getDrops(f.vault().getBlockState(),h.getLevel(),f.vault().getBlockPos(),f.vault());
-            h.assertTrue(drops.size()==1 && drops.getFirst().has(net.minecraft.core.component.DataComponents.BLOCK_ENTITY_DATA),"Vault dismantles to one data-bearing block");
+            h.assertTrue(drops.size()==1 && (net.minecraft.world.item.BlockItem.getBlockEntityData(drops.get(0))!=null),"Vault dismantles to one data-bearing block");
             h.getLevel().setBlockAndUpdate(a.getBlockPos().above(2),Blocks.AIR.defaultBlockState());
             h.assertTrue(!a.structure.formed() && !f.access().connectedStructure(),"Breaking shell removes network access immediately"); h.succeed();
         });
@@ -67,8 +67,8 @@ public final class MultiblockScenarios {
             h.assertTrue(a.parallel()==16 && Math.abs(a.speed()-io.github.sudabake.appliedagristics.logic.ProductionMath.moduleSpeed(2,Balance.SPEED_MAX.get()))<1e-8 && a.conversion() && task.occupied==2,"Physical modules determine speed, parallel and conversion");
             h.assertTrue(f.seeds().count(seed)==2,"Conversion does not consume existing seeds");
             f.seeds().add(seed,14); a.step(); h.assertTrue(task.occupied==16 && f.seeds().count(seed)==16,"Newly supplied seeds fill parallel; surplus remains");
-            var saved=a.saveWithFullMetadata(h.getLevel().registryAccess());
-            var restored=new NetworkPlanter(a.getBlockPos(),a.getBlockState()); restored.setLevel(h.getLevel()); restored.loadWithComponents(saved,h.getLevel().registryAccess());
+            var saved=a.saveWithFullMetadata();
+            var restored=new NetworkPlanter(a.getBlockPos(),a.getBlockState()); restored.setLevel(h.getLevel()); restored.load(saved);
             h.assertTrue(restored.tasks.get(crop.getId()).progress==task.progress,"Partial work survives serialization");
             a.configure(crop.getId(),false,-1); h.assertTrue(f.seeds().used(seed)==0,"Disabling releases local seed claims"); h.succeed();
         });
@@ -86,7 +86,7 @@ public final class MultiblockScenarios {
         });
     }
     public static void biologicalStockIsolation(GameTestHelper h) {
-        var f=fixture(h); var a=f.controller(); var cow=ResourceLocation.parse("minecraft:cow"); var pig=ResourceLocation.parse("minecraft:pig");
+        var f=fixture(h); var a=f.controller(); var cow=new ResourceLocation("minecraft:cow"); var pig=new ResourceLocation("minecraft:pig");
         for (var entity:List.of(cow,pig)) f.seeds().add(AEItemKey.of(BioData.withIdentity(Agristics.BIO_SEED.get(),entity)),1);
         h.runAtTickTime(100,()->{
             a.configure(BioData.cropId(cow),true,1); a.configure(BioData.cropId(pig),true,2);

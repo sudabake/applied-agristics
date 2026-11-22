@@ -4,13 +4,12 @@ import io.github.sudabake.appliedagristics.Agristics;
 import io.github.sudabake.appliedagristics.block.*;
 import io.github.sudabake.appliedagristics.network.Messages;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.*;
 import net.minecraft.world.inventory.*;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.items.SlotItemHandler;
-import net.neoforged.neoforge.network.PacketDistributor;
+import net.minecraftforge.items.SlotItemHandler;
 
 public final class MachineMenu extends appeng.menu.AEBaseMenu
     implements appeng.menu.interfaces.IProgressProvider {
@@ -34,12 +33,12 @@ public final class MachineMenu extends appeng.menu.AEBaseMenu
 
   private long lastSync = -1;
 
-  public MachineMenu(int id, Inventory inventory, RegistryFriendlyByteBuf buffer) {
+  public MachineMenu(int id, Inventory inventory, FriendlyByteBuf buffer) {
     this(id, inventory, clientMachine(inventory, buffer));
     sessionToken = buffer.readLong();
   }
 
-  private static MachineEntity clientMachine(Inventory inventory, RegistryFriendlyByteBuf buffer) {
+  private static MachineEntity clientMachine(Inventory inventory, FriendlyByteBuf buffer) {
     var pos = buffer.readBlockPos();
     int kind = buffer.readVarInt();
     var block =
@@ -171,7 +170,7 @@ public final class MachineMenu extends appeng.menu.AEBaseMenu
             if (!player.level().isClientSide
                 && machine instanceof ItemPort port
                 && !previous.isEmpty()
-                && (!ItemStack.isSameItemSameComponents(previous, stack)
+                && (!ItemStack.isSameItemSameTags(previous, stack)
                     || stack.getCount() < previous.getCount()))
               port.releaseForManualExtraction(previous);
             super.set(stack);
@@ -200,13 +199,13 @@ public final class MachineMenu extends appeng.menu.AEBaseMenu
     state.putString("facing", PlanterOrientation.front(machine.getBlockState()).getName());
     var payload=new Messages.Snapshot(machine.getBlockPos(), containerId, sessionToken, state);
     if (first && Boolean.getBoolean("appliedagristics.clientSmoke")) {
-      var buffer=new RegistryFriendlyByteBuf(io.netty.buffer.Unpooled.buffer(),server.registryAccess());
+      var buffer=new FriendlyByteBuf(io.netty.buffer.Unpooled.buffer());
       try {
-        Messages.Snapshot.CODEC.encode(buffer,payload);
+        buffer.writeNbt(payload.data());
         com.mojang.logging.LogUtils.getLogger().info("MENU_PAYLOAD_PROFILE machine={} bytes={}",machine.getClass().getSimpleName(),buffer.readableBytes());
       } finally {buffer.release();}
     }
-    PacketDistributor.sendToPlayer(server,payload);
+    io.github.sudabake.appliedagristics.network.Messages.sendToPlayer(server,payload);
   }
 
   public boolean matches(net.minecraft.core.BlockPos pos, int containerId, long sessionToken) {

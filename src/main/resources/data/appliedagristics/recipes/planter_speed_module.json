@@ -8,5 +8,5 @@
     "A": {"item": "ae2:speed_card"},
     "F": {"item": "appliedagristics:planter_frame"}
   },
-  "result": {"id": "appliedagristics:planter_speed_module", "count": 1}
+  "result": {"item": "appliedagristics:planter_speed_module", "count": 1}
 }

@@ -13,15 +13,15 @@ import net.minecraft.network.chat.Component;
  */
 public final class SeedStorageSettingsScreen extends AESubScreen<MachineMenu, SeedStorageScreen> {
   private final AECheckbox autoCollect;
-  private final AE2Button[] filters = new AE2Button[4];
-  private final AE2Button eject;
+  private final MachineTextButton[] filters = new MachineTextButton[4];
+  private final MachineTextButton eject;
   private boolean confirming;
 
   public SeedStorageSettingsScreen(SeedStorageScreen parent) {
     super(parent, "/screens/appliedagristics_seed_settings.json");
     widgets.add(
         "back",
-        new TabButton(Icon.BACK, menu.machine.getDisplayName(), button -> returnToParent()));
+        new TabButton(Icon.ARROW_LEFT, menu.machine.getDisplayName(), button -> returnToParent()));
     autoCollect = widgets.addCheckbox("autoCollect",
         Component.translatable("gui.appliedagristics.auto_collect_label"), () -> {
           confirming = false;
@@ -31,7 +31,7 @@ public final class SeedStorageSettingsScreen extends AESubScreen<MachineMenu, Se
     for (int i = 0; i < 4; i++) {
       final int filter = i;
       filters[i] =
-          new AE2Button(
+          new MachineTextButton(
               Component.translatable("gui.appliedagristics.collect_filter_" + i),
               button -> {
                 confirming = false;
@@ -40,7 +40,7 @@ public final class SeedStorageSettingsScreen extends AESubScreen<MachineMenu, Se
       widgets.add("filter" + i, filters[i]);
     }
     eject =
-        new AE2Button(
+        new MachineTextButton(
             Component.empty(),
             button -> {
               if (confirming) {
@@ -50,11 +50,6 @@ public final class SeedStorageSettingsScreen extends AESubScreen<MachineMenu, Se
             });
     eject.setTooltip(Tooltip.create(Component.translatable("gui.appliedagristics.eject_warning")));
     widgets.add("eject", eject);
-  }
-
-  @Override
-  protected boolean shouldAddToolbar() {
-    return false;
   }
 
   @Override

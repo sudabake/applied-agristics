@@ -10,7 +10,6 @@ import net.minecraft.nbt.*;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 public final class MachineScreen extends appeng.client.gui.AEBaseScreen<MachineMenu> {
   private final List<appeng.client.gui.widgets.AECheckbox> checks = new ArrayList<>();
@@ -36,14 +35,14 @@ public final class MachineScreen extends appeng.client.gui.AEBaseScreen<MachineM
     inventoryLabelY = menu.machine instanceof EarlyPlanter ? 126 : 150;
   }
 
-  @Override
-  protected boolean shouldAddToolbar() {
-    return !(menu.machine instanceof EarlyPlanter);
+  private void send(int action, String id, long value) {
+    io.github.sudabake.appliedagristics.network.Messages.sendToServer(
+        new Messages.Control(menu.machine.getBlockPos(), menu.containerId, menu.sessionToken, action, id, value, ItemStack.EMPTY));
   }
 
-  private void send(int action, String id, long value) {
-    PacketDistributor.sendToServer(
-        new Messages.Control(menu.machine.getBlockPos(), menu.containerId, menu.sessionToken, action, id, value, ItemStack.EMPTY));
+  @Override
+  protected appeng.client.guidebook.PageAnchor getHelpTopic() {
+    return menu.machine instanceof EarlyPlanter ? null : super.getHelpTopic();
   }
 
   @Override
@@ -137,7 +136,7 @@ public final class MachineScreen extends appeng.client.gui.AEBaseScreen<MachineM
   public void containerTick() {
     super.containerTick();
     if (menu.machine.networkMachine())
-      menu.page = Math.clamp(menu.page, 0, Math.max(0, menu.state.getInt("pages") - 1));
+      menu.page = net.minecraft.util.Mth.clamp(menu.page, 0, Math.max(0, menu.state.getInt("pages") - 1));
     if (cropFilter != null) cropFilter.setSelected(menu.state.getBoolean("hideOrdinary"));
     if (autoNewSeeds != null) autoNewSeeds.setSelected(menu.state.getBoolean("autoEnableNewSeeds"));
     var signature = new StringBuilder();
@@ -217,7 +216,7 @@ public final class MachineScreen extends appeng.client.gui.AEBaseScreen<MachineM
         int x = leftPos + 32;
         g.fill(x, y - 1, leftPos + 310, y + 21, 0xFFBFC0CE);
         var seed =
-            ItemStack.parseOptional(minecraft.level.registryAccess(), row.getCompound("seed"));
+            ItemStack.of( row.getCompound("seed"));
         g.renderItem(seed, x + 2, y);
         var crop =
             com.blakebr0.mysticalagriculture.registry.CropRegistry.getInstance()
@@ -244,7 +243,7 @@ public final class MachineScreen extends appeng.client.gui.AEBaseScreen<MachineM
             hover);
         if (menu.machine instanceof NetworkPlanter) {
           var output =
-              ItemStack.parseOptional(minecraft.level.registryAccess(), row.getCompound("output"));
+              ItemStack.of( row.getCompound("output"));
           g.renderItem(output, leftPos + 126, y);
           g.drawString(
               font,
@@ -304,7 +303,7 @@ public final class MachineScreen extends appeng.client.gui.AEBaseScreen<MachineM
     WaterGauge.draw(graphics, x, y, width, height, menu.state.getInt("water"));
   }
 
-  private static final class AeButton extends appeng.client.gui.widgets.AE2Button {
+  private static final class AeButton extends MachineTextButton {
     private AeButton(Button.Builder builder) {
       this(builder.build());
     }
@@ -431,11 +430,11 @@ public final class MachineScreen extends appeng.client.gui.AEBaseScreen<MachineM
         if (mouseX >= leftPos + 34 && mouseX < leftPos + 50)
           g.renderTooltip(
               font,
-              ItemStack.parseOptional(minecraft.level.registryAccess(), row.getCompound("seed")),
+              ItemStack.of( row.getCompound("seed")),
               mouseX,
               mouseY);
         else if (menu.machine instanceof NetworkPlanter && mouseX >= leftPos + 126 && mouseX < leftPos + 142)
-          g.renderTooltip(font, ItemStack.parseOptional(minecraft.level.registryAccess(), row.getCompound("output")), mouseX, mouseY);
+          g.renderTooltip(font, ItemStack.of( row.getCompound("output")), mouseX, mouseY);
         else if (menu.machine instanceof NetworkPlanter
             && mouseX >= leftPos + 145
             && mouseX < leftPos + 192)
@@ -478,7 +477,7 @@ public final class MachineScreen extends appeng.client.gui.AEBaseScreen<MachineM
 
   private void scrollAt(double y) {
     int last = Math.max(0, menu.state.getInt("pages") - 1);
-    int next = Math.clamp((int) Math.round((y - topPos - 68) * last / 70.0), 0, last);
+    int next = net.minecraft.util.Mth.clamp((int) Math.round((y - topPos - 68) * last / 70.0), 0, last);
     if (next != menu.page) {
       menu.page = next;
       send(4, "", next);
@@ -529,14 +528,14 @@ public final class MachineScreen extends appeng.client.gui.AEBaseScreen<MachineM
   }
 
   @Override
-  public boolean mouseScrolled(double x, double y, double horizontal, double vertical) {
+  public boolean mouseScrolled(double x, double y, double vertical) {
     if (menu.machine.networkMachine()
         && x >= leftPos
         && x <= leftPos + imageWidth
         && y >= topPos + 48
         && y <= topPos + 148) {
       int next =
-          Math.clamp(
+          net.minecraft.util.Mth.clamp(
               menu.page - (int) Math.signum(vertical),
               0,
               Math.max(0, menu.state.getInt("pages") - 1));
@@ -546,7 +545,7 @@ public final class MachineScreen extends appeng.client.gui.AEBaseScreen<MachineM
       }
       return true;
     }
-    return super.mouseScrolled(x, y, horizontal, vertical);
+    return super.mouseScrolled(x, y, vertical);
   }
 
   @Override

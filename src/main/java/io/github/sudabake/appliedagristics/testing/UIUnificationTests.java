@@ -11,7 +11,7 @@ import net.minecraft.core.*;
 import net.minecraft.gametest.framework.*;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.*;
-import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+import net.minecraftforge.gametest.PrefixGameTestTemplate;
 
 @PrefixGameTestTemplate(false)
 public final class UIUnificationTests {
@@ -27,11 +27,11 @@ public final class UIUnificationTests {
           "Array access and biological processor do not consume channels");
       h.assertTrue(machine.getMainNode().getGrid() == f.controller().getMainNode().getGrid(),
           "Adjacent processor remains part of the same AE network");
-      var saved = machine.saveWithFullMetadata(h.getLevel().registryAccess());
+      var saved = machine.saveWithFullMetadata();
       saved.putIntArray("sides", new int[] {0, 1, 2, 3, 0, 2});
-      machine.loadWithComponents(saved, h.getLevel().registryAccess());
+      machine.load(saved);
       int[] expected = {1, 1, 3, 3, 1, 3};
-      var swab = BioData.withIdentity(Agristics.SAMPLER.get(), ResourceLocation.parse("minecraft:cow"));
+      var swab = BioData.withIdentity(Agristics.SAMPLER.get(), new ResourceLocation("minecraft:cow"));
       for (var side : Direction.values()) {
         h.assertTrue(machine.sideMode(side.ordinal()) == expected[side.ordinal()],
             "Legacy output bits survive migration while every input face opens");
@@ -43,14 +43,14 @@ public final class UIUnificationTests {
       h.assertTrue(machine.automation(Direction.DOWN).extractItem(3, 1, true).isEmpty()
           && machine.automation(Direction.NORTH).extractItem(3, 1, true).is(Items.WHEAT),
           "Output permission controls extraction independently of input");
-      var player = h.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+      var player = h.makeMockSurvivalPlayer();
       player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND,
           appeng.core.definitions.AEItems.CERTUS_QUARTZ_WRENCH.stack());
       var hit = new net.minecraft.world.phys.BlockHitResult(net.minecraft.world.phys.Vec3.atCenterOf(pos), Direction.DOWN, pos, false);
-      MachineWrench.wrench(new net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickBlock(
+      MachineWrench.wrench(new net.minecraftforge.event.entity.player.PlayerInteractEvent.RightClickBlock(
           player, net.minecraft.world.InteractionHand.MAIN_HAND, pos, hit));
       h.assertTrue(machine.sideMode(Direction.DOWN.ordinal()) == 3, "Wrench enables output without disabling input");
-      MachineWrench.wrench(new net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickBlock(
+      MachineWrench.wrench(new net.minecraftforge.event.entity.player.PlayerInteractEvent.RightClickBlock(
           player, net.minecraft.world.InteractionHand.MAIN_HAND, pos, hit));
       h.assertTrue(machine.sideMode(Direction.DOWN.ordinal()) == 1, "Wrench switches back to input-only");
       h.assertTrue(Agristics.CULTIVATION_CHAMBER.get().defaultBlockState().getSoundType().getBreakSound()
@@ -77,7 +77,7 @@ public final class UIUnificationTests {
       h.assertTrue(network.insert(key, 4, Actionable.MODULATE, source) == 4 && bank.count(key) == 3,
           "Disabling again takes effect for subsequent inserts");
       bank.add(key, 2);
-      bank.collect(h.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL));
+      bank.collect(h.makeMockSurvivalPlayer());
       h.assertTrue(bank.count(key) == 17 && !bank.snapshot(0, "").getBoolean("autoCollect"),
           "Direct produced seeds and manual collection work while automatic collection stays off");
       h.succeed();
@@ -88,9 +88,9 @@ public final class UIUnificationTests {
   public static void vanillaFilterKeepsBiologicalAndMysticalCrops(GameTestHelper h) {
     var f = PlanterFixture.install(h.getLevel(), h.absolutePos(new BlockPos(2, 1, 1)), true);
     f.seeds().add(AEItemKey.of(new ItemStack(Items.WHEAT_SEEDS)), 1);
-    f.seeds().add(AEItemKey.of(new ItemStack(Crops.all().getFirst().getSeedsItem())), 1);
+    f.seeds().add(AEItemKey.of(new ItemStack(Crops.all().get(0).getSeedsItem())), 1);
     f.seeds().add(AEItemKey.of(BioData.withIdentity(Agristics.BIO_SEED.get(),
-        ResourceLocation.parse("minecraft:cow"))), 1);
+        new ResourceLocation("minecraft:cow"))), 1);
     var rows = f.controller().snapshot(0, "hide_ordinary").getList("rows", 10);
     h.assertTrue(rows.size() == 2, "Vanilla filter keeps MA and component-bearing biological seeds");
     h.succeed();

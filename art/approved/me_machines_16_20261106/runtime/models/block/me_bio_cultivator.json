@@ -1,6 +1,6 @@
 {
   "parent": "minecraft:block/block",
-  "loader": "neoforge:composite",
+  "loader": "forge:composite",
   "textures": {
     "0": "appliedagristics:block/me_bio_cultivator",
     "particle": "appliedagristics:block/me_bio_cultivator"
@@ -2410,7 +2410,7 @@
       ]
     },
     "cells": {
-      "loader": "neoforge:obj",
+      "loader": "forge:obj",
       "model": "appliedagristics:models/block/me_bio_cells.obj",
       "flip_v": true,
       "automatic_culling": false,

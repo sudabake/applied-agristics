@@ -10,12 +10,12 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.level.block.Block;
-import net.neoforged.bus.api.EventPriority;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
-import net.neoforged.neoforge.event.level.BlockEvent;
+import net.minecraftforge.eventbus.api.EventPriority;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.event.entity.player.PlayerInteractEvent;
+import net.minecraftforge.event.level.BlockEvent;
 
 /** Uses AE's wrench recognition and the agreed per-block dismantling rules. */
 @EventBusSubscriber(modid=Agristics.ID)
@@ -29,7 +29,7 @@ public final class MachineWrench {
         event.setCanceled(true); event.setCancellationResult(InteractionResult.sidedSuccess(level.isClientSide));
         if (!(level instanceof ServerLevel server)) return;
         if (player.isShiftKeyDown()) {
-            if (NeoForge.EVENT_BUS.post(new BlockEvent.BreakEvent(level,pos,state,player)).isCanceled()) return;
+            if (MinecraftForge.EVENT_BUS.post(new BlockEvent.BreakEvent(level,pos,state,player))) return;
             var drops=Block.getDrops(state,server,pos,level.getBlockEntity(pos),player,stack);
             if (!level.removeBlock(pos,false)) return;
             server.playSound(null,pos,state.is(Agristics.CULTIVATION_CHAMBER.get()) ? SoundEvents.GLASS_BREAK : SoundEvents.ITEM_FRAME_REMOVE_ITEM,SoundSource.BLOCKS,.7f,1f);

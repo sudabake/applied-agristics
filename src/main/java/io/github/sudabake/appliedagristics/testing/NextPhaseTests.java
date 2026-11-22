@@ -16,15 +16,15 @@ import net.minecraft.world.item.crafting.*;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
-import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+import net.minecraftforge.gametest.PrefixGameTestTemplate;
 
 @PrefixGameTestTemplate(false)
 public final class NextPhaseTests {
-    private static final ResourceLocation COW=ResourceLocation.parse("minecraft:cow");
+    private static final ResourceLocation COW=new ResourceLocation("minecraft:cow");
 
     @GameTest(template="empty",templateNamespace=Agristics.ID)
     public static void realPortPlacementUsesPlayerView(GameTestHelper h) {
-        var player=h.makeMockPlayer(net.minecraft.world.level.GameType.CREATIVE);
+        var player=ForgeTestInputs.mockPlayer(h, net.minecraft.world.level.GameType.CREATIVE);
         var placed=new ArrayList<BlockPos>();
         for(int index=0;index<3;index++) {
             var block=List.of(Agristics.NETWORK_ACCESS.get(),Agristics.INPUT_PORT.get(),Agristics.OUTPUT_PORT.get()).get(index);
@@ -59,8 +59,8 @@ public final class NextPhaseTests {
         var f=PlanterFixture.install(h.getLevel(),h.absolutePos(new BlockPos(2,1,1)),true);f.modules(0,1,true);
         var seed=AEItemKey.of(new ItemStack(Items.WHEAT_SEEDS));var product=AEItemKey.of(new ItemStack(Items.WHEAT));f.seeds().add(seed,1);
         h.runAtTickTime(100,()-> {
-            var manager=h.getLevel().getRecipeManager();var originals=new ArrayList<>(manager.getRecipes());var recipes=new ArrayList<RecipeHolder<?>>(originals);
-            recipes.add(new RecipeHolder<>(ResourceLocation.parse("appliedagristics:test/ordinary_conversion"),new PlantingRecipe(Ingredient.of(Items.WHEAT_SEEDS),Ingredient.of(Blocks.DIRT),List.of(new ItemStack(Items.WHEAT,2),new ItemStack(Items.WHEAT_SEEDS,3)),Blocks.WHEAT.defaultBlockState(),false,200,true)));
+            var manager=h.getLevel().getRecipeManager();var originals=new ArrayList<>(manager.getRecipes());var recipes=new ArrayList<Recipe<?>>(originals);
+            recipes.add(new PlantingRecipe(new ResourceLocation("appliedagristics:test/ordinary_conversion"), Ingredient.of(Items.WHEAT_SEEDS),Ingredient.of(Blocks.DIRT),List.of(new ItemStack(Items.WHEAT,2),new ItemStack(Items.WHEAT_SEEDS,3)),Blocks.WHEAT.defaultBlockState(),false,200,true, java.util.Optional.empty()));
             manager.replaceRecipes(recipes);CropSources.invalidate();
             try {
                 var a=f.controller();var id=Cultivations.id(seed.toStack(1),h.getLevel());a.configure(id,true,-1);var task=a.tasks.get(id);
@@ -86,7 +86,7 @@ public final class NextPhaseTests {
             drops=Block.getDrops(state.setValue(BlockStateProperties.AGE_7,0),h.getLevel(),pos,plant);
             h.assertTrue(count(drops,Agristics.BIO_ESSENCE.get())==0 && count(drops,Agristics.BIO_SEED.get())==1,"Immature plants never grant essence or bonus seeds");
             var seed=BioData.withIdentity(Agristics.BIO_SEED.get(),COW);
-            h.assertTrue(seed.is(TagKey.create(Registries.ITEM,ResourceLocation.parse("c:seeds"))),"Biological seed belongs to the common seed tag");
+            h.assertTrue(seed.is(TagKey.create(Registries.ITEM,new ResourceLocation("c:seeds"))),"Biological seed belongs to the common seed tag");
             h.assertTrue(plant.identity().equals(COW),"Harvest inspection does not alter stored species");h.succeed();
         } finally { Balance.FALLBACK_SEED_CHANCE.set(old); }
     }
@@ -171,18 +171,18 @@ public final class NextPhaseTests {
 
     @GameTest(template="empty",templateNamespace=Agristics.ID)
     public static void jdteRetainsSpeciesAndOnlyOutputsNetSeeds(GameTestHelper h) {
-        if(!net.neoforged.fml.ModList.get().isLoaded("jdte")) { h.succeed();return; }
+        if(!net.minecraftforge.fml.ModList.get().isLoaded("jdte")) { h.succeed();return; }
         double old=Balance.FALLBACK_SEED_CHANCE.get();
         try {
-            var resolver=Class.forName("com.jdte.common.recipes.GreenhouseCropResolver");
-            for(var id:List.of(COW,ResourceLocation.parse("minecraft:chicken"))) {
-                var seed=BioData.withIdentity(Agristics.BIO_SEED.get(),id);var definition=resolver.getMethod("findGeneric",ItemStack.class).invoke(null,seed);
-                var generate=definition.getClass().getMethod("generateHarvest",net.minecraft.server.level.ServerLevel.class,BlockPos.class,ItemStack.class);
+            for (var id : List.of(COW, new ResourceLocation("minecraft:chicken"))) {
+                var seed = BioData.withIdentity(Agristics.BIO_SEED.get(), id);
+                var definition = JdteBatchTests.definition(h, seed);
+                h.assertTrue(definition != null, "JDTE resolves the biological seed");
                 Balance.FALLBACK_SEED_CHANCE.set(0.0);
-                @SuppressWarnings("unchecked") var result=(List<ItemStack>)generate.invoke(definition,h.getLevel(),h.absolutePos(BlockPos.ZERO),ItemStack.EMPTY);
+                var result = JdteBatchTests.sample(h, definition);
                 h.assertTrue(count(result,Agristics.BIO_ESSENCE.get())==1 && count(result,Agristics.BIO_SEED.get())==0 && result.stream().allMatch(s->id.equals(BioData.identity(s))),"JDTE produces the matching essence without copying its retained seed");
                 Balance.FALLBACK_SEED_CHANCE.set(1.0);
-                @SuppressWarnings("unchecked") var bonus=(List<ItemStack>)generate.invoke(definition,h.getLevel(),h.absolutePos(BlockPos.ZERO),ItemStack.EMPTY);
+                var bonus = JdteBatchTests.sample(h, definition);
                 h.assertTrue(count(bonus,Agristics.BIO_SEED.get())==1 && bonus.stream().allMatch(s->id.equals(BioData.identity(s))),"JDTE adds exactly the configured new seed and preserves species");
             }
             h.succeed();

@@ -11,9 +11,32 @@ public abstract class GridMachine extends MachineEntity implements IGridConnecte
     private IManagedGridNode node;
     private CompoundTag unloadedNode = new CompoundTag();
     private boolean destroyed;
+    private net.minecraftforge.common.util.LazyOptional<GridMachine> gridHost = net.minecraftforge.common.util.LazyOptional.of(() -> this);
     protected GridMachine(BlockEntityType<?> type, BlockPos pos, BlockState state, int slots) {
         super(type, pos, state, slots); node = makeNode();
     }
+    @Override
+    public <T> net.minecraftforge.common.util.LazyOptional<T> getCapability(
+        net.minecraftforge.common.capabilities.Capability<T> capability, net.minecraft.core.Direction side) {
+        if (!isRemoved() && ownsNode() && (!(this instanceof NetworkAccess access) || access.connectedStructure())
+            && (capability == appeng.capabilities.Capabilities.IN_WORLD_GRID_NODE_HOST
+                || capability == appeng.capabilities.Capabilities.CRAFTING_MACHINE && this instanceof AEProcessingMachine)) {
+            if (!gridHost.isPresent()) gridHost = net.minecraftforge.common.util.LazyOptional.of(() -> this);
+            return gridHost.cast();
+        }
+        return super.getCapability(capability, side);
+    }
+
+    @Override public IGridNode getGridNode(net.minecraft.core.Direction side) {
+        if (!ownsNode() || (this instanceof NetworkAccess access && !access.connectedStructure())) return null;
+        return IGridConnectedBlockEntity.super.getGridNode(side);
+    }
+
+    @Override public void invalidateCaps() {
+        super.invalidateCaps();
+        gridHost.invalidate();
+    }
+
     private IManagedGridNode makeNode() {
         var result = GridHelper.createManagedNode(this, new IGridNodeListener<GridMachine>() {
             @Override public void onSaveChanges(GridMachine owner, IGridNode node) { owner.setChanged(); }
@@ -54,11 +77,11 @@ public abstract class GridMachine extends MachineEntity implements IGridConnecte
     protected final void reviveNode() {
         if (destroyed) { node = makeNode(); node.loadFromNBT(unloadedNode); destroyed = false; }
     }
-    @Override protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.saveAdditional(tag, registries);
+    @Override protected void saveAdditional(CompoundTag tag) {
+        super.saveAdditional(tag);
         if (destroyed) tag.merge(unloadedNode); else node.saveToNBT(tag);
     }
-    @Override protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.loadAdditional(tag, registries); node.loadFromNBT(tag);
+    @Override public void load(CompoundTag tag) {
+        super.load(tag); node.loadFromNBT(tag);
     }
 }

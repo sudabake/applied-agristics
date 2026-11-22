@@ -17,14 +17,12 @@ import net.minecraft.world.item.ItemStack;
 public final class AltarIOScreen<P extends AEBaseScreen<MachineMenu>> extends AESubScreen<MachineMenu, P> {
     public AltarIOScreen(P parent) {
         super(parent, "/screens/appliedagristics_machine_io.json");
-        widgets.add("back", new TabButton(Icon.BACK, menu.machine.getDisplayName(), b -> returnToParent()));
+        widgets.add("back", new TabButton(Icon.ARROW_LEFT, menu.machine.getDisplayName(), b -> returnToParent()));
         for (var side : RelativeSide.values()) {
             var name = side == RelativeSide.BACK ? "backSide" : side.name().toLowerCase(Locale.ROOT);
             widgets.add(name, new SideButton(side));
         }
     }
-
-    @Override protected boolean shouldAddToolbar() { return false; }
 
     private Direction absoluteSide(RelativeSide side) {
         // The client menu can own a placeholder entity whose default facing is unrelated to the host.
@@ -62,9 +60,9 @@ public final class AltarIOScreen<P extends AEBaseScreen<MachineMenu>> extends AE
 
         @Override public void renderWidget(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
             int yOffset = isHovered() ? 1 : 0;
-            var background = isHovered() ? Icon.TOOLBAR_BUTTON_BACKGROUND_HOVER
-                : (mode() & 2) != 0 ? Icon.TOOLBAR_BUTTON_BACKGROUND_FOCUS : Icon.TOOLBAR_BUTTON_BACKGROUND;
-            background.getBlitter().dest(getX()-1, getY()+yOffset, 18, 20).zOffset(2).blit(graphics);
+            var background = isHovered() ? Icon.TAB_BUTTON_BACKGROUND_FOCUS
+                : (mode() & 2) != 0 ? Icon.TAB_BUTTON_BACKGROUND_FOCUS : Icon.TOOLBAR_BUTTON_BACKGROUND;
+            background.getBlitter().dest(getX()-1, getY()+yOffset, 18, 20).blit(graphics);
             var stack = neighbor();
             if (!stack.isEmpty()) graphics.renderItem(stack, getX(), getY()+1+yOffset, 0, 3);
         }

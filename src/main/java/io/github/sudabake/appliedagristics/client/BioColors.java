@@ -4,19 +4,19 @@ import io.github.sudabake.appliedagristics.*;
 import io.github.sudabake.appliedagristics.biology.BioData;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.item.*;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.client.event.RegisterColorHandlersEvent;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
+import net.minecraftforge.client.event.RegisterColorHandlersEvent;
 
 @EventBusSubscriber(modid = Agristics.ID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public final class BioColors {
-    @SubscribeEvent public static void setup(net.neoforged.fml.event.lifecycle.FMLClientSetupEvent event) {
+    @SubscribeEvent public static void setup(net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent event) {
         event.enqueueWork(() -> net.minecraft.client.renderer.item.ItemProperties.register(Agristics.SAMPLER.get(),
-            net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(Agristics.ID,"sampled"),
+            new net.minecraft.resources.ResourceLocation(Agristics.ID,"sampled"),
             (stack,level,entity,seed)->BioData.identified(stack)?1:0));
         event.enqueueWork(() -> net.minecraft.client.renderer.item.ItemProperties.register(Agristics.BIO_ESSENCE.get(),
-            net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(Agristics.ID, "boss"), (stack, level, entity, seed) -> {
+            new net.minecraft.resources.ResourceLocation(Agristics.ID, "boss"), (stack, level, entity, seed) -> {
                 var id = BioData.identity(stack);
                 return id == null ? 0 : id.toString().equals("minecraft:wither") ? 1 : id.toString().equals("minecraft:ender_dragon") ? 2 : 0;
             }));

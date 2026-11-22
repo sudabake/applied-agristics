@@ -10,7 +10,7 @@
     }
   ],
   "result": {
-    "id": "minecraft:farmland",
+    "item": "minecraft:farmland",
     "count": 1
   }
 }

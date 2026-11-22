@@ -10,7 +10,6 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.network.PacketDistributor;
 import java.util.List;
 
 /** Uses the same screen, slot, toolbar and upgrade panel implementation as AE addons. */
@@ -30,7 +29,7 @@ public class AltarScreen extends AEBaseScreen<MachineMenu> {
     }
     public void openIO() { switchToScreen(new AltarIOScreen<>(this)); }
     static void send(MachineMenu menu, int action, long value) {
-        PacketDistributor.sendToServer(new Messages.Control(menu.machine.getBlockPos(), menu.containerId, menu.sessionToken, action, "", value, ItemStack.EMPTY));
+        io.github.sudabake.appliedagristics.network.Messages.sendToServer(new Messages.Control(menu.machine.getBlockPos(), menu.containerId, menu.sessionToken, action, "", value, ItemStack.EMPTY));
     }
     @Override public void drawBG(GuiGraphics graphics, int offsetX, int offsetY, int mouseX, int mouseY, float partialTick) {
         super.drawBG(graphics, offsetX, offsetY, mouseX, mouseY, partialTick);

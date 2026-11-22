@@ -31,7 +31,7 @@ public final class BioCropBlock extends CropBlock implements EntityBlock {
         }
         return drops;
     }
-    @Override public ItemStack getCloneItemStack(BlockState state,net.minecraft.world.phys.HitResult target,LevelReader level,BlockPos pos,net.minecraft.world.entity.player.Player player) {
+    @Override public ItemStack getCloneItemStack(BlockState state,net.minecraft.world.phys.HitResult target,BlockGetter level,BlockPos pos,net.minecraft.world.entity.player.Player player) {
         return level.getBlockEntity(pos) instanceof BioCropEntity crop && crop.identity()!=null
             ? BioData.withIdentity(Agristics.BIO_SEED.get(),crop.identity()) : ItemStack.EMPTY;
     }

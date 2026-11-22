@@ -12,7 +12,7 @@ def write(path, data):
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
 
 def install():
-    write(RES/'data/c/tags/item/seeds.json', {'replace': False, 'values': ['appliedagristics:bio_seed']})
+    write(RES/'data/c/tags/items/seeds.json', {'replace': False, 'values': ['appliedagristics:bio_seed']})
     source = ROOT / 'art/approved/user_items_16_20261028'
     for name in ('bio_sampler.png', 'culture_nutrient.png',
                  'bio_essence_0.png', 'bio_essence_0.png.mcmeta',
@@ -33,10 +33,10 @@ def install():
         model=json.loads(path.read_text(encoding='utf-8'))
         model.setdefault('display',{})['gui']={'rotation':[30,45,0], 'scale':[.625,.625,.625]}
         write(path,model)
-    recipes = RES / 'data/appliedagristics/recipe'
+    recipes = RES / 'data/appliedagristics/recipes'
     def shaped(name, pattern, key):
         write(recipes / f'{name}.json', {'type': 'minecraft:crafting_shaped', 'category': 'misc',
-            'pattern': pattern, 'key': key, 'result': {'id': f'appliedagristics:{name}', 'count': 1}})
+            'pattern': pattern, 'key': key, 'result': {'item': f'appliedagristics:{name}', 'count': 1}})
     shaped('bio_sampler', [' W', 'S '], {'W': {'tag': 'minecraft:wool'}, 'S': {'item': 'minecraft:stick'}})
     shaped('early_planter', ['S S', 'PHP', 'SSS'], {'S': {'item': 'minecraft:stone'},
         'P': {'item': 'mysticalagriculture:prosperity_shard'}, 'H': {'item': 'minecraft:hopper'}})

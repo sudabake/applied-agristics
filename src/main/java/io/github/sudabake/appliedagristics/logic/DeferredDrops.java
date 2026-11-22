@@ -8,9 +8,9 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.phys.AABB;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.event.tick.LevelTickEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
+import net.minecraftforge.event.TickEvent;
 import java.util.*;
 
 /** A bounded world-owned handoff for dismantled bulk batches. Machine items remain data-free. */
@@ -18,7 +18,6 @@ import java.util.*;
 public final class DeferredDrops extends SavedData {
     public static final String NAME="appliedagristics_deferred_drops";
     public static final int STACK_BUDGET=16,NEARBY_LIMIT=64;
-    private static final Factory<DeferredDrops> FACTORY=new Factory<>(DeferredDrops::new,DeferredDrops::load);
     private static final class Pending {
         final CompoundTag key;
         final CompoundTag original;
@@ -35,10 +34,10 @@ public final class DeferredDrops extends SavedData {
     private int cursor;
     private ListTag recoveries=new ListTag();
 
-    public static DeferredDrops get(ServerLevel level) { return level.getDataStorage().computeIfAbsent(FACTORY,NAME); }
+    public static DeferredDrops get(ServerLevel level) { return level.getDataStorage().computeIfAbsent(DeferredDrops::load, DeferredDrops::new, NAME); }
     public void enqueue(ServerLevel level,BlockPos pos,Map<AEItemKey,Long> amounts) {
         var stacks=new ArrayList<Pending>();
-        amounts.forEach((key,count)->{if(count>0) stacks.add(new Pending(key.toTag(level.registryAccess()),count));});
+        amounts.forEach((key,count)->{if(count>0) stacks.add(new Pending(key.toTag(),count));});
         if(stacks.isEmpty()) return;
         sites.add(new Site(pos.immutable(),stacks));setDirty();
         drain(level);
@@ -72,7 +71,7 @@ public final class DeferredDrops extends SavedData {
             var iterator=site.stacks.iterator();
             while(iterator.hasNext() && budget>0 && nearby<NEARBY_LIMIT) {
                 var pending=iterator.next();
-                var key=AEItemKey.fromTag(level.registryAccess(),pending.key);
+                var key=AEItemKey.fromTag(pending.key);
                 // Preserve the serialized key while its mod is absent; never silently discard its count.
                 if(key==null || key.toStack(1).isEmpty()) continue;
                 while(pending.count>0 && budget>0 && nearby<NEARBY_LIMIT) {
@@ -88,17 +87,17 @@ public final class DeferredDrops extends SavedData {
         }
     }
     public long queuedAt(BlockPos pos,AEItemKey key,HolderLookup.Provider registries) {
-        long total=0;var tag=key.toTag(registries);
+        long total=0;var tag=key .toTag();
         for(var site:sites) if(site.pos.equals(pos)) for(var entry:site.stacks) if(entry.key.equals(tag)) total=Math.addExact(total,entry.count);
         return total;
     }
-    @SubscribeEvent public static void tick(LevelTickEvent.Post event) {
-        if(event.getLevel() instanceof ServerLevel level && level.getGameTime()%5==0) {
-            var data=level.getDataStorage().get(FACTORY,NAME);
+    @SubscribeEvent public static void tick(TickEvent.LevelTickEvent event) {
+        if(event.phase == TickEvent.Phase.END && event.level instanceof ServerLevel level && level.getGameTime()%5==0) {
+            var data=level.getDataStorage().get(DeferredDrops::load,NAME);
             if(data!=null && !data.sites.isEmpty()) data.drain(level);
         }
     }
-    public static DeferredDrops load(CompoundTag tag,HolderLookup.Provider registries) {
+    public static DeferredDrops load(CompoundTag tag) {
         var data=new DeferredDrops();
         data.recoveries=tag.getList("recoveries",Tag.TAG_COMPOUND).copy();
         for(var raw:tag.getList("sites",Tag.TAG_COMPOUND)) {
@@ -111,7 +110,7 @@ public final class DeferredDrops extends SavedData {
         }
         return data;
     }
-    @Override public CompoundTag save(CompoundTag tag,HolderLookup.Provider registries) {
+    @Override public CompoundTag save(CompoundTag tag) {
         var saved=new ListTag();
         for(var site:sites) {
             var entry=new CompoundTag();entry.putLong("pos",site.pos.asLong());var stacks=new ListTag();

@@ -4,119 +4,82 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: '版本号，例如 1.3.1 或 1.3.2-beta.1'
+        description: Source mod version
         required: true
+        default: '1.3.2'
         type: string
       release_type:
-        description: '发行类型'
+        description: Release type
         required: true
+        default: beta
         type: choice
-        options: [release, beta, alpha]
-        default: release
+        options: [beta]
       target:
-        description: '上传平台'
+        description: Platforms
         required: true
+        default: github-curseforge
         type: choice
-        options: [all, github-curseforge, github, curseforge, modrinth]
-        default: all
+        options: [github-curseforge, github, curseforge]
       dry_run:
-        description: '仅测试并生成下载包，取消勾选才正式上传'
+        description: Build and verify without publishing
         required: true
-        type: boolean
         default: true
+        type: boolean
 
 permissions:
   contents: read
 
 concurrency:
-  group: release-${{ inputs.version }}
+  group: forge-1.20.1-publication
   cancel-in-progress: false
 
-jobs:
-  prepare:
-    if: github.repository == 'sudabake/applied-agristics'
-    runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.prepare.outputs.version }}
-      release_type: ${{ steps.prepare.outputs.release_type }}
-      platforms: ${{ steps.prepare.outputs.platforms }}
-      curseforge_id: ${{ steps.prepare.outputs.curseforge_id }}
-      modrinth_id: ${{ steps.credentials.outputs.modrinth_id || steps.prepare.outputs.modrinth_id }}
-      dependencies: ${{ steps.prepare.outputs.dependencies }}
-      minecraft: ${{ steps.prepare.outputs.minecraft }}
-      loader: ${{ steps.prepare.outputs.loader }}
-      java: ${{ steps.prepare.outputs.java }}
-    steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
-        with:
-          persist-credentials: false
-      - name: Check version, source and release notes
-        id: prepare
-        env:
-          RELEASE_VERSION: ${{ inputs.version }}
-          RELEASE_TYPE: ${{ inputs.release_type }}
-          RELEASE_TARGET: ${{ inputs.target }}
-          RELEASE_DRY_RUN: ${{ inputs.dry_run }}
-        run: python3 tools/release.py prepare
-      - name: Check upload credentials and project access
-        id: credentials
-        if: ${{ !inputs.dry_run }}
-        env:
-          RELEASE_PLATFORMS: ${{ steps.prepare.outputs.platforms }}
-          CURSEFORGE_TOKEN: ${{ secrets.CURSEFORGE_TOKEN }}
-          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
-        run: python3 tools/release.py credentials
+env:
+  RELEASE_NAME: 1.3.2-forge-1.20.1
+  RELEASE_NOTES: docs/FORGE_1.20.1_RELEASE_NOTES.md
 
+jobs:
   verify:
-    needs: prepare
+    if: github.repository == 'sudabake/applied-agristics' && github.ref == 'refs/heads/port/forge-1.20.1'
     runs-on: ubuntu-latest
-    timeout-minutes: 25
-    strategy:
-      fail-fast: false
-      matrix:
-        dependencies: [latest, minimum]
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           persist-credentials: false
+      - name: Check release inputs
+        env:
+          REQUESTED_VERSION: ${{ inputs.version }}
+          REQUESTED_TYPE: ${{ inputs.release_type }}
+          REQUESTED_TARGET: ${{ inputs.target }}
+        run: |
+          test "$REQUESTED_VERSION" = '1.3.2'
+          test "$REQUESTED_TYPE" = beta
+          grep -qx 'mod_version=1.3.2' gradle.properties
+          case "$REQUESTED_TARGET" in github-curseforge|github|curseforge) ;; *) exit 1 ;; esac
       - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
         with:
           distribution: temurin
-          java-version: ${{ needs.prepare.outputs.java }}
+          java-version: '17'
       - uses: gradle/actions/setup-gradle@4c125117fe7c5aed11272ec4213f602f012f89f2 # v5
-      - name: Check resource and release tooling
+      - name: Verify and bundle Forge files
         run: |
           python3 -m unittest discover -s tools/tests -v
           python3 tools/check_resource_rebuild.py
-      - name: Build and run game tests
-        env:
-          RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
-          DEPENDENCY_PROFILE: ${{ matrix.dependencies }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          args=("-Pmod_version=$RELEASE_VERSION" "-Prelease_name=$RELEASE_VERSION")
-          if [[ "$DEPENDENCY_PROFILE" == minimum ]]; then
-            args+=(-Pneo_version=21.1.241 -Pae2_version=19.2.17 -Pma_version=8.0.27 -Pguideme_version=21.1.17)
-          fi
-          bash gradlew build runGameTestServer "${args[@]}"
-          python3 tools/resource_audit.py --jar "build/libs/applied-agristics-$RELEASE_VERSION.jar"
-      - name: Prepare the shared publication files
-        if: matrix.dependencies == 'latest'
-        env:
-          RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
-          RELEASE_TYPE: ${{ needs.prepare.outputs.release_type }}
-        run: python3 tools/release.py bundle
+          bash gradlew build runGameTestServer -Prelease_name="$RELEASE_NAME"
+          jar="applied-agristics-$RELEASE_NAME.jar"
+          python3 tools/resource_audit.py --jar "build/libs/$jar"
+          mkdir -p build/forge-publication
+          cp "build/libs/$jar" build/forge-publication/
+          cd build/forge-publication
+          sha256sum "$jar" > SHA256SUMS.txt
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
-        if: matrix.dependencies == 'latest'
         with:
-          name: release-${{ needs.prepare.outputs.version }}
-          path: build/publication/
+          name: forge-1.20.1-publication
+          path: build/forge-publication/
           if-no-files-found: error
-          retention-days: 14
 
   publish:
-    needs: [prepare, verify]
+    needs: verify
     if: ${{ !inputs.dry_run }}
     runs-on: ubuntu-latest
     permissions:
@@ -124,62 +87,52 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: ${{ fromJSON(needs.prepare.outputs.platforms) }}
+        platform: ${{ fromJSON(inputs.target == 'github-curseforge' && '["github","curseforge"]' || format('["{0}"]', inputs.target)) }}
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           persist-credentials: false
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
-          name: release-${{ needs.prepare.outputs.version }}
-          path: build/publication/
-      - name: Verify shared files before uploading
-        env:
-          RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
-        run: python3 tools/release.py verify
-      - name: Upload to ${{ matrix.platform }}
+          name: forge-1.20.1-publication
+          path: build/forge-publication/
+      - name: Verify JAR checksum
+        working-directory: build/forge-publication
+        run: sha256sum -c SHA256SUMS.txt
+      - name: Upload Forge beta
         id: upload
         uses: Kira-NT/mc-publish@c23376546a97f5ba7984e94445da359459b14419 # v3.3.2
         with:
-          files: build/publication/applied-agristics-${{ needs.prepare.outputs.version }}.jar
-          name: applied-agristics-${{ needs.prepare.outputs.version }}.jar
-          version: ${{ needs.prepare.outputs.version }}
-          version-type: ${{ needs.prepare.outputs.release_type }}
-          changelog-file: build/publication/release-notes.md
-          loaders: ${{ needs.prepare.outputs.loader }}
-          game-versions: ${{ needs.prepare.outputs.minecraft }}
-          java: ${{ needs.prepare.outputs.java }}
+          files: build/forge-publication/applied-agristics-${{ env.RELEASE_NAME }}.jar
+          name: applied-agristics-${{ env.RELEASE_NAME }}.jar
+          version: ${{ env.RELEASE_NAME }}
+          version-type: beta
+          changelog-file: ${{ env.RELEASE_NOTES }}
+          loaders: forge
+          game-versions: '1.20.1'
+          java: '17'
           environment: client | server
           retry-attempts: 1
           fail-mode: fail
           github-token: ${{ matrix.platform == 'github' && secrets.GITHUB_TOKEN || '' }}
-          github-tag: v${{ needs.prepare.outputs.version }}
+          github-tag: v${{ env.RELEASE_NAME }}
           github-commitish: ${{ github.sha }}
+          github-prerelease: true
           github-generate-changelog: false
           github-files: |
-            build/publication/applied-agristics-${{ needs.prepare.outputs.version }}.jar
-            build/publication/applied-agristics-${{ needs.prepare.outputs.version }}-source.zip
-            build/publication/SHA256SUMS.txt
-          curseforge-id: ${{ matrix.platform == 'curseforge' && needs.prepare.outputs.curseforge_id || '' }}
+            build/forge-publication/applied-agristics-${{ env.RELEASE_NAME }}.jar
+            build/forge-publication/SHA256SUMS.txt
+          curseforge-id: ${{ matrix.platform == 'curseforge' && '1772431' || '' }}
           curseforge-token: ${{ matrix.platform == 'curseforge' && secrets.CURSEFORGE_TOKEN || '' }}
-          curseforge-dependencies: ${{ fromJSON(needs.prepare.outputs.dependencies).curseforge }}
-          modrinth-id: ${{ matrix.platform == 'modrinth' && needs.prepare.outputs.modrinth_id || '' }}
-          modrinth-token: ${{ matrix.platform == 'modrinth' && secrets.MODRINTH_TOKEN || '' }}
-          modrinth-dependencies: ${{ fromJSON(needs.prepare.outputs.dependencies).modrinth }}
-      - name: Record upload receipt
+          curseforge-dependencies: |
+            applied-energistics-2(required)
+            mystical-agriculture(required)
+      - name: Record publication
         env:
-          RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
-          PUBLICATION_PLATFORM: ${{ matrix.platform }}
-          PUBLICATION_PROJECT: ${{ steps.upload.outputs[format('{0}-id', matrix.platform)] || steps.upload.outputs.github-repo }}
-          PUBLICATION_ID: ${{ steps.upload.outputs[format('{0}-version', matrix.platform)] || steps.upload.outputs.github-tag }}
-          PUBLICATION_URL: ${{ steps.upload.outputs[format('{0}-url', matrix.platform)] }}
-          PUBLICATION_FILES: ${{ steps.upload.outputs[format('{0}-files', matrix.platform)] }}
-          MODRINTH_TOKEN: ${{ matrix.platform == 'modrinth' && secrets.MODRINTH_TOKEN || '' }}
-        run: python3 tools/release.py receipt
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
-        if: always()
-        with:
-          name: receipt-${{ needs.prepare.outputs.version }}-${{ matrix.platform }}
-          path: build/publication/*-receipt.json
-          if-no-files-found: warn
-          retention-days: 90
+          PLATFORM: ${{ matrix.platform }}
+          FILES: ${{ steps.upload.outputs[format('{0}-files', matrix.platform)] }}
+          URL: ${{ steps.upload.outputs[format('{0}-url', matrix.platform)] }}
+        run: |
+          test -n "$FILES"
+          test -n "$URL"
+          printf '%s\n\n%s\n\n%s\n' "$PLATFORM" "$URL" "$FILES" >> "$GITHUB_STEP_SUMMARY"

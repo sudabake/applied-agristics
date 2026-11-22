@@ -33,9 +33,9 @@ def install():
         if seed in ('oak_sapling', 'dark_oak_sapling'):
             pools.append(item_pool('apple', chance=0.05))
         name = 'native/' + seed
-        write(ROOT / f'data/appliedagristics/loot_table/planting/{seed}.json',
+        write(ROOT / f'data/appliedagristics/loot_tables/planting/{seed}.json',
               {'type': 'minecraft:block', 'pools': pools})
-        write(ROOT / f'data/appliedagristics/recipe/{name}.json', {
+        write(ROOT / f'data/appliedagristics/recipes/{name}.json', {
             'type': 'appliedagristics:planting', 'seed': {'item': 'minecraft:' + seed},
             'outputs': [{'id': 'minecraft:' + log, 'count': 1}],
             'display': {'Name': 'minecraft:' + seed}, 'ticks': 2400,
@@ -44,13 +44,13 @@ def install():
 
     # These plants lack a mature fruit state usable by the generic crop-loot path.
     for plant in ('sugar_cane', 'cactus', 'bamboo', 'kelp', 'glow_berries', 'brown_mushroom', 'red_mushroom'):
-        write(ROOT / f'data/appliedagristics/recipe/native/{plant}.json', {
+        write(ROOT / f'data/appliedagristics/recipes/native/{plant}.json', {
             'type': 'appliedagristics:planting', 'seed': {'item': 'minecraft:' + plant},
             'outputs': [{'id': 'minecraft:' + plant, 'count': 1}],
             'display': {'Name': 'minecraft:' + ('cave_vines' if plant == 'glow_berries' else plant)},
             'ticks': 200, 'reproduces': True,
         })
-    write(ROOT / 'data/appliedagristics/recipe/native/chorus_flower.json', {
+    write(ROOT / 'data/appliedagristics/recipes/native/chorus_flower.json', {
         'type': 'appliedagristics:planting', 'seed': {'item': 'minecraft:chorus_flower'},
         'outputs': [{'id': 'minecraft:chorus_fruit', 'count': 1}],
         'display': {'Name': 'minecraft:chorus_flower'}, 'ticks': 200, 'reproduces': False,
@@ -86,7 +86,7 @@ def install():
                  '成型、拆结构和重新成型保留各部件方向，输出面与正面图案一致。成型控制器保持水平朝向锁定。\n\n'
                  '作物悬停说明分别显示实际耗电、含批次限制的运行需求、忽略批次限制的理论满负荷和升级预估。'
                  'JEI 只列可能产物及种植材料，数量不代表每轮产量或保底掉落。\n')
-    guide.write_text(text, encoding='utf-8')
+    guide.write_text(text, encoding='utf-8', newline='\n')
 
 
 if __name__ == '__main__':

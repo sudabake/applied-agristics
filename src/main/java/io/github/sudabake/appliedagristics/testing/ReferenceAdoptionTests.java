@@ -10,14 +10,13 @@ import io.github.sudabake.appliedagristics.network.Messages;
 import io.netty.buffer.Unpooled;
 import java.util.*;
 import net.minecraft.core.*;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.gametest.framework.*;
 import net.minecraft.nbt.*;
-import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.*;
 import net.minecraft.world.level.GameType;
-import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+import net.minecraftforge.gametest.PrefixGameTestTemplate;
 
 @PrefixGameTestTemplate(false)
 public final class ReferenceAdoptionTests {
@@ -33,28 +32,28 @@ public final class ReferenceAdoptionTests {
         for (var block:List.of(Agristics.SEEDS.get(),Agristics.ESSENCE_VAULT.get())) {
             var machine=(MachineEntity)block.newBlockEntity(h.absolutePos(new BlockPos(1,1,1)),block.defaultBlockState());machine.setLevel(h.getLevel());
             String name=machine instanceof SeedStorage ? "seeds" : "essences";
-            var valid=AEItemKey.of(new ItemStack(Items.WHEAT_SEEDS)).toTag(registries);
-            var badComponent=valid.copy();var components=new CompoundTag();components.putInt("missing_mod:identity",123);badComponent.put("components",components);
+            var valid=AEItemKey.of(new ItemStack(Items.WHEAT_SEEDS)) .toTag();
+            var badTag = valid.copy(); badTag.putString("tag", "malformed item NBT");
             var raw=entry(missing(),9000000000L);raw.putString("futureMetadata","keep verbatim");
-            var list=new ListTag();list.add(entry(valid,3));list.add(entry(valid,4));list.add(raw);list.add(entry(badComponent,17));
-            var tag=machine.saveWithFullMetadata(registries);tag.put(name,list);machine.loadWithComponents(tag,registries);
-            h.assertTrue(machine.snapshot(0,"").getInt("unresolved")==2,"Missing item and component are both visible as recovery entries");
-            var item=new ItemStack(block);machine.saveToItem(item,registries);
+            var list=new ListTag();list.add(entry(valid,3));list.add(entry(valid,4));list.add(raw);list.add(entry(badTag,17));
+            var tag=machine.saveWithFullMetadata();tag.put(name,list);machine.load(tag);
+            h.assertTrue(machine.snapshot(0,"").getInt("unresolved")==2,"Missing item and malformed NBT are both visible as recovery entries");
+            var item=new ItemStack(block);machine.saveToItem(item);
             var restored=(MachineEntity)block.newBlockEntity(machine.getBlockPos(),block.defaultBlockState());restored.setLevel(h.getLevel());
-            restored.loadWithComponents(item.get(DataComponents.BLOCK_ENTITY_DATA).copyTag(),registries);
-            var saved=restored.saveWithFullMetadata(registries).getList(name,Tag.TAG_COMPOUND);
-            h.assertTrue(saved.size()==3 && saved.getCompound(0).getLong("count")==7 && saved.contains(raw) && saved.contains(entry(badComponent,17)),"Pickup and reload preserve valid merged counts and exact unreadable records");
+            restored.load(net.minecraft.world.item.BlockItem.getBlockEntityData(item));
+            var saved=restored.saveWithFullMetadata().getList(name,Tag.TAG_COMPOUND);
+            h.assertTrue(saved.size()==3 && saved.getCompound(0).getLong("count")==7 && saved.contains(raw) && saved.contains(entry(badTag,17)),"Pickup and reload preserve valid merged counts and exact unreadable records");
         }
         h.succeed();
     }
     @GameTest(template="empty",templateNamespace=Agristics.ID)
     public static void overflowRecordCanResolveAfterSpaceReturns(GameTestHelper h) {
         var registries=h.getLevel().registryAccess();var key=AEItemKey.of(new ItemStack(Items.WHEAT_SEEDS));
-        var list=new ListTag();list.add(entry(key.toTag(registries),Long.MAX_VALUE));list.add(entry(key.toTag(registries),3));
-        var map=new LinkedHashMap<AEItemKey,Long>();var unresolved=StoredItemCounts.load(list,map,registries);
+        var list=new ListTag();list.add(entry(key .toTag(),Long.MAX_VALUE));list.add(entry(key .toTag(),3));
+        var map=new LinkedHashMap<AEItemKey,Long>();var unresolved=StoredItemCounts.load(list,map);
         h.assertTrue(map.get(key)==Long.MAX_VALUE && unresolved.size()==1,"Duplicate overflow neither wraps nor crashes");
-        map.put(key,Long.MAX_VALUE-10);var saved=StoredItemCounts.save(map,unresolved,registries);map.clear();
-        unresolved=StoredItemCounts.load(saved,map,registries);
+        map.put(key,Long.MAX_VALUE-10);var saved=StoredItemCounts.save(map,unresolved);map.clear();
+        unresolved=StoredItemCounts.load(saved,map);
         h.assertTrue(unresolved.isEmpty() && map.get(key)==Long.MAX_VALUE-7,"Retained entry resolves on reload when representable");h.succeed();
     }
     @GameTest(template="empty",templateNamespace=Agristics.ID)
@@ -66,21 +65,21 @@ public final class ReferenceAdoptionTests {
         var batch=new ListTag();batch.add(raw);task.put("batch",batch);
         var unknownTask=new CompoundTag();unknownTask.putString("id","not a resource id");unknownTask.putString("future","preserve");
         var tasks=new ListTag();tasks.add(task);tasks.add(unknownTask);
-        var tag=machine.saveWithFullMetadata(registries);tag.put("tasks",tasks);machine.loadWithComponents(tag,registries);
-        var saved=machine.saveWithFullMetadata(registries);
+        var tag=machine.saveWithFullMetadata();tag.put("tasks",tasks);machine.load(tag);
+        var saved=machine.saveWithFullMetadata();
         h.assertTrue(saved.getList("tasks",10).getCompound(0).getList("batch",10).equals(batch) && saved.getList("tasks",10).contains(unknownTask),"Paid batch and unreadable task survive save-load-save");
-        machine.dropContents();var queue=DeferredDrops.get(h.getLevel()).save(new CompoundTag(),registries);
+        machine.dropContents();var queue=DeferredDrops.get(h.getLevel()).save(new CompoundTag());
         h.assertTrue(queue.getList("sites",10).stream().map(CompoundTag.class::cast).anyMatch(site->site.getList("stacks",10).contains(raw)),"Dismantling transfers unresolved paid output into the world-owned drop queue");
         h.assertTrue(!queue.getList("recoveries",10).isEmpty(),"Unparseable task metadata remains in world recovery data");h.succeed();
     }
     @GameTest(template="empty",templateNamespace=Agristics.ID)
     public static void menuIdentityRejectsReopenedAndOtherMenus(GameTestHelper h) {
-        var player=h.makeMockPlayer(GameType.SURVIVAL);var machine=new MEInfusionAltar(h.absolutePos(new BlockPos(1,1,1)),Agristics.ME_INFUSION.get().defaultBlockState());machine.setLevel(h.getLevel());
+        var player=h.makeMockSurvivalPlayer();var machine=new MEInfusionAltar(h.absolutePos(new BlockPos(1,1,1)),Agristics.ME_INFUSION.get().defaultBlockState());machine.setLevel(h.getLevel());
         var menu=new MachineMenu(7,player.getInventory(),machine,123L);
         h.assertTrue(menu.matches(machine.getBlockPos(),7,123L) && !menu.matches(machine.getBlockPos(),7,124L) && !menu.matches(machine.getBlockPos(),8,123L) && !menu.matches(machine.getBlockPos().above(),7,123L),"Session, container and position must all match, even after container ID wraps");
-        var buffer=new RegistryFriendlyByteBuf(Unpooled.buffer(),h.getLevel().registryAccess());
+        var buffer=new FriendlyByteBuf(Unpooled.buffer());
         try {
-            var snapshot=new Messages.Snapshot(machine.getBlockPos(),7,123L,new CompoundTag());Messages.Snapshot.CODEC.encode(buffer,snapshot);var decoded=Messages.Snapshot.CODEC.decode(buffer);
+            var snapshot=new Messages.Snapshot(machine.getBlockPos(),7,123L,new CompoundTag());snapshot.write(buffer);var decoded=Messages.Snapshot.read(buffer);
             h.assertTrue(menu.matches(decoded.pos(),decoded.containerId(),decoded.sessionToken()) && !buffer.isReadable(),"Snapshot codec preserves menu identity");
         } finally {buffer.release();}
         h.succeed();
@@ -90,11 +89,10 @@ public final class ReferenceAdoptionTests {
         var fixture=PlanterFixture.install(h.getLevel(),h.absolutePos(new BlockPos(2,1,1)),true);
         h.runAtTickTime(100,()-> {
             var manager=h.getLevel().getRecipeManager();var original=new ArrayList<>(manager.getRecipes());
-            var recipes=new ArrayList<net.minecraft.world.item.crafting.RecipeHolder<?>>(original);
+            var recipes=new ArrayList<net.minecraft.world.item.crafting.Recipe<?>>(original);
             for (var item:List.of(Items.COOKIE,Items.BREAD))
-                recipes.add(new net.minecraft.world.item.crafting.RecipeHolder<>(ResourceLocation.parse("appliedagristics:test/shared_"+item.toString().replace(':','_')),
-                    new PlantingRecipe(net.minecraft.world.item.crafting.Ingredient.of(item),net.minecraft.world.item.crafting.Ingredient.of(net.minecraft.world.level.block.Blocks.DIRT),
-                    List.of(new ItemStack(Items.DIAMOND,2)),net.minecraft.world.level.block.Blocks.WHEAT.defaultBlockState(),false,200,true)));
+                recipes.add(new PlantingRecipe(new ResourceLocation("appliedagristics:test/shared_"+item.toString().replace(':','_')), net.minecraft.world.item.crafting.Ingredient.of(item),net.minecraft.world.item.crafting.Ingredient.of(net.minecraft.world.level.block.Blocks.DIRT),
+                    List.of(new ItemStack(Items.DIAMOND,2)),net.minecraft.world.level.block.Blocks.WHEAT.defaultBlockState(),false,200,true, java.util.Optional.empty()));
             try {
                 manager.replaceRecipes(recipes);CropSources.invalidate();
                 var planter=fixture.controller();

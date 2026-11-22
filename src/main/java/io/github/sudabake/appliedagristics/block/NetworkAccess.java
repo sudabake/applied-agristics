@@ -38,9 +38,9 @@ public final class NetworkAccess extends GridMachine implements IStorageProvider
         }
     }
     public NetworkAccess(BlockPos pos, BlockState state) { super(Agristics.ACCESS_BE.get(), pos, state, 0); }
-    public void bind(PlanterStructure structure) { this.structure = structure; invalidateCapabilities(); }
+    public void bind(PlanterStructure structure) { this.structure = structure; invalidateCaps(); reviveCaps(); }
     public void unbind(PlanterStructure previous) {
-        if (structure == previous) { structure = null; invalidateCapabilities(); super.release(); }
+        if (structure == previous) { structure = null; invalidateCaps(); reviveCaps(); super.release(); }
     }
     public boolean connectedStructure() { return structure != null && structure.formed(); }
     @Override public void ensureNode() {

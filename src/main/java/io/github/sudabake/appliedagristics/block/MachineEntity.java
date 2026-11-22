@@ -9,11 +9,17 @@ import net.minecraft.world.entity.player.*;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.level.block.entity.*;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.items.ItemStackHandler;
+import net.minecraftforge.common.capabilities.Capability;
+import net.minecraftforge.common.capabilities.ForgeCapabilities;
+import net.minecraftforge.common.util.LazyOptional;
+import net.minecraftforge.items.IItemHandler;
+import net.minecraftforge.items.ItemStackHandler;
 
 public abstract class MachineEntity extends BlockEntity implements MenuProvider {
     public final ItemStackHandler items;
     private final int inventorySize;
+    private final java.util.Map<Direction, LazyOptional<IItemHandler>> itemPorts = new java.util.HashMap<>();
+    private LazyOptional<net.minecraftforge.fluids.capability.IFluidHandler> fluidPort = LazyOptional.empty();
     public String status = "idle";
     private boolean workingVisual;
     public boolean workingVisual() { return workingVisual; }
@@ -23,10 +29,13 @@ public abstract class MachineEntity extends BlockEntity implements MenuProvider 
         workingVisual=next;
         if (level!=null && !level.isClientSide) level.sendBlockUpdated(worldPosition,getBlockState(),getBlockState(),net.minecraft.world.level.block.Block.UPDATE_CLIENTS);
     }
-    @Override public CompoundTag getUpdateTag(HolderLookup.Provider registries) { var tag=new CompoundTag(); tag.putBoolean("working",workingVisual); return tag; }
-    @Override public void handleUpdateTag(CompoundTag tag,HolderLookup.Provider registries) { workingVisual=tag.getBoolean("working"); }
+    @Override public CompoundTag getUpdateTag() { var tag=new CompoundTag(); tag.putBoolean("working",workingVisual); return tag; }
+    @Override public void handleUpdateTag(CompoundTag tag) { workingVisual=tag.getBoolean("working"); }
     @Override public net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket getUpdatePacket() { return net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket.create(this); }
-    @Override public void onDataPacket(net.minecraft.network.Connection connection,net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket packet,HolderLookup.Provider registries) { handleUpdateTag(packet.getTag(),registries); }
+    @Override public void onDataPacket(net.minecraft.network.Connection connection, net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket packet) {
+        var tag = packet.getTag();
+        handleUpdateTag(tag == null ? new CompoundTag() : tag);
+    }
     protected MachineEntity(BlockEntityType<?> type, BlockPos pos, BlockState state, int slots) {
         super(type, pos, state); inventorySize = slots;
         items = new ItemStackHandler(slots) {
@@ -36,6 +45,32 @@ public abstract class MachineEntity extends BlockEntity implements MenuProvider 
             @Override public net.minecraft.world.item.ItemStack extractItem(int slot,int amount,boolean simulate) { return super.extractItem(slot,MachineEntity.this.extractable(slot,amount),simulate); }
         };
     }
+    @Override public <T> LazyOptional<T> getCapability(Capability<T> capability, Direction side) {
+        if (!isRemoved() && capability == ForgeCapabilities.ITEM_HANDLER) {
+            return itemPorts.computeIfAbsent(side, direction -> {
+                var handler = automation(direction);
+                return handler == null ? LazyOptional.empty() : LazyOptional.of(() -> handler);
+            }).cast();
+        }
+        if (!isRemoved() && capability == ForgeCapabilities.FLUID_HANDLER && this instanceof EarlyPlanter early) {
+            if (!fluidPort.isPresent()) fluidPort = LazyOptional.of(() -> early.water);
+            return fluidPort.cast();
+        }
+        return super.getCapability(capability, side);
+    }
+
+    @Override public void invalidateCaps() {
+        super.invalidateCaps();
+        itemPorts.values().forEach(LazyOptional::invalidate);
+        itemPorts.clear();
+        fluidPort.invalidate();
+        fluidPort = LazyOptional.empty();
+    }
+
+    public IItemHandler automation(Direction side) {
+        return this instanceof SeedStorage seeds ? seeds.port : null;
+    }
+
     protected boolean valid(int slot, net.minecraft.world.item.ItemStack stack) { return true; }
     protected int slotLimit(int slot) { return 64; }
     protected void inventoryChanged(int slot) {}
@@ -55,18 +90,18 @@ public abstract class MachineEntity extends BlockEntity implements MenuProvider 
         long token=java.util.concurrent.ThreadLocalRandom.current().nextLong();
         var provider=new net.minecraft.world.SimpleMenuProvider(
             (id, inventory, owner) -> new MachineMenu(id, inventory, this, token), getDisplayName());
-        player.openMenu(provider, buffer -> {
+        net.minecraftforge.network.NetworkHooks.openScreen(player, provider, buffer -> {
             buffer.writeBlockPos(worldPosition);
             buffer.writeVarInt(((MachineBlock) getBlockState().getBlock()).kind().menuId);
             buffer.writeLong(token);
         });
     }
     @Override public AbstractContainerMenu createMenu(int id, Inventory inventory, Player player) { return new MachineMenu(id, inventory, this); }
-    @Override protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.saveAdditional(tag, registries); tag.put("inventory", items.serializeNBT(registries));
+    @Override protected void saveAdditional(CompoundTag tag) {
+        super.saveAdditional(tag); tag.put("inventory", items.serializeNBT());
     }
-    @Override protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.loadAdditional(tag, registries); var inventory = tag.getCompound("inventory").copy(); inventory.putInt("Size", inventorySize); items.deserializeNBT(registries, inventory);
+    @Override public void load(CompoundTag tag) {
+        super.load(tag); var inventory = tag.getCompound("inventory").copy(); inventory.putInt("Size", inventorySize); items.deserializeNBT(inventory);
     }
     public CompoundTag snapshot(int page, String search) {
         var tag = new CompoundTag(); tag.putString("status", status); return tag;

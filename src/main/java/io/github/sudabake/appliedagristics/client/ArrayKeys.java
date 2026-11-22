@@ -6,12 +6,12 @@ import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.phys.BlockHitResult;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
-import net.neoforged.neoforge.client.event.ClientTickEvent;
-import net.neoforged.neoforge.client.settings.KeyConflictContext;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
+import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
+import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.client.settings.KeyConflictContext;
 import org.lwjgl.glfw.GLFW;
 
 @EventBusSubscriber(modid=Agristics.ID,value=Dist.CLIENT,bus=EventBusSubscriber.Bus.MOD)
@@ -22,14 +22,15 @@ public final class ArrayKeys {
     public static boolean part(String name) { return java.util.Set.of("network_planter","seed_storage","me_network_access","planter_input_port","planter_output_port","essence_vault","planter_frame","cultivation_chamber","planter_speed_module","planter_parallel_module","planter_conversion_module").contains(name); }
     @EventBusSubscriber(modid=Agristics.ID,value=Dist.CLIENT)
     public static final class Events {
-        @SubscribeEvent public static void tick(ClientTickEvent.Post event) {
+        @SubscribeEvent public static void tick(TickEvent.ClientTickEvent event) {
+            if (event.phase != TickEvent.Phase.END) return;
             var mc=Minecraft.getInstance(); if(mc.screen!=null || mc.level==null) return;
             boolean structure=STRUCTURE.consumeClick(),guide=GUIDE.consumeClick();
             if(!(mc.hitResult instanceof BlockHitResult hit)) return;
             var id=BuiltInRegistries.BLOCK.getKey(mc.level.getBlockState(hit.getBlockPos()).getBlock());
             if(!id.getNamespace().equals(Agristics.ID)||!part(id.getPath())) return;
             if(guide) ArrayGuide.open();
-            else if(structure && net.neoforged.fml.ModList.get().isLoaded("jei")) io.github.sudabake.appliedagristics.compat.jei.AgristicsJei.showStructure();
+            else if(structure && net.minecraftforge.fml.ModList.get().isLoaded("jei")) io.github.sudabake.appliedagristics.compat.jei.AgristicsJei.showStructure();
             else if(structure) ArrayGuide.open();
         }
     }

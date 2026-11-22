@@ -11,11 +11,10 @@ import java.util.*;
 
 /** World-owned, append-only pattern slots. Missing drops leave tombstones instead of shifting recipes. */
 public final class BioLootOrder extends SavedData {
-    private static final Factory<BioLootOrder> FACTORY=new Factory<>(BioLootOrder::new,BioLootOrder::load);
     private final Map<ResourceLocation,List<ResourceLocation>> slots=new LinkedHashMap<>();
 
     public static BioLootOrder get(ServerLevel level) {
-        return level.getServer().overworld().getDataStorage().computeIfAbsent(FACTORY,"appliedagristics_bio_loot_order");
+        return level.getServer().overworld().getDataStorage().computeIfAbsent(BioLootOrder::load, BioLootOrder::new, "appliedagristics_bio_loot_order");
     }
     public Map<ResourceLocation,List<Item>> reconcile(Map<ResourceLocation,List<Item>> current) {
         var result=new LinkedHashMap<ResourceLocation,List<Item>>();
@@ -29,7 +28,7 @@ public final class BioLootOrder extends SavedData {
         });
         return Collections.unmodifiableMap(result);
     }
-    public static BioLootOrder load(CompoundTag tag,HolderLookup.Provider registries) {
+    public static BioLootOrder load(CompoundTag tag) {
         var data=new BioLootOrder();
         for(var raw:tag.getList("entities",Tag.TAG_COMPOUND)) {
             var entry=(CompoundTag)raw;var entity=ResourceLocation.tryParse(entry.getString("entity"));if(entity==null) continue;
@@ -42,7 +41,7 @@ public final class BioLootOrder extends SavedData {
         }
         return data;
     }
-    @Override public CompoundTag save(CompoundTag tag,HolderLookup.Provider registries) {
+    @Override public CompoundTag save(CompoundTag tag) {
         var entries=new ListTag();
         slots.forEach((entity,order)->{
             var entry=new CompoundTag();entry.putString("entity",entity.toString());var values=new ListTag();

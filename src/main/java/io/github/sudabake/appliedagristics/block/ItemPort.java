@@ -11,8 +11,8 @@ import net.minecraft.core.*;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.capabilities.Capabilities;
-import net.neoforged.neoforge.items.IItemHandler;
+import net.minecraftforge.common.capabilities.ForgeCapabilities;
+import net.minecraftforge.items.IItemHandler;
 import java.util.*;
 
 /** Finite 16-slot input/output port. No physical AE node; storage belongs to the formed structure. */
@@ -119,7 +119,7 @@ public final class ItemPort extends GridMachine implements SeedBank, IStoragePro
         if (input || !autoOutput || structure==null || !structure.formed() || !getMainNode().isActive()) return;
         var side=outputFace(); var pos=worldPosition.relative(side);
         if (!level.hasChunkAt(pos) || PlanterStructure.ownerAt(level,pos)==structure) return;
-        var adjacent=level.getCapability(Capabilities.ItemHandler.BLOCK,pos,side.getOpposite());
+        var adjacent=level.getBlockEntity(pos) == null ? null : level.getBlockEntity(pos).getCapability(ForgeCapabilities.ITEM_HANDLER, side.getOpposite()).orElse(null);
         if (adjacent!=null) push(adjacent);
     }
     private void push(IItemHandler target) {
@@ -127,7 +127,7 @@ public final class ItemPort extends GridMachine implements SeedBank, IStoragePro
             var offered=items.getStackInSlot(i);
             if (offered.isEmpty()) continue;
             var key=AEItemKey.of(offered);
-            var rest=net.neoforged.neoforge.items.ItemHandlerHelper.insertItemStacked(target,offered.copy(),false);
+            var rest=net.minecraftforge.items.ItemHandlerHelper.insertItemStacked(target,offered.copy(),false);
             int accepted=offered.getCount()-rest.getCount();
             if (accepted>0) {
                 items.extractItem(i,accepted,false);
@@ -135,9 +135,9 @@ public final class ItemPort extends GridMachine implements SeedBank, IStoragePro
             }
         }
     }
-    @Override protected void saveAdditional(CompoundTag tag,HolderLookup.Provider registries) { super.saveAdditional(tag,registries); tag.putBoolean("autoOutput",autoOutput); }
-    @Override protected void loadAdditional(CompoundTag tag,HolderLookup.Provider registries) {
-        super.loadAdditional(tag,registries); leases.clear(); autoOutput=!input && tag.getBoolean("autoOutput");
+    @Override protected void saveAdditional(CompoundTag tag) { super.saveAdditional(tag); tag.putBoolean("autoOutput",autoOutput); }
+    @Override public void load(CompoundTag tag) {
+        super.load(tag); leases.clear(); autoOutput=!input && tag.getBoolean("autoOutput");
     }
     @Override public CompoundTag snapshot(int page,String search) {
         var tag=super.snapshot(page,search); tag.putBoolean("autoOutput",autoOutput); tag.putBoolean("inputPort",input);

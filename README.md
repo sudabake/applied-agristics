@@ -1,10 +1,8 @@
 # Applied Agristics 应用农业
 
-Minecraft **1.21.1 / NeoForge / Java 21**，AE2 × Mystical Agriculture 农业附属。
+Minecraft **1.20.1 / Forge / Java 17**，AE2 × Mystical Agriculture 农业附属。
 
-当前版本为 **1.3.2**。
-
-下载见 [GitHub Releases](https://github.com/sudabake/applied-agristics/releases)、[CurseForge](https://www.curseforge.com/minecraft/mc-mods/applied-agristics) 和 [Modrinth](https://modrinth.com/mod/applied-agristics)。
+本分支以已发布的 1.21.1 版 **1.3.2** 为基线，用于 Forge 本地测试。两个 Minecraft 版本各用对应存档。
 
 ## 主要内容
 
@@ -31,11 +29,9 @@ Minecraft **1.21.1 / NeoForge / Java 21**，AE2 × Mystical Agriculture 农业�
 
 ## 构建
 
-三个平台的一键发布与首次令牌配置见 [发布说明](docs/PUBLISHING.md)。
+安装 JDK 17，在项目根目录运行 `gradlew.bat build`（Windows）或 `bash gradlew build`。生成的 Forge 测试包为 `build/libs/applied-agristics-1.3.2-forge-1.20.1-demo.jar`。运行 `gradlew.bat runGameTestServer` 执行游戏测试。
 
-安装 JDK 21，在项目根目录运行 `gradlew.bat build`（Windows）或 `bash gradlew build`。成品位于 `build/libs/`。运行 `gradlew.bat runGameTestServer` 执行游戏测试。
-
-开发依赖为 NeoForge 21.1.248、AE2 19.2.18、Mystical Agriculture 8.0.28、GuideME 21.1.19 和 Cucumber 8.0.16。此前验证过最低核心组合 NeoForge 21.1.241、AE2 19.2.17、Mystical Agriculture 8.0.27、GuideME 21.1.17 和 Cucumber 8.0.16。
+开发依赖为 Forge 47.4.20、AE2 15.4.10、Mystical Agriculture 7.0.24、GuideME 20.1.15 和 Cucumber 7.0.16。客户端测试可用 `runClient -PclientSmoke -PjeiTests -PmachineModelChecks`。可选联动测试把对应的 JAR 放在单独目录，通过 `-PruntimeFixtures=<目录>` 加载。
 
 ## 项目资料
 

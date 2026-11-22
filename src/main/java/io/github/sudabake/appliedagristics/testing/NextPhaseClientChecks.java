@@ -12,7 +12,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
-import net.neoforged.neoforge.client.model.data.ModelData;
+import net.minecraftforge.client.model.data.ModelData;
 
 /** Disposable-world-only visual and real baked-quad checks; excluded from the JAR. */
 public final class NextPhaseClientChecks {
@@ -28,7 +28,7 @@ public final class NextPhaseClientChecks {
             for(int age=0;age<8;age++) {
                 var p=new BlockPos(age,100,10);level.setBlockAndUpdate(p.below(),Blocks.FARMLAND.defaultBlockState());
                 level.setBlockAndUpdate(p,Agristics.BIO_CROP.get().defaultBlockState().setValue(BlockStateProperties.AGE_7,age));
-                ((BioCropEntity)level.getBlockEntity(p)).setIdentity(ResourceLocation.parse("minecraft:cow"));
+                ((BioCropEntity)level.getBlockEntity(p)).setIdentity(new ResourceLocation("minecraft:cow"));
             }
             for(int x=12;x<17;x++) for(int y=100;y<103;y++) level.setBlockAndUpdate(new BlockPos(x,y,10),x==13 && y==102?Blocks.AIR.defaultBlockState():Agristics.PLANTER_FRAME.get().defaultBlockState());
             level.setBlockAndUpdate(new BlockPos(12,101,10),Agristics.SPEED_MODULE.get().defaultBlockState());
@@ -94,7 +94,7 @@ public final class NextPhaseClientChecks {
                 "planter_speed_module","planter_parallel_module","planter_conversion_module");
         int checked=0;
         for(var name:names) {
-            var block=net.minecraft.core.registries.BuiltInRegistries.BLOCK.get(ResourceLocation.fromNamespaceAndPath(Agristics.ID,name));
+            var block=net.minecraft.core.registries.BuiltInRegistries.BLOCK.get(new ResourceLocation(Agristics.ID,name));
             for(boolean formed:new boolean[]{false,true}) for(int cell=0;cell<(formed?36:1);cell++) {
                 for(var facing:PlanterOrientation.property(block.defaultBlockState()).getPossibleValues()) {
                     var state=PlanterOrientation.withFacing(block.defaultBlockState(),facing)
@@ -105,9 +105,9 @@ public final class NextPhaseClientChecks {
                         var quads=model.getQuads(state,side,RandomSource.create(19),ModelData.EMPTY,null);
                         boolean front=modules.contains(name) || side==PlanterOrientation.front(state);
                         String expected=front?"block/"+name+(modules.contains(name)?"":"_front"):"block/planter_frame";
-                        if(quads.size()!=1 || !quads.getFirst().getSprite().contents().name().getPath().equals(expected))
+                        if(quads.size()!=1 || !quads.get(0).getSprite().contents().name().getPath().equals(expected))
                             throw new IllegalStateException("Full-face material mismatch: "+name+" "+side+" formed="+formed+" cell="+cell+" facing="+facing);
-                        var quad=quads.getFirst();var sprite=quad.getSprite();int[] vertices=quad.getVertices();int stride=vertices.length/4;
+                        var quad=quads.get(0);var sprite=quad.getSprite();int[] vertices=quad.getVertices();int stride=vertices.length/4;
                         float minU=Float.POSITIVE_INFINITY,maxU=Float.NEGATIVE_INFINITY;
                         float minV=Float.POSITIVE_INFINITY,maxV=Float.NEGATIVE_INFINITY;
                         for(int vertex=0;vertex<4;vertex++) {

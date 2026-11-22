@@ -5,16 +5,16 @@ public final class ProductionMath {
     public static int cardLimit(int maximum) { return 32 - Integer.numberOfLeadingZeros(maximum - 1); }
     public static int parallel(int cards, int maximum) { return Math.min(maximum, 1 << Math.min(16, Math.max(0, cards))); }
     public static double speed(int cards, int maximum) {
-        double fraction = Math.clamp((double) cards / cardLimit(maximum), 0, 1);
+        double fraction = unitFraction((double) cards / cardLimit(maximum));
         return Math.exp(Math.log(maximum) * Math.pow(fraction, 1.5));
     }
     /** Four physical blocks span the existing configured upgrade range. */
     public static int moduleParallel(int modules, int maximum) {
-        int steps = (int)Math.ceil(cardLimit(maximum) * Math.clamp(modules / 4.0, 0, 1));
+        int steps = (int)Math.ceil(cardLimit(maximum) * unitFraction(modules / 4.0));
         return parallel(steps, maximum);
     }
     public static double moduleSpeed(int modules, int maximum) {
-        double fraction = Math.clamp(modules / 4.0, 0, 1);
+        double fraction = unitFraction(modules / 4.0);
         return Math.exp(Math.log(maximum) * Math.pow(fraction, 1.5));
     }
     public static double power(long occupied, double speed, double base, double maximumRate, double fullPower) {
@@ -33,5 +33,6 @@ public final class ProductionMath {
         return power(occupied, speed, base, maximumRate, fullPower)
                 * stepWork(occupied, speed, duration, batchLimit) / (5.0 * occupied * speed);
     }
+    private static double unitFraction(double value) { return Math.max(0, Math.min(1, value)); }
     private ProductionMath() {}
 }

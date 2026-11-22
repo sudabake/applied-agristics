@@ -77,7 +77,7 @@ class ResourceExportTests(unittest.TestCase):
                 png_comparison_bytes(path)
 
     def test_gzip_matches_approved_nbt_without_host_metadata(self):
-        approved = TOOLS.parent / 'src/main/resources/data/appliedagristics/structure/empty.nbt'
+        approved = TOOLS.parent / 'src/main/resources/data/appliedagristics/structures/empty.nbt'
         encoded = approved.read_bytes()
         payload = gzip.decompress(encoded)
         generated = gzip_bytes(payload)
