@@ -6,6 +6,8 @@ Minecraft **1.21.1 / NeoForge / Java 21**，AE2 × Mystical Agriculture 农业�
 
 下载见 [GitHub Releases](https://github.com/sudabake/applied-agristics/releases)、[CurseForge](https://www.curseforge.com/minecraft/mc-mods/applied-agristics) 和 [Modrinth](https://modrinth.com/mod/applied-agristics)。
 
+Minecraft 1.20.1 / Forge / Java 17 的构建说明见 [Forge 分支](https://github.com/sudabake/applied-agristics/tree/port/forge-1.20.1)。
+
 ## 主要内容
 
 - 基础种植机使用种子和合适的土壤生产，水提供加速。特殊作物按要求在机器下方放置基座。

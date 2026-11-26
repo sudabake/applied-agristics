@@ -15,7 +15,22 @@ GitHub 发布使用运行时自动提供的 GITHUB_TOKEN。令牌只填在 Secre
 
 令牌入口为 https://authors.curseforge.com/#/settings/api-tokens 和 https://modrinth.com/settings/pats 。GitHub 密钥页面为 https://github.com/sudabake/applied-agristics/settings/secrets/actions 。
 
-## 每次发布
+## 自动触发
+
+先提交并验证准备发布的源码，再更新目标分支的 `.github/release-request.json`。只有该文件在对应发布分支上发生变化时，推送才会触发发布工作流。
+
+```json
+{
+  "version": "1.4.0",
+  "type": "release",
+  "target": "github-curseforge",
+  "dry_run": false
+}
+```
+
+NeoForge 使用 `main` 分支和 `release` 类型。1.20.1 Forge 使用 `port/forge-1.20.1` 分支和 `beta` 类型，文件名带 `-forge-1.20.1`。先验证 NeoForge，再准备 Forge 分支。设置 `dry_run: true` 只构建验证。选择 `github-curseforge` 时，工作流用仓库已有的 `CURSEFORGE_TOKEN` 通过上传 API 发送 JAR。
+
+## 手动触发
 
 1. 将已验证的公开源码推送到准备发布的分支，更新 gradle.properties 的 mod_version 和 docs/RELEASE_NOTES.md。
 2. 打开 Actions → Publish release → Run workflow，选择源码分支。
@@ -35,7 +50,7 @@ GitHub 发布使用运行时自动提供的 GITHUB_TOKEN。令牌只填在 Secre
 - CurseForge 和 Modrinth 各创建独立的新版本，仅上传运行 JAR。GitHub Release 同时带源码 ZIP 和校验文件。
 - 自动填 Minecraft 1.21.1、NeoForge、Java 21、发行类型、更新日志及固定前置关系。
 
-普通 push 和 pull_request 继续只运行 build.yml 的构建检查。Publish release 仅接受手动运行。演练不会创建版本或上传发行附件，生成文件保存在该运行的 Artifacts，保留 14 天。
+普通源码推送和 pull_request 继续运行构建检查。演练生成的文件保存在该运行的 Artifacts，保留 14 天。
 
 ## 部分平台失败
 
