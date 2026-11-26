@@ -19,6 +19,40 @@ import java.util.*;
 @PrefixGameTestTemplate(false)
 public final class CropStorageTests {
     @GameTest(template="empty",templateNamespace=Agristics.ID,timeoutTicks=240)
+    public static void finiteVaultOverflowsToMeThenOutputPorts(GameTestHelper h) {
+        var fixture=PlanterFixture.install(h.getLevel(),h.absolutePos(new BlockPos(2,1,1)),true);
+        h.runAtTickTime(100,()->{
+            long old=Balance.CROP_VAULT_CAPACITY.get();
+            try {
+                Balance.CROP_VAULT_CAPACITY.set(5L);
+                var wheat=AEItemKey.of(new ItemStack(Items.WHEAT));
+                var potato=AEItemKey.of(new ItemStack(Items.POTATO));
+                var source=IActionSource.ofMachine(fixture.controller());
+                var outputs=fixture.controller().structure.outputs();
+                fixture.vault().storeProduced(wheat,4,false);
+                fixture.vault().loadWithComponents(fixture.vault().saveWithFullMetadata(h.getLevel().registryAccess()),h.getLevel().registryAccess());
+                h.assertTrue(fixture.vault().storeProduced(potato,3,true)==1,"The cap counts all product types after reloading");
+                h.assertTrue(outputs.insert(potato,3,Actionable.MODULATE,source)==3 && fixture.output().count(potato)==2,
+                        "Without a disk, overflow goes to the output port");
+                fixture.drive().getInternalInventory().setItemDirect(0,appeng.core.definitions.AEItems.ITEM_CELL_1K.stack());
+                fixture.seeds().toggleAutoCollect();
+                h.assertTrue(outputs.insert(potato,4,Actionable.SIMULATE,source)==4 && fixture.output().count(potato)==2,
+                        "Overflow simulation changes no inventory");
+                h.assertTrue(outputs.insert(potato,4,Actionable.MODULATE,source)==4
+                        && fixture.output().count(potato)==2 && fixture.seeds().count(potato)==0,
+                        "The disk accepts production overflow ahead of the port without refilling seed banks");
+                var grid=fixture.access().getMainNode().getGrid();
+                h.assertTrue(grid.getStorageService().getInventory().extract(potato,100,Actionable.SIMULATE,source)==7,
+                        "All products are accounted for once in the ME network");
+                Balance.CROP_VAULT_CAPACITY.set(2L);
+                h.assertTrue(fixture.vault().storeProduced(wheat,1,false)==0,"Lowering a cap leaves existing stock intact");
+                h.succeed();
+            } finally {
+                Balance.CROP_VAULT_CAPACITY.set(old);
+            }
+        });
+    }
+    @GameTest(template="empty",templateNamespace=Agristics.ID,timeoutTicks=240)
     public static void cachedOutputOrderTracksPriorityChangesAndLoad(GameTestHelper h) {
         var fixture=PlanterFixture.install(h.getLevel(),h.absolutePos(new BlockPos(2,1,1)),true);
         var secondPos=fixture.controller().getBlockPos().west().above(2);

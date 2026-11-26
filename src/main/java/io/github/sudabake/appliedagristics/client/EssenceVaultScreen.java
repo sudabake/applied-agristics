@@ -33,6 +33,7 @@ public final class EssenceVaultScreen extends AEBaseScreen<MachineMenu> {
     }
     @Override public void drawFG(GuiGraphics graphics,int offsetX,int offsetY,int mouseX,int mouseY) {
         super.drawFG(graphics,offsetX,offsetY,mouseX,mouseY);
+        graphics.drawString(font,font.plainSubstrByWidth(capacityLabel().getString(),160),8,105,0x404054,false);
         var rows=menu.state.getList("rows",10);
         for (int i=0;i<rows.size();i++) {
             var row=rows.getCompound(i); var stack=ItemStack.parseOptional(minecraft.level.registryAccess(),row.getCompound("item")); int y=22+i*17;
@@ -46,6 +47,18 @@ public final class EssenceVaultScreen extends AEBaseScreen<MachineMenu> {
             int thumb=Math.max(8,68*4/Math.max(4,menu.state.getInt("types")));
             int y=22+(68-thumb)*menu.page/(pages-1);
             graphics.fill(164,y,167,y+thumb,0xFFBBBBD0);
+        }
+    }
+    private Component capacityLabel() {
+        long capacity=menu.state.contains("capacity") ? menu.state.getLong("capacity") : -1;
+        return Component.translatable("gui.appliedagristics.vault_capacity",capacity<0 ? "∞" : Long.toString(capacity));
+    }
+    @Override public void render(GuiGraphics graphics,int mouseX,int mouseY,float partialTick) {
+        super.render(graphics,mouseX,mouseY,partialTick);
+        if (mouseX>=leftPos+8 && mouseX<leftPos+8+Math.min(160,font.width(capacityLabel()))
+                && mouseY>=topPos+104 && mouseY<topPos+115) {
+            graphics.renderComponentTooltip(font,java.util.List.of(capacityLabel(),
+                    Component.translatable("gui.appliedagristics.vault_capacity_hint")),mouseX,mouseY);
         }
     }
     @Override protected void updateBeforeRender() { super.updateBeforeRender(); recoveryWarning.setVisibility(menu.state.getInt("unresolved")>0); setTextContent("state",Component.translatable("gui.appliedagristics.vault_readonly",menu.state.getInt("types"))); }

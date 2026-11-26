@@ -37,6 +37,16 @@ public final class NetworkAccess extends GridMachine implements IStorageProvider
             if (grid!=null) grid.getStorageService().invalidateCache();
         }
     }
+
+    public long insertOverflow(appeng.api.stacks.AEItemKey item, long amount,
+            appeng.api.config.Actionable mode) {
+        var grid=getMainNode().getGrid();
+        if (grid==null || !getMainNode().isActive()) return 0;
+        long inserted=grid.getStorageService().getInventory().insert(item,amount,mode,
+                appeng.api.networking.security.IActionSource.ofMachine(this));
+        if (mode==appeng.api.config.Actionable.MODULATE && inserted>0) storageChanged(item,inserted);
+        return inserted;
+    }
     public NetworkAccess(BlockPos pos, BlockState state) { super(Agristics.ACCESS_BE.get(), pos, state, 0); }
     public void bind(PlanterStructure structure) { this.structure = structure; invalidateCapabilities(); }
     public void unbind(PlanterStructure previous) {

@@ -1,6 +1,7 @@
 package io.github.sudabake.appliedagristics.multiblock;
 
 import io.github.sudabake.appliedagristics.Agristics;
+import io.github.sudabake.appliedagristics.Balance;
 import io.github.sudabake.appliedagristics.block.*;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -47,6 +48,8 @@ public final class PlanterStructure {
             if (!formed() || !(key instanceof appeng.api.stacks.AEItemKey item) || amount<=0) return 0;
             boolean simulate=mode==appeng.api.config.Actionable.SIMULATE; long left=amount;
             for (var vault:outputVaults) { left-=vault.storeProduced(item,left,simulate); if (left==0) break; }
+            if (left>0 && !outputVaults.isEmpty() && Balance.CROP_VAULT_CAPACITY.get()>=0)
+                left-=access.insertOverflow(item,left,mode);
             for (var port:ports) if (!port.isInput() && left>0) left-=port.insertLocal(item,left,simulate);
             return amount-left;
         }

@@ -13,6 +13,11 @@ import net.neoforged.neoforge.items.*;
 import net.neoforged.neoforge.items.wrapper.RangedWrapper;
 
 public final class EarlyPlanter extends MachineEntity {
+    private long lastHarvestTick = Long.MIN_VALUE;
+
+    public boolean harvestFlash() {
+        return level!=null && lastHarvestTick!=Long.MIN_VALUE && level.getGameTime()-lastHarvestTick<6;
+    }
     private java.util.List<ItemStack> pending;
     private final GrowthClock clock = new GrowthClock();
     public final FluidTank water = new FluidTank(16000, stack -> stack.getFluid() == Fluids.WATER) {
@@ -21,7 +26,7 @@ public final class EarlyPlanter extends MachineEntity {
     public EarlyPlanter(BlockPos pos, BlockState state) { super(Agristics.EARLY_BE.get(), pos, state, 11); }
     @Override protected boolean valid(int slot, ItemStack stack) { return slot == 0 ? io.github.sudabake.appliedagristics.logic.Harvests.seed(stack,level) : slot == 1 && (stack.getItem() instanceof net.minecraft.world.item.BlockItem || io.github.sudabake.appliedagristics.logic.CropSources.soil(level,items.getStackInSlot(0),stack)); }
     @Override protected void inventoryChanged(int slot) {
-        if (slot < 2 && clock != null && pending == null) clock.reset();
+        if (slot < 2 && clock != null && pending == null) { clock.reset(); lastHarvestTick=Long.MIN_VALUE; }
         if (slot<2 && level!=null && !level.isClientSide) level.sendBlockUpdated(worldPosition,getBlockState(),getBlockState(),net.minecraft.world.level.block.Block.UPDATE_CLIENTS);
     }
     @Override public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
@@ -59,7 +64,7 @@ public final class EarlyPlanter extends MachineEntity {
             }
             for (int i = 0; i < 9; i++) items.setStackInSlot(i + 2, trial.getStackInSlot(i));
             if (boosted) water.drain(Balance.WATER_COST.get(), FluidAction.EXECUTE);
-            pending = null; clock.reset();
+            pending = null; clock.reset(); lastHarvestTick=level.getGameTime();
         }
         setChanged();
     }
@@ -86,6 +91,9 @@ public final class EarlyPlanter extends MachineEntity {
             tag.putDouble("seedChance", io.github.sudabake.appliedagristics.logic.NativeSeedYield.reproduces((net.minecraft.server.level.ServerLevel)level,items.getStackInSlot(0),items.getStackInSlot(1)) ? crop.getSecondaryChance(ground.getBlock()) * 100 : 10);
             tag.putDouble("fertilizerChance", crop == com.blakebr0.mysticalagriculture.lib.ModCrops.INFERIUM ? 0 : com.blakebr0.mysticalagriculture.config.ModConfigs.FERTILIZED_ESSENCE_DROP_CHANCE.get() * 100);
         }
-        tag.putInt("progress", (int) Math.min(1000, progress)); tag.putInt("duration", 1000); return tag;
+        boolean completed=harvestFlash();
+        tag.putBoolean("harvestFlash",completed);
+        tag.putInt("progress", completed || pending!=null ? 1000 : (int) Math.min(1000, progress));
+        tag.putInt("duration", 1000); return tag;
     }
 }

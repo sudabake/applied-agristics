@@ -19,6 +19,7 @@ public final class MachineScreen extends appeng.client.gui.AEBaseScreen<MachineM
   private boolean draggingScroll;
   private appeng.client.gui.widgets.AECheckbox cropFilter;
   private appeng.client.gui.widgets.AECheckbox autoNewSeeds;
+  private Button buildArray;
   private String rowSignature = "";
   private final appeng.client.gui.widgets.IconButton recoveryWarning;
 
@@ -55,6 +56,9 @@ public final class MachineScreen extends appeng.client.gui.AEBaseScreen<MachineM
     rowSignature = "";
     if (!menu.machine.networkMachine()) return;
     if (menu.machine instanceof NetworkPlanter) {
+      buildArray = addRenderableWidget(Button.builder(
+                  Component.translatable("gui.appliedagristics.build_array"), b -> send(18, "", 0))
+              .bounds(leftPos+109,topPos+26,112,18).build(AeButton::new));
       autoNewSeeds = addRenderableWidget(new appeng.client.gui.widgets.AECheckbox(
           leftPos + 136, topPos + 6, 94, 16, style,
           Component.translatable("gui.appliedagristics.auto_new_seeds")));
@@ -199,7 +203,7 @@ public final class MachineScreen extends appeng.client.gui.AEBaseScreen<MachineM
                     + "  "
                     + compact(menu.state.getDouble("power"))
                     + " AE/t",
-                220),
+                buildArray!=null && buildArray.visible ? 91 : 212),
             leftPos + 16,
             topPos + 31,
             0x404054,
@@ -366,6 +370,7 @@ public final class MachineScreen extends appeng.client.gui.AEBaseScreen<MachineM
   @Override
   protected void updateBeforeRender() {
     super.updateBeforeRender();
+    if (buildArray!=null) buildArray.visible=menu.state.contains("formed") && !menu.state.getBoolean("formed");
     recoveryWarning.setVisibility(menu.state.getInt("unresolved") > 0);
   }
 

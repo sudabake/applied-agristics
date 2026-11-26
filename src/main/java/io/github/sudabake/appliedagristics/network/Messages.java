@@ -37,8 +37,21 @@ public final class Messages {
         public static final StreamCodec<RegistryFriendlyByteBuf, BiologicalCatalog> CODEC = StreamCodec.of((buffer, p) -> buffer.writeNbt(p.data), buffer -> new BiologicalCatalog(buffer.readNbt()));
         @Override public Type<BiologicalCatalog> type() { return TYPE; }
     }
+    public record BuildConflicts(ResourceLocation dimension, java.util.List<BlockPos> positions) implements CustomPacketPayload {
+        public static final Type<BuildConflicts> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(Agristics.ID,"build_conflicts"));
+        public static final StreamCodec<RegistryFriendlyByteBuf,BuildConflicts> CODEC = StreamCodec.of(
+                (buffer,payload) -> {
+                    buffer.writeResourceLocation(payload.dimension);
+                    buffer.writeCollection(payload.positions,(out,pos) -> out.writeBlockPos(pos));
+                },
+                buffer -> new BuildConflicts(buffer.readResourceLocation(),
+                        buffer.readCollection(FriendlyByteBuf.limitValue(java.util.ArrayList::new,36),in -> in.readBlockPos())));
+        @Override public Type<BuildConflicts> type() { return TYPE; }
+    }
     public static void register(RegisterPayloadHandlersEvent event) {
-        var registrar = event.registrar("9");
+        var registrar = event.registrar("10");
+        registrar.playToClient(BuildConflicts.TYPE, BuildConflicts.CODEC, (p,context) -> context.enqueueWork(
+                () -> io.github.sudabake.appliedagristics.client.ArrayConflictOverlay.show(p)));
         registrar.playToClient(BiologicalCatalog.TYPE, BiologicalCatalog.CODEC, (p, context) -> context.enqueueWork(() -> { if (p.data != null) io.github.sudabake.appliedagristics.biology.BioLootCatalog.loadClient(p.data); }));
         registrar.playToServer(Control.TYPE, Control.CODEC, (p, context) -> context.enqueueWork(() -> {
             if (!(context.player() instanceof ServerPlayer player) || !(player.containerMenu instanceof MachineMenu menu)
@@ -62,9 +75,11 @@ public final class Messages {
                 case 15 -> { if(machine instanceof SeedStorage drive) drive.toggleAutoCollect(); }
                 case 16 -> { if(machine instanceof SeedStorage drive && p.value>=0 && p.value<4) drive.setCollectFilter((int)p.value); }
                 case 17 -> { if(machine instanceof SeedStorage drive) drive.ejectSeeds(); }
+                case 18 -> { if(machine instanceof NetworkPlanter planter)
+                    io.github.sudabake.appliedagristics.multiblock.ArrayConstruction.build(planter,player); }
                 default -> { return; }
             }
-            menu.sync(player);
+            if (player.containerMenu==menu) menu.sync(player);
         }));
         registrar.playToClient(Snapshot.TYPE, Snapshot.CODEC, (p, context) -> context.enqueueWork(() -> {
             if (context.player().containerMenu instanceof MachineMenu menu && menu.matches(p.pos, p.containerId, p.sessionToken) && p.data != null) menu.state = p.data;

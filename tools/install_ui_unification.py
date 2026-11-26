@@ -65,24 +65,5 @@ def install():
     style = json.loads(path.read_text(encoding='utf-8'))
     style['text']['dialog_title']['text'] = {'translate': 'gui.appliedagristics.io_config'}
     write(path, style)
-    path = A / 'ae2guide/index.md'
-    text = path.read_text(encoding='utf-8')
-    text = text.replace('ME 种子仓的自动收容开关控制每秒从网络主动拉取已有种子。',
-                        'ME 种子仓的自动收容开关同时控制网络新存入种子的接收与每秒主动收容。关闭后仍可手动收容，阵列直产种子沿现有规则分流。')
-    text = text.replace('“新种默认启用”', '“自动启用新作物”')
-    text = text.replace('只有成型后的 ME 网络接入模块可以连接 AE，整座结构使用一个通道。',
-                        '只有成型后的 ME 网络接入模块可以连接 AE，整座结构自身不占频道。')
-    text = text.replace('并配置各面的输入／输出模式。', '并开关各面的输出；所有面始终允许输入合法材料。')
-    text = text.replace('“拉取种子”按钮用于手动导入网络已有种子，不持续扫描全网。',
-                        '“收容种子”按钮手动导入网络已有种子；自动收容开启后每秒按筛选范围收容。')
-    extra = '所有 AE 联网机器自身不占频道。ME 加工机六面均可输入，输出方向页只设置各面是否启用输出；启用输出的面仍可输入。'
-    if extra not in text:
-        text += '\n' + extra + '\n'
-    output_rules = '输出口只接收阵列内部收获，外部仅可提取。开启自动输出后，收获物到达时立即推送有图案一面的容器，其余面可用管道抽取。ME 加工订单的结果返还网络，手动自动输出只推送配置面的相邻容器。'
-    if output_rules not in text:
-        text += '\n' + output_rules + '\n'
-    path.write_text(text, encoding='utf-8')
-
-
 if __name__ == '__main__':
     install()
