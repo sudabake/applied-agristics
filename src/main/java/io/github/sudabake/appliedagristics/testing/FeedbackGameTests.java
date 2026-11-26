@@ -74,10 +74,20 @@ public final class FeedbackGameTests {
     private static ServerPlayer player(GameTestHelper helper, boolean creative) {
         var level=helper.getLevel();
         var profile=new com.mojang.authlib.GameProfile(java.util.UUID.randomUUID(),"Array Test");
-        return new ServerPlayer(level.getServer(),level,profile) {
-            @Override public boolean isCreative() { return creative; }
-            @Override public void sendSystemMessage(Component message) {}
-        };
+        return new ConstructionPlayer(level,profile,creative);
+    }
+
+    private static final class ConstructionPlayer extends ServerPlayer {
+        private final boolean creative;
+
+        private ConstructionPlayer(net.minecraft.server.level.ServerLevel level,
+                com.mojang.authlib.GameProfile profile, boolean creative) {
+            super(level.getServer(),level,profile);
+            this.creative=creative;
+        }
+
+        @Override public boolean isCreative() { return creative; }
+        @Override public void sendSystemMessage(Component message) {}
     }
 
     @GameTest(template="empty",templateNamespace=Agristics.ID)
