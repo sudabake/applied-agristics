@@ -38,6 +38,7 @@ public final class TestingBootstrap {
         event.register(HarvestEstimateTests.class);
         event.register(OutputAndStorageTests.class);
         event.register(PlantingCompatibilityTests.class);
+        event.register(FeedbackGameTests.class);
     }
 
     private static void releaseTestStructures(net.minecraftforge.event.server.ServerStoppingEvent event) {

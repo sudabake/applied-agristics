@@ -37,6 +37,7 @@ public final class ClientSmoke {
     private static int watchdog;
     private static boolean done;
     private static boolean guidePending;
+    private static GuideClientChecks guideChecks;
     private static volatile boolean corePassed;
     private static int guideTicks;
     private static boolean nextPhasePending;
@@ -179,6 +180,16 @@ public final class ClientSmoke {
             if(sceneTicks==310) {scenePending=false;nextPhasePending=true;}
             return;
         }
+        if (guideChecks!=null) {
+            if (!guideChecks.tick(mc)) return;
+            var log=org.slf4j.LoggerFactory.getLogger("AppliedAgristicsTests");
+            log.info("CLIENT_GUIDE_FEEDBACK_RESULT {} language={}",guideChecks.passed(),mc.getLanguageManager().getSelected());
+            if (guideChecks.passed() && corePassed) log.info("CLIENT_SMOKE_PASSED menus=8 guidePages=9 gradualArrayPreviews=true");
+            else log.error("CLIENT_SMOKE_GUIDE_OR_BIOLOGY_FAILED");
+            done=true;
+            mc.stop();
+            return;
+        }
         if (guidePending) {
             guideTicks++;
             var cowId = new net.minecraft.resources.ResourceLocation("minecraft:cow");
@@ -198,11 +209,9 @@ public final class ClientSmoke {
                 corePassed &= tooltip.isEmpty() && use.getResult()==net.minecraft.world.InteractionResult.PASS && mc.screen==before;
                 essence.getItem().appendHoverText(essence,mc.level,tooltip,net.minecraft.world.item.TooltipFlag.ADVANCED);
                 corePassed &= tooltip.size()==1 && tooltip.get(0).getString().contains(cowId.toString());
-                if (corePassed && io.github.sudabake.appliedagristics.biology.BioLootCatalog.clientDrops(cowId).contains(net.minecraft.world.item.Items.BEEF)
-                    && mc.getItemColors().getColor(cowSeed, 0) == (0xFF000000 | egg.getColor(0)) && mc.getItemColors().getColor(cowSeed, 0) != mc.getItemColors().getColor(pigSeed, 0))
-                    org.slf4j.LoggerFactory.getLogger("AppliedAgristicsTests").info("CLIENT_SMOKE_PASSED menus=8 formedModels=true plantDisplay=true jeiOnlyRecipes=true spawnEggTint=true");
-                else org.slf4j.LoggerFactory.getLogger("AppliedAgristicsTests").error("CLIENT_SMOKE_BIOLOGY_FAILED");
-                done = true; mc.stop();
+                corePassed &= io.github.sudabake.appliedagristics.biology.BioLootCatalog.clientDrops(cowId).contains(net.minecraft.world.item.Items.BEEF)
+                    && mc.getItemColors().getColor(cowSeed, 0) == (0xFF000000 | egg.getColor(0)) && mc.getItemColors().getColor(cowSeed, 0) != mc.getItemColors().getColor(pigSeed, 0);
+                guideChecks=new GuideClientChecks(mc);
             }
             return;
         }

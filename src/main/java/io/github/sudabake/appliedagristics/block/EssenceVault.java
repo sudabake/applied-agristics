@@ -18,6 +18,7 @@ public final class EssenceVault extends GridMachine implements IStorageProvider 
     private PlanterStructure structure;
     private ListTag unresolved = new ListTag();
     private int priority;
+    private long storedTotal;
     private final Map<AEItemKey,Long> contents=new LinkedHashMap<>();
     private final MEStorage networkInventory=new MEStorage() {
         @Override public net.minecraft.network.chat.Component getDescription() { return getDisplayName(); }
@@ -47,10 +48,25 @@ public final class EssenceVault extends GridMachine implements IStorageProvider 
     public long storeProduced(AEItemKey key,long amount,boolean simulate) {
         if (amount<=0 || key.toStack(1).isEmpty()) return 0;
         long accepted=Amounts.insertable(contents.getOrDefault(key,0L),amount);
+        long capacity=Balance.CROP_VAULT_CAPACITY.get();
+        if (capacity>=0) accepted=Amounts.insertable(storedTotal,accepted,capacity);
         if (!simulate && accepted>0) { contents.merge(key,accepted,Long::sum); changed(key,accepted); }
         return accepted;
     }
-    private void changed(AEItemKey key,long delta) { storedItemsChanged(key,delta); }
+    private void changed(AEItemKey key,long delta) {
+        if (delta<0 && storedTotal==Long.MAX_VALUE) recount();
+        else if (delta<0) storedTotal+=delta;
+        else storedTotal+=Amounts.insertable(storedTotal,delta);
+        storedItemsChanged(key,delta);
+    }
+    private void recount() {
+        storedTotal=0;
+        for (long count:contents.values()) storedTotal+=Amounts.insertable(storedTotal,count);
+        for (var raw:unresolved) {
+            long count=((CompoundTag)raw).getLong("count");
+            if (count>0) storedTotal+=Amounts.insertable(storedTotal,count);
+        }
+    }
     @Override public void step() { status=structure==null || !structure.formed() ? "unformed" : getMainNode().isActive() ? "online" : "offline"; }
     @Override protected void saveAdditional(CompoundTag tag) {
         super.saveAdditional(tag);
@@ -62,12 +78,15 @@ public final class EssenceVault extends GridMachine implements IStorageProvider 
         priority=tag.getInt("priority");
         contents.clear();
         unresolved=StoredItemCounts.load(tag.getList("essences",Tag.TAG_COMPOUND),contents);
+        recount();
         if (structure != null) structure.refreshOutputOrder();
     }
     @Override public CompoundTag snapshot(int offset,String search) {
         var tag=super.snapshot(offset,search); tag.putInt("unresolved",unresolved.size()); var entries=List.copyOf(contents.entrySet());
         int start=net.minecraft.util.Mth.clamp(offset,0,Math.max(0,entries.size()-4)); var rows=new ListTag();
         for (var entry:entries.subList(start,Math.min(start+4,entries.size()))) { var row=new CompoundTag(); row.put("item",entry.getKey().toStack(1).save(new CompoundTag())); row.putLong("count",entry.getValue()); rows.add(row); }
-        tag.put("rows",rows); tag.putInt("pages",Math.max(1,entries.size()-3)); tag.putInt("types",contents.size()); tag.putInt("priority",priority); return tag;
+        tag.put("rows",rows); tag.putInt("pages",Math.max(1,entries.size()-3)); tag.putInt("types",contents.size()); tag.putInt("priority",priority);
+        tag.putLong("capacity",Balance.CROP_VAULT_CAPACITY.get());
+        return tag;
     }
 }

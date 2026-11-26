@@ -1,12 +1,15 @@
 name: Publish release
 
 on:
+  push:
+    branches: [port/forge-1.20.1]
+    paths: ['.github/release-request.json']
   workflow_dispatch:
     inputs:
       version:
         description: Source mod version
         required: true
-        default: '1.3.2'
+        default: '1.4.0'
         type: string
       release_type:
         description: Release type
@@ -34,7 +37,6 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  RELEASE_NAME: 1.3.2-forge-1.20.1
   RELEASE_NOTES: docs/FORGE_1.20.1_RELEASE_NOTES.md
 
 jobs:
@@ -42,26 +44,61 @@ jobs:
     if: github.repository == 'sudabake/applied-agristics' && github.ref == 'refs/heads/port/forge-1.20.1'
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    outputs:
+      dry_run: ${{ steps.request.outputs.dry_run }}
+      platforms: ${{ steps.request.outputs.platforms }}
+      release_name: ${{ steps.request.outputs.release_name }}
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           persist-credentials: false
       - name: Check release inputs
+        id: request
         env:
           REQUESTED_VERSION: ${{ inputs.version }}
           REQUESTED_TYPE: ${{ inputs.release_type }}
           REQUESTED_TARGET: ${{ inputs.target }}
+          REQUESTED_DRY_RUN: ${{ inputs.dry_run }}
         run: |
-          test "$REQUESTED_VERSION" = '1.3.2'
+          if [[ "$GITHUB_EVENT_NAME" == push ]]; then
+            REQUESTED_VERSION=$(jq -er '.version | strings' .github/release-request.json)
+            REQUESTED_TYPE=$(jq -er '.type | strings' .github/release-request.json)
+            REQUESTED_TARGET=$(jq -er '.target | strings' .github/release-request.json)
+            REQUESTED_DRY_RUN=$(jq -er '.dry_run | booleans | tostring' .github/release-request.json)
+          fi
+          [[ "$REQUESTED_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
           test "$REQUESTED_TYPE" = beta
-          grep -qx 'mod_version=1.3.2' gradle.properties
-          case "$REQUESTED_TARGET" in github-curseforge|github|curseforge) ;; *) exit 1 ;; esac
+          release_name="$REQUESTED_VERSION-forge-1.20.1"
+          grep -Fxq "mod_version=$REQUESTED_VERSION" gradle.properties
+          grep -Fxq "release_name=$release_name" gradle.properties
+          case "$REQUESTED_DRY_RUN" in true|false) ;; *) exit 1 ;; esac
+          case "$REQUESTED_TARGET" in
+            github-curseforge) platforms='["github","curseforge"]' ;;
+            github) platforms='["github"]' ;;
+            curseforge) platforms='["curseforge"]' ;;
+            *) exit 1 ;;
+          esac
+          if [[ "$REQUESTED_DRY_RUN" == false && "$REQUESTED_TARGET" != curseforge ]]; then
+            tags=$(git ls-remote --tags origin "refs/tags/v$release_name")
+            test -z "$tags"
+          fi
+          printf 'dry_run=%s\nplatforms=%s\nrelease_name=%s\n' "$REQUESTED_DRY_RUN" "$platforms" "$release_name" >> "$GITHUB_OUTPUT"
+      - name: Check CurseForge API credentials
+        if: steps.request.outputs.dry_run == 'false' && contains(fromJSON(steps.request.outputs.platforms), 'curseforge')
+        env:
+          CURSEFORGE_TOKEN: ${{ secrets.CURSEFORGE_TOKEN }}
+        run: |
+          test -n "$CURSEFORGE_TOKEN"
+          curl --silent --show-error --fail --max-time 30 \
+            -H "X-Api-Token: $CURSEFORGE_TOKEN" https://minecraft.curseforge.com/api/game/versions >/dev/null
       - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
         with:
           distribution: temurin
           java-version: '17'
       - uses: gradle/actions/setup-gradle@4c125117fe7c5aed11272ec4213f602f012f89f2 # v5
       - name: Verify and bundle Forge files
+        env:
+          RELEASE_NAME: ${{ steps.request.outputs.release_name }}
         run: |
           python3 -m unittest discover -s tools/tests -v
           python3 tools/check_resource_rebuild.py
@@ -80,14 +117,16 @@ jobs:
 
   publish:
     needs: verify
-    if: ${{ !inputs.dry_run }}
+    if: needs.verify.outputs.dry_run == 'false'
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    env:
+      RELEASE_NAME: ${{ needs.verify.outputs.release_name }}
     strategy:
       fail-fast: false
       matrix:
-        platform: ${{ fromJSON(inputs.target == 'github-curseforge' && '["github","curseforge"]' || format('["{0}"]', inputs.target)) }}
+        platform: ${{ fromJSON(needs.verify.outputs.platforms) }}
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:

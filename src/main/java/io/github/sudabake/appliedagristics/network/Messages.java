@@ -15,7 +15,7 @@ import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.network.simple.SimpleChannel;
 
 public final class Messages {
-    private static final String PROTOCOL = "forge-1";
+    private static final String PROTOCOL = "forge-2";
     private static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
         new ResourceLocation(Agristics.ID, "main"), () -> PROTOCOL, PROTOCOL::equals, PROTOCOL::equals);
 
@@ -53,6 +53,16 @@ public final class Messages {
         }
     }
     public record BiologicalCatalog(CompoundTag data) {}
+    public record BuildConflicts(ResourceLocation dimension, java.util.List<BlockPos> positions) {
+        void write(FriendlyByteBuf buf) {
+            buf.writeResourceLocation(dimension);
+            buf.writeCollection(positions,(out,pos) -> out.writeBlockPos(pos));
+        }
+        static BuildConflicts read(FriendlyByteBuf buf) {
+            return new BuildConflicts(buf.readResourceLocation(),
+                    buf.readCollection(FriendlyByteBuf.limitValue(java.util.ArrayList::new,36),in -> in.readBlockPos()));
+        }
+    }
 
     public static void register() {
         CHANNEL.messageBuilder(Control.class, 0, NetworkDirection.PLAY_TO_SERVER)
@@ -70,6 +80,9 @@ public final class Messages {
             .consumerMainThread((p, ctx) -> {
                 if (p.data != null) io.github.sudabake.appliedagristics.biology.BioLootCatalog.loadClient(p.data);
             }).add();
+        CHANNEL.messageBuilder(BuildConflicts.class, 3, NetworkDirection.PLAY_TO_CLIENT)
+            .encoder(BuildConflicts::write).decoder(BuildConflicts::read)
+            .consumerMainThread((p, context) -> io.github.sudabake.appliedagristics.client.ArrayConflictOverlay.show(p)).add();
     }
 
     public static void sendToServer(Control message) { CHANNEL.sendToServer(message); }
@@ -105,8 +118,10 @@ public final class Messages {
             case 15 -> { if(machine instanceof SeedStorage drive) drive.toggleAutoCollect(); }
             case 16 -> { if(machine instanceof SeedStorage drive && p.value>=0 && p.value<4) drive.setCollectFilter((int)p.value); }
             case 17 -> { if(machine instanceof SeedStorage drive) drive.ejectSeeds(); }
+            case 18 -> { if(machine instanceof NetworkPlanter planter)
+                io.github.sudabake.appliedagristics.multiblock.ArrayConstruction.build(planter,player); }
             default -> { return; }
         }
-        menu.sync(player);
+        if (player.containerMenu==menu) menu.sync(player);
     }
 }

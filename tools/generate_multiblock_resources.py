@@ -50,6 +50,16 @@ for lang,index in (('zh_cn',0),('en_us',1)):
         'gui.appliedagristics.auto_input_on':('自动输入：开','Auto input: on'),
         'gui.appliedagristics.auto_input_off':('自动输入：关','Auto input: off'),
         'gui.appliedagristics.vault_readonly':('%s 种作物；AE 仅可提取','%s types; AE extraction only'),
+        'gui.appliedagristics.vault_capacity':("容量上限：%s","Capacity: %s"),
+        'gui.appliedagristics.vault_capacity_hint':("可以通过配置文件修改上限","You can change this limit in the configuration file."),
+        'gui.appliedagristics.build_array':("一键搭建","Build Array"),
+        'gui.appliedagristics.build_need_seed':("阵列至少需要一个普通种子仓或 ME 种子仓。","The array needs at least one Seed Storage or ME Seed Storage."),
+        'gui.appliedagristics.build_need_output':("阵列至少需要一个输出口或作物仓。","The array needs at least one Output Port or Crop Storage."),
+        'gui.appliedagristics.build_need_items':("缺少 %s 个%s。","Missing %s × %s."),
+        'gui.appliedagristics.build_no_space':("必需部件还需要 %s 个空的外壳位置。","The array needs %s more open shell spaces for required parts."),
+        'gui.appliedagristics.build_blocked':("无法搭建阵列。有 %s 个被占用或无法放置的格子，已用红框标出。","Cannot build the array. %s blocked or unavailable positions are outlined in red."),
+        'gui.appliedagristics.build_denied':("此处禁止放置方块，未消耗材料。","Block placement is restricted here. No materials were used."),
+        'gui.appliedagristics.build_complete':("ME 农业阵列已搭建。请把 ME 网络接入模块接到有电的网络。","The ME Agricultural Array has been built. Connect its ME Network Access to a powered network."),
         'gui.appliedagristics.next_speed_power':('再加一个速度模块：%s AE/t','One more speed module: %s AE/t'),
         'gui.appliedagristics.next_parallel_power':('再加一个并行模块：%s AE/t（按已有种子）','One more parallel module: %s AE/t (available seeds)'),
         'gui.appliedagristics.all_crops':('全部作物','All crops'),
@@ -79,6 +89,7 @@ write(ROOT/'assets/ae2/screens/appliedagristics_port.json',port_style)
 (ROOT/'assets/ae2/screens/appliedagristics_seed_storage.json').unlink(missing_ok=True)
 vault_style=json.loads(json.dumps(port_style)); vault_style['text']['dialog_title']['text']={'translate':'block.appliedagristics.essence_vault'}
 vault_style['text']['state']['position']['top']=94
+vault_style['generatedBackground']['height']=212
 write(ROOT/'assets/ae2/screens/appliedagristics_vault.json',vault_style)
 (ROOT/'assets/ae2/screens/appliedagristics_port_io.json').unlink(missing_ok=True)
 from install_art_resources import install

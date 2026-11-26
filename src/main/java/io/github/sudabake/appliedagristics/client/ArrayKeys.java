@@ -19,17 +19,19 @@ public final class ArrayKeys {
     public static final KeyMapping STRUCTURE=new KeyMapping("key.appliedagristics.structure",KeyConflictContext.IN_GAME,InputConstants.Type.KEYSYM,GLFW.GLFW_KEY_U,"key.categories.appliedagristics");
     public static final KeyMapping GUIDE=new KeyMapping("key.appliedagristics.guide",KeyConflictContext.IN_GAME,InputConstants.Type.KEYSYM,GLFW.GLFW_KEY_G,"key.categories.appliedagristics");
     @SubscribeEvent public static void register(RegisterKeyMappingsEvent event) { event.register(STRUCTURE);event.register(GUIDE);ArrayGuide.init(); }
-    public static boolean part(String name) { return java.util.Set.of("network_planter","seed_storage","me_network_access","planter_input_port","planter_output_port","essence_vault","planter_frame","cultivation_chamber","planter_speed_module","planter_parallel_module","planter_conversion_module").contains(name); }
     @EventBusSubscriber(modid=Agristics.ID,value=Dist.CLIENT)
     public static final class Events {
         @SubscribeEvent public static void tick(TickEvent.ClientTickEvent event) {
             if (event.phase != TickEvent.Phase.END) return;
             var mc=Minecraft.getInstance(); if(mc.screen!=null || mc.level==null) return;
             boolean structure=STRUCTURE.consumeClick(),guide=GUIDE.consumeClick();
+            if(!structure && !guide) return;
             if(!(mc.hitResult instanceof BlockHitResult hit)) return;
             var id=BuiltInRegistries.BLOCK.getKey(mc.level.getBlockState(hit.getBlockPos()).getBlock());
-            if(!id.getNamespace().equals(Agristics.ID)||!part(id.getPath())) return;
-            if(guide) ArrayGuide.open();
+            if(!id.getNamespace().equals(Agristics.ID)) return;
+            var page=ArrayGuide.pageForPart(id.getPath());
+            if(page==null) return;
+            if(guide) ArrayGuide.open(page);
             else if(structure && net.minecraftforge.fml.ModList.get().isLoaded("jei")) io.github.sudabake.appliedagristics.compat.jei.AgristicsJei.showStructure();
             else if(structure) ArrayGuide.open();
         }

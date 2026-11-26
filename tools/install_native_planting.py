@@ -69,25 +69,5 @@ def install():
         values.update({key: pair[index] for key, pair in translations.items()})
         write(path, values)
 
-    guide = ROOT / 'assets/appliedagristics/ae2guide/index.md'
-    text = guide.read_text(encoding='utf-8')
-    compatibility = '种植先使用本 Mod 内置规则和整合包 planting 覆盖。普通树苗还会读取原生树木定义，包括神秘学异界树苗和新生魔艺至高树苗。可选植物盆、沉浸工程园艺玻璃罩、MekMM 种植站的有效配方可补充其他作物，JEI 共用同一份种植目录。工业先锋水培床使用原生生长与收割逻辑，其常规作物和树木由原生成熟掉落及树木定义覆盖。'
-    if compatibility not in text:
-        text += '\n' + compatibility + '\n'
-    heading = '## 原版植物与端口朝向'
-    if heading not in text:
-        text += ('\n' + heading + '\n\n'
-                 '原版树苗、杜鹃与下界巨型菌采用统一 2400 tick 周期，每轮 1～4 根对应原木或菌柄，'
-                 '5% 额外种植材料，橡树和深色橡树另有 5% 苹果。原种植材料始终保留。'
-                 '此类随机收获每 5 tick 最多 64 轮；默认满配、256 颗占满时平均约 640 根原木/秒、2344 AE/t。\n\n'
-                 '植物盆配方继续补充外部作物。没有外部配方时，甘蔗、仙人掌、竹子、海带、发光浆果和两种蘑菇'
-                 '使用内置 200 tick、每轮 1 份净产物规则；紫颂花产紫颂果并采用配置中的种子增殖补偿。\n\n'
-                 '接入模块、普通种子仓与输出口成型后仍可六向旋转，ME 种子仓与作物仓可水平旋转。'
-                 '成型、拆结构和重新成型保留各部件方向，输出面与正面图案一致。成型控制器保持水平朝向锁定。\n\n'
-                 '作物悬停说明分别显示实际耗电、含批次限制的运行需求、忽略批次限制的理论满负荷和升级预估。'
-                 'JEI 只列可能产物及种植材料，数量不代表每轮产量或保底掉落。\n')
-    guide.write_text(text, encoding='utf-8', newline='\n')
-
-
 if __name__ == '__main__':
     install()

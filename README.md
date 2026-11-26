@@ -2,9 +2,13 @@
 
 Minecraft **1.20.1 / Forge / Java 17**，AE2 × Mystical Agriculture 农业附属。
 
-本分支以 1.21.1 版 **1.3.2** 为基线，提供 **1.20.1 Forge Beta**。两个 Minecraft 版本各用对应存档。
+本分支以 1.21.1 版 **1.4.0** 为基线，提供 **1.20.1 Forge Beta**。两个 Minecraft 版本各用对应存档。
 
-下载和更新说明见 [GitHub Releases](https://github.com/sudabake/applied-agristics/releases/tag/v1.3.2-forge-1.20.1) 和 [CurseForge](https://www.curseforge.com/minecraft/mc-mods/applied-agristics/files/9748014)。
+下载和更新说明见 [GitHub Releases](https://github.com/sudabake/applied-agristics/releases/tag/v1.4.0-forge-1.20.1) 和 [CurseForge](https://www.curseforge.com/minecraft/mc-mods/applied-agristics)。
+
+## 1.4.0 更新
+
+同步新版双语指南、一键搭建、仓储容量设置、基础种植机进度和控制器光照修复。详细说明见 [Forge 更新日志](docs/FORGE_1.20.1_RELEASE_NOTES.md)。
 
 ## 主要内容
 
@@ -31,7 +35,7 @@ Minecraft **1.20.1 / Forge / Java 17**，AE2 × Mystical Agriculture 农业附�
 
 ## 构建
 
-安装 JDK 17，在项目根目录运行 `gradlew.bat build`（Windows）或 `bash gradlew build`。生成的 Forge 测试包为 `build/libs/applied-agristics-1.3.2-forge-1.20.1-demo.jar`。运行 `gradlew.bat runGameTestServer` 执行游戏测试。
+安装 JDK 17，在项目根目录运行 `gradlew.bat build`（Windows）或 `bash gradlew build`。生成的 Forge 测试包为 `build/libs/applied-agristics-1.4.0-forge-1.20.1.jar`。运行 `gradlew.bat runGameTestServer` 执行游戏测试。
 
 开发依赖为 Forge 47.4.20、AE2 15.4.10、Mystical Agriculture 7.0.24、GuideME 20.1.15 和 Cucumber 7.0.16。客户端测试可用 `runClient -PclientSmoke -PjeiTests -PmachineModelChecks`。可选联动测试把对应的 JAR 放在单独目录，通过 `-PruntimeFixtures=<目录>` 加载。
 

@@ -92,8 +92,8 @@ dependencies {
     modImplementation modDependency('Cucumber-1.20.1-7.0.16.jar', "maven.modrinth:cucumber:${cucumber_version}")
     modImplementation modDependency('guideme-20.1.15.jar', "maven.modrinth:guideme:${guideme_version}")
     modCompileOnly modDependency('Mekanism-1.20.1-10.4.16.80.jar', 'maven.modrinth:mekanism:uxe1WQp4')
-    modCompileOnly "maven.modrinth:immersiveengineering:WUzj4tgJ"
-    modCompileOnly "maven.modrinth:mekanismmoremachine:4jmSX8kC"
+    modCompileOnly modDependency('ImmersiveEngineering-1.20.1-10.2.0-183.jar', 'maven.modrinth:immersiveengineering:WUzj4tgJ')
+    modCompileOnly modDependency('mekmm-1.20.1-1.1.2.jar', 'maven.modrinth:mekanismmoremachine:4jmSX8kC')
     annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
     testImplementation platform('org.junit:junit-bom:5.11.4')
     testImplementation 'org.junit.jupiter:junit-jupiter'

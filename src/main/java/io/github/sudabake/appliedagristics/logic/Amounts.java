@@ -4,8 +4,11 @@ package io.github.sudabake.appliedagristics.logic;
 public final class Amounts {
     private Amounts() {}
     public static long insertable(long stored, long requested) {
-        if (stored < 0 || requested < 0) throw new IllegalArgumentException("Negative amount");
-        return Math.min(requested, Long.MAX_VALUE - stored);
+        return insertable(stored, requested, Long.MAX_VALUE);
+    }
+    public static long insertable(long stored, long requested, long capacity) {
+        if (stored < 0 || requested < 0 || capacity < 0) throw new IllegalArgumentException("Negative amount");
+        return Math.min(requested, Math.max(0, capacity - stored));
     }
     public static long extractable(long stored, long reserved, long requested) {
         if (stored < 0 || reserved < 0 || requested < 0) throw new IllegalArgumentException("Negative amount");

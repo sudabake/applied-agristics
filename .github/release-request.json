@@ -1,0 +1,6 @@
+{
+  "version": "1.4.0",
+  "type": "beta",
+  "target": "github-curseforge",
+  "dry_run": false
+}

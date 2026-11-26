@@ -187,6 +187,8 @@ public final class MachineMenu extends appeng.menu.AEBaseMenu
 
   @Override
   public void broadcastChanges() {
+    if (player instanceof ServerPlayer server && machine instanceof EarlyPlanter early
+        && early.harvestFlash()!=state.getBoolean("harvestFlash")) sync(server);
     super.broadcastChanges();
     if (player instanceof ServerPlayer server && server.level().getGameTime() - lastSync >= 20)
       sync(server);

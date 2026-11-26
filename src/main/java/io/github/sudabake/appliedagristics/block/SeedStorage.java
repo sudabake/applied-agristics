@@ -59,8 +59,10 @@ public final class SeedStorage extends GridMachine implements appeng.api.storage
     private final appeng.api.storage.MEStorage networkInventory = new appeng.api.storage.MEStorage() {
         @Override public net.minecraft.network.chat.Component getDescription() { return getDisplayName(); }
         @Override public long insert(appeng.api.stacks.AEKey what, long amount, Actionable mode, IActionSource source) {
+            // Array production has already run its dedicated seed-return rules.
+            if (source.machine().orElse(null) instanceof NetworkAccess) return 0;
             if (!autoCollect || ejecting || source.machine().orElse(null) instanceof SeedStorage bank && bank.ejecting || !(what instanceof AEItemKey key) || amount <= 0 || !acceptsCollection(key) || !io.github.sudabake.appliedagristics.logic.Harvests.seed(key.toStack(1),level)) return 0;
-            return mode == Actionable.SIMULATE ? Amounts.insertable(count(key), amount) : add(key, amount);
+            return mode == Actionable.SIMULATE ? roomFor(key, amount) : add(key, amount);
         }
         @Override public long extract(appeng.api.stacks.AEKey what, long amount, Actionable mode, IActionSource source) {
             return ejecting || collecting || source.machine().orElse(null) instanceof SeedStorage bank && bank.collecting || !(what instanceof AEItemKey key) ? 0 : extractFree(key, amount, mode);
@@ -68,7 +70,7 @@ public final class SeedStorage extends GridMachine implements appeng.api.storage
         @Override public void getAvailableStacks(appeng.api.stacks.KeyCounter out) {
             if (!collecting && !ejecting) seeds.forEach((key,count) -> { long free=count-used(key); if (free>0) out.add(key,free); });
         }
-        @Override public boolean isPreferredStorageFor(appeng.api.stacks.AEKey key, IActionSource source) { return autoCollect && key instanceof AEItemKey item && acceptsCollection(item) && io.github.sudabake.appliedagristics.logic.Harvests.seed(item.toStack(1),level); }
+        @Override public boolean isPreferredStorageFor(appeng.api.stacks.AEKey key, IActionSource source) { return autoCollect && key instanceof AEItemKey item && roomFor(item, 1)>0 && acceptsCollection(item) && io.github.sudabake.appliedagristics.logic.Harvests.seed(item.toStack(1),level); }
     };
     @Override public void mountInventories(appeng.api.storage.IStorageMounts mounts) { mounts.mount(networkInventory, 100); }
     private void changed() { storedItemsChanged(null,0); }
@@ -107,9 +109,12 @@ public final class SeedStorage extends GridMachine implements appeng.api.storage
     }
     public long add(AEItemKey key, long requested) {
         if(!acceptsCollection(key)) return 0;
-        long accepted = Amounts.insertable(count(key), requested);
+        long accepted = roomFor(key, requested);
         if (accepted > 0) { seeds.merge(key, accepted, Long::sum); changed(key,accepted); }
         return accepted;
+    }
+    private long roomFor(AEItemKey key, long amount) {
+        return Amounts.insertable(count(key), amount, Balance.ME_SEEDS_PER_TYPE.get());
     }
     public long extractFree(AEItemKey key, long amount, Actionable mode) {
         long taken = amount <= 0 ? 0 : Amounts.extractable(count(key), used(key), amount);
@@ -124,7 +129,8 @@ public final class SeedStorage extends GridMachine implements appeng.api.storage
         collecting = true;
         try { for (var entry : storage.getAvailableStacks()) {
             if (entry.getKey() instanceof AEItemKey key && acceptsCollection(key) && io.github.sudabake.appliedagristics.logic.Harvests.seed(key.toStack(1),level)) {
-                long room = Amounts.insertable(count(key), entry.getLongValue());
+                long room = roomFor(key, entry.getLongValue());
+                if (room == 0) continue;
                 long extracted = storage.extract(key, room, Actionable.MODULATE, source);
                 add(key, extracted);
             }

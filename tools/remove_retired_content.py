@@ -24,12 +24,6 @@ def install():
             (resources / 'data/appliedagristics/recipes' / (prefix + name + '.json')).unlink(missing_ok=True)
     (resources / 'data/appliedagristics/recipes/legacy_bio_seed.json').unlink(missing_ok=True)
     (assets / 'textures/mob_effect/nourishment.png').unlink(missing_ok=True)
-    guide = assets / 'ae2guide/index.md'
-    text = guide.read_text(encoding='utf-8')
-    text = text.replace('旧精华存储器直接升级为作物仓，原有库存、优先级和随方块保存的数据保留。', '')
-    text = text.replace('旧四态设置保留原有输出面并开放各面输入。', '')
-    guide.write_text(text, encoding='utf-8')
-
     for language in ('zh_cn', 'en_us'):
         path = assets / 'lang' / (language + '.json')
         data = json.loads(path.read_text(encoding='utf-8'))

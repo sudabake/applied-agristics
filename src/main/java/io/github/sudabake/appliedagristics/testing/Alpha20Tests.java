@@ -20,17 +20,26 @@ import net.minecraftforge.gametest.PrefixGameTestTemplate;
 @PrefixGameTestTemplate(false)
 public final class Alpha20Tests {
     @GameTest(template="empty",templateNamespace=Agristics.ID)
-    public static void unboundedStoragePersistsCounts(GameTestHelper h) {
-        var pos=new BlockPos(1,1,1);h.setBlock(pos,Agristics.SEEDS.get());SeedStorage bank = (SeedStorage) h.getBlockEntity(pos);
+    public static void seedStorageCapsEachTypeAndPreservesLegacyCounts(GameTestHelper h) {
+        var pos=new BlockPos(1,1,1);h.setBlock(pos,Agristics.SEEDS.get());SeedStorage bank=(SeedStorage)h.getBlockEntity(pos);
+        long capacity=Balance.ME_SEEDS_PER_TYPE.get();
         for(int i=0;i<20;i++) {
             var key=AEItemKey.of(new ItemStack(Crops.all().get(i).getSeedsItem()));
-            h.assertTrue(bank.add(key,1000000000L+i)==1000000000L+i,"Seed storage has no sixteen-type cap");
+            h.assertTrue(bank.add(key,Long.MAX_VALUE)==capacity,"Every seed type has its own capacity");
+            h.assertTrue(bank.add(key,1)==0,"A full type has no remaining space");
         }
         var wheat=AEItemKey.of(new ItemStack(Items.WHEAT_SEEDS));
-        h.assertTrue(bank.add(wheat,10000000000L)==10000000000L,"Seed storage accepts large counts");
-        var save=bank.saveWithFullMetadata();bank.load(save);
-        for(int i=0;i<20;i++) h.assertTrue(bank.count(AEItemKey.of(new ItemStack(Crops.all().get(i).getSeedsItem())))==1000000000L+i,"Every current count survives saving");
-        h.assertTrue(bank.count(wheat)==10000000000L,"Large counts survive saving");h.succeed();
+        var save=bank.saveWithFullMetadata();
+        var stored=save.getList("seeds",10);
+        var legacy=new net.minecraft.nbt.CompoundTag();
+        legacy.put("key",wheat.toTag());
+        legacy.putLong("count",10_000_000_000L);
+        stored.add(legacy);
+        bank.load(save);
+        for(int i=0;i<20;i++) h.assertTrue(bank.count(AEItemKey.of(new ItemStack(Crops.all().get(i).getSeedsItem())))==capacity,"Every current count survives saving");
+        h.assertTrue(bank.count(wheat)==10_000_000_000L,"Existing large counts survive loading");
+        h.assertTrue(bank.extractFree(wheat,1,appeng.api.config.Actionable.MODULATE)==1,"Existing excess remains retrievable");
+        h.succeed();
     }
 
     @GameTest(template="empty",templateNamespace=Agristics.ID,timeoutTicks=180)
