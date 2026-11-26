@@ -1,6 +1,9 @@
 name: Publish release
 
 on:
+  push:
+    branches: [main]
+    paths: ['.github/release-request.json']
   workflow_dispatch:
     inputs:
       version:
@@ -29,7 +32,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: release-${{ inputs.version }}
+  group: neoforge-publication
   cancel-in-progress: false
 
 jobs:
@@ -46,6 +49,7 @@ jobs:
       minecraft: ${{ steps.prepare.outputs.minecraft }}
       loader: ${{ steps.prepare.outputs.loader }}
       java: ${{ steps.prepare.outputs.java }}
+      dry_run: ${{ steps.prepare.outputs.dry_run }}
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
@@ -60,7 +64,7 @@ jobs:
         run: python3 tools/release.py prepare
       - name: Check upload credentials and project access
         id: credentials
-        if: ${{ !inputs.dry_run }}
+        if: steps.prepare.outputs.dry_run == 'false'
         env:
           RELEASE_PLATFORMS: ${{ steps.prepare.outputs.platforms }}
           CURSEFORGE_TOKEN: ${{ secrets.CURSEFORGE_TOKEN }}
@@ -117,7 +121,7 @@ jobs:
 
   publish:
     needs: [prepare, verify]
-    if: ${{ !inputs.dry_run }}
+    if: needs.prepare.outputs.dry_run == 'false'
     runs-on: ubuntu-latest
     permissions:
       contents: write

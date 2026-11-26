@@ -227,8 +227,16 @@ def main():
     version = os.environ.get('RELEASE_VERSION', '')
     release_type = os.environ.get('RELEASE_TYPE', 'release')
     if command == 'prepare':
-        output = prepare(ROOT, version, release_type, os.environ.get('RELEASE_TARGET', 'all'),
-                         os.environ.get('RELEASE_DRY_RUN', 'true') == 'true')
+        target = os.environ.get('RELEASE_TARGET', 'all')
+        dry_run = os.environ.get('RELEASE_DRY_RUN', 'true') == 'true'
+        if os.environ.get('GITHUB_EVENT_NAME') == 'push':
+            request = json.loads((ROOT / '.github/release-request.json').read_text(encoding='utf-8'))
+            if set(request) != {'version', 'type', 'target', 'dry_run'} or type(request['dry_run']) is not bool:
+                raise ValueError('Invalid release request')
+            version, release_type = request['version'], request['type']
+            target, dry_run = request['target'], request['dry_run']
+        output = prepare(ROOT, version, release_type, target, dry_run)
+        output['dry_run'] = 'true' if dry_run else 'false'
         write_outputs(output)
         print('Prepared ' + output['version'] + ' for ' + output['platforms'])
     elif command == 'credentials':
